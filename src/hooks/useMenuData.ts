@@ -56,23 +56,51 @@ export const useMenuData = () => {
     const fetchMenuData = async () => {
       try {
         const session = await getSession()
-        const token = (session?.user as any).accessToken
-        const userTypeId = (session?.user as any)?.userTypeId
+        if (!session?.user) {
+          throw new Error('No active session found')
+        }
+
+        const token = (session.user as any).accessToken
+        const userTypeId = (session.user as any)?.userTypeId
+
+        if (!token || !userTypeId) {
+          throw new Error('Missing authentication data')
+        }
 
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/v1/personal/permissions?userTypeId=${userTypeId}`,
           {
             headers: {
-              Authorization: `Bearer ${token}`
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+              Accept: 'application/json'
             }
           }
         )
 
+        // Check if the response is JSON
+        const contentType = response.headers.get('content-type')
+        if (!contentType || !contentType.includes('application/json')) {
+          const text = await response.text()
+          console.error('Non-JSON response:', text)
+          throw new Error('Server returned non-JSON response')
+        }
+
         if (!response.ok) {
-          throw new Error(`Failed to fetch menu data: ${response.statusText}`)
+          const errorData = await response.json().catch(() => null)
+          throw new Error(
+            `Failed to fetch menu data: ${response.status} ${response.statusText}${
+              errorData ? ` - ${JSON.stringify(errorData)}` : ''
+            }`
+          )
         }
 
         const apiData = await response.json()
+        
+        if (!apiData.result || !Array.isArray(apiData.result)) {
+          throw new Error('Invalid API response format')
+        }
+
         const transformedData = apiData.result.map(mapMenuItem)
         setMenuData(transformedData)
       } catch (err) {
