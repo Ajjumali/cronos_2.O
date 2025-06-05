@@ -60,7 +60,7 @@ export const useMenuData = () => {
         const userTypeId = (session?.user as any)?.userTypeId
 
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/v1/personal/permissions?userTypeId=${userTypeId}`,
+          `${process.env.API_URL}/v1/personal/permissions?userTypeId=${userTypeId}`,
           {
             method: 'GET',
             headers: {
@@ -70,9 +70,9 @@ export const useMenuData = () => {
           }
         )
 
-        if (!response.ok) {
-          throw new Error(`Failed to fetch menu data: ${response.statusText}`)
-        }
+        // if (!response.ok) {
+        //   throw new Error(`Failed to fetch menu data: ${response.statusText}`)
+        // }
 
         const apiData = await response.json()
         const transformedData = apiData.result.map(mapMenuItem)
