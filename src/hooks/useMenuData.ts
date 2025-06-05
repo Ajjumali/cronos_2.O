@@ -58,7 +58,7 @@ export const useMenuData = () => {
         const session = await getSession()
         const token = (session?.user as any).accessToken
         const userTypeId = (session?.user as any)?.userTypeId
-
+        console.log('API URL:', process.env.API_URL)
         const response = await fetch(
           `${process.env.API_URL}/v1/personal/permissions?userTypeId=${userTypeId}`,
           {
@@ -69,7 +69,7 @@ export const useMenuData = () => {
             }
           }
         )
-
+        console.log('API URL:', response)
         // if (!response.ok) {
         //   throw new Error(`Failed to fetch menu data: ${response.statusText}`)
         // }
