@@ -18,22 +18,22 @@ const mapMenuItem = (apiItem: ApiMenuItem): VerticalMenuDataType => {
   const baseProps = {
     id: apiItem.id,
     label: apiItem.title,
-    ...(apiItem.icon && { icon: `tabler-${apiItem.icon}` })
-  }
+    ...(apiItem.icon && { icon: `tabler-${apiItem.icon}` }),
+  };
 
   if (apiItem.type === 'section') {
     return {
       ...baseProps,
       isSection: true,
       children: apiItem.children?.map(mapMenuItem) || []
-    }
+    };
   }
 
   if (apiItem.type === 'collapse') {
     return {
       ...baseProps,
       children: apiItem.children?.map(mapMenuItem) || []
-    }
+    };
   }
 
   return {
@@ -41,8 +41,38 @@ const mapMenuItem = (apiItem: ApiMenuItem): VerticalMenuDataType => {
     href: apiItem.url,
     exactMatch: false,
     activeUrl: apiItem.url
-  }
-}
+  };
+};
+
+// const mapMenuItem = (apiItem: ApiMenuItem): VerticalMenuDataType => {
+//   const baseProps = {
+//     id: apiItem.id,
+//     label: apiItem.title,
+//     ...(apiItem.icon && { icon: `tabler-${apiItem.icon}` })
+//   }
+
+//   if (apiItem.type === 'section') {
+//     return {
+//       ...baseProps,
+//       isSection: true,
+//       children: apiItem.children?.map(mapMenuItem) || []
+//     }
+//   }
+
+//   if (apiItem.type === 'collapse') {
+//     return {
+//       ...baseProps,
+//       children: apiItem.children?.map(mapMenuItem) || []
+//     }
+//   }
+
+//   return {
+//     ...baseProps,
+//     href: apiItem.url,
+//     exactMatch: false,
+//     activeUrl: apiItem.url
+//   }
+// }
 
 export const useMenuData = () => {
   const [menuData, setMenuData] = useState<VerticalMenuDataType[]>([])
@@ -69,28 +99,51 @@ export const useMenuData = () => {
         }
 
         console.log('Fetching from API:', `${apiUrl}/v1/personal/permissions?userTypeId=${userTypeId}`)
-
-        const response = await fetch(`${apiUrl}/v1/personal/permissions?userTypeId=${userTypeId}`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/v1/personal/permissions?userTypeId=${userTypeId}`, {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
-        })
-
-        if (!response.ok) {
-          const text = await response.text()
-          throw new Error(`Failed to fetch menu data (Status: ${response.status}) - ${text}`)
+        });
+        
+        const contentType = response.headers.get('content-type') || '';
+        
+        if (!contentType.includes('application/json')) {
+          const raw = await response.text();
+          throw new Error(`Non-JSON response:\n${raw.slice(0, 200)}...`);
         }
-
-        const apiData = await response.json()
-
+        
+        const apiData = await response.json();
+        
         if (!apiData?.result || !Array.isArray(apiData.result)) {
-          throw new Error('Invalid menu structure in API response')
+          throw new Error('Invalid structure: `result` array missing');
         }
+        
+        const transformedData = apiData.result.map(mapMenuItem);
+        setMenuData(transformedData);
+        
+        // const response = await fetch(`${apiUrl}/v1/personal/permissions?userTypeId=${userTypeId}`, {
+        //   method: 'GET',
+        //   headers: {
+        //     Authorization: `Bearer ${token}`,
+        //     'Content-Type': 'application/json'
+        //   }
+        // })
 
-        const transformedData = apiData.result.map(mapMenuItem)
-        setMenuData(transformedData)
+        // if (!response.ok) {
+        //   const text = await response.text()
+        //   throw new Error(`Failed to fetch menu data (Status: ${response.status}) - ${text}`)
+        // }
+
+        // const apiData = await response.json()
+
+        // if (!apiData?.result || !Array.isArray(apiData.result)) {
+        //   throw new Error('Invalid menu structure in API response')
+        // }
+
+        // const transformedData = apiData.result.map(mapMenuItem)
+        // setMenuData(transformedData)
       } catch (err) {
         console.error('Error fetching menu data:', err)
         setError(err instanceof Error ? err.message : 'An error occurred')
