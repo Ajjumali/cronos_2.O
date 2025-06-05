@@ -65,14 +65,14 @@ export const useMenuData = () => {
             method: 'GET',
             headers: {
               Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
+              'Content-Type': 'application/json',
+            },
           }
-        )
+        );
         console.log('API URL:', response)
-        // if (!response.ok) {
-        //   throw new Error(`Failed to fetch menu data: ${response.statusText}`)
-        // }
+        if (!response.ok) {
+          throw new Error('Failed to fetch permissions');
+        }
 
         const apiData = await response.json()
         const transformedData = apiData.result.map(mapMenuItem)
