@@ -99,13 +99,24 @@ export const useMenuData = () => {
         }
 
         console.log('Fetching from API:', `${apiUrl}/v1/personal/permissions?userTypeId=${userTypeId}`)
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/v1/personal/permissions?userTypeId=${userTypeId}`, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
+        const response = await fetch(
+          `https://ec7e-182-70-113-122.ngrok-free.app/api/v1/personal/permissions?userTypeId=${userTypeId}`,
+          {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            }
           }
-        });
+        )
+        
+        // const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/v1/personal/permissions?userTypeId=${userTypeId}`, {
+        //   method: 'GET',
+        //   headers: {
+        //     Authorization: `Bearer ${token}`,
+        //     'Content-Type': 'application/json'
+        //   }
+        // });
         
         const contentType = response.headers.get('content-type') || '';
         
