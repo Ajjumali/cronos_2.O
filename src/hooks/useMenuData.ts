@@ -60,7 +60,7 @@ export const useMenuData = () => {
         const userTypeId = (session?.user as any)?.userTypeId
 
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/personal/permissions?userTypeId=${userTypeId}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/v1/personal/permissions?userTypeId=${userTypeId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`
@@ -69,7 +69,7 @@ export const useMenuData = () => {
         )
 
         if (!response.ok) {
-          throw new Error('Failed to fetch menu data')
+          throw new Error(`Failed to fetch menu data: ${response.statusText}`)
         }
 
         const apiData = await response.json()
