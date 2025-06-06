@@ -97,7 +97,7 @@ export const useMenuData = () => {
         if (!apiUrl) {
           throw new Error('Environment variable NEXT_PUBLIC_API_URL is not defined')
         }
-
+       console.log(token, userTypeId)
         console.log('Fetching from API:', `${apiUrl}/v1/personal/permissions?userTypeId=${userTypeId}`)
         const response = await fetch(
           `https://ec7e-182-70-113-122.ngrok-free.app/api/v1/personal/permissions?userTypeId=${userTypeId}`,
