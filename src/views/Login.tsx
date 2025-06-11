@@ -159,7 +159,7 @@ const Login = ({ mode }: { mode: SystemMode }) => {
       if (res?.ok) {
         console.log('Login successful, redirecting...')
         // Successful login
-        const redirectURL = searchParams.get('redirectTo') ?? '/'
+        const redirectURL = searchParams.get('redirectTo') ?? themeConfig.homePageUrl
         router.replace(getLocalizedUrl(redirectURL, locale as Locale))
       }
     } catch (error) {
