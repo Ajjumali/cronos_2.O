@@ -53,6 +53,8 @@ import InputLabel from '@mui/material/InputLabel'
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import BarcodePrintDialog from '@/components/dialogs/barcode-print'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import { FormGroup, TextField } from '@mui/material'
 
 // Dummy data for demonstration
 const dummySample = {
@@ -278,7 +280,10 @@ const ValidateSample = () => {
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [showBarcodeDialog, setShowBarcodeDialog] = useState<boolean>(false)
   const [selectedTestForBarcode, setSelectedTestForBarcode] = useState<any>(null)
-
+  const [isAcknowledged, setIsAcknowledged] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  
   const columns = useMemo<ColumnDef<any, any>[]>(
     () => [
       {
@@ -965,6 +970,10 @@ const ValidateSample = () => {
       })
       setShowBarcodeDialog(true)
     }
+  }
+
+  function handleReject(): void {
+    throw new Error('Function not implemented.')
   }
 
   return (
@@ -1812,128 +1821,73 @@ const ValidateSample = () => {
 
       {/* Approval Confirmation Dialog */}
       <Dialog
-        open={isApprovalModalOpen}
-        onClose={handleCloseApprovalModal}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>
-          Confirm Test Approval
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="body1" sx={{ mb: 2 }}>
-              You are about to approve the following tests:
-            </Typography>
-            
-            <Box sx={{ 
-              maxHeight: '200px', 
-              overflowY: 'auto',
-              bgcolor: 'action.hover',
-              borderRadius: 1,
-              p: 2,
-              mb: 3
-            }}>
-              {table.getSelectedRowModel().rows.map((row, index) => (
-                <Box
-                  key={row.id}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1,
-                    py: 1,
-                    borderBottom: index !== table.getSelectedRowModel().rows.length - 1 ? '1px solid' : 'none',
-                    borderColor: 'divider'
-                  }}
-                >
-                  <i className="tabler-check text-success" />
-                  <Typography variant="body2">
-                    {row.original.testName}
-                  </Typography>
-                </Box>
-              ))}
-            </Box>
+  open={isApprovalModalOpen}
+  onClose={handleCloseApprovalModal}
+  maxWidth="xs"
+  fullWidth
+>
+  <DialogTitle>Test Result Declaration</DialogTitle>
 
-            <CustomTextField
-              fullWidth
-              multiline
-              rows={3}
-              label="Approval Comment"
-              placeholder="Enter any comments or notes for this approval..."
-              value={approvalComment}
-              onChange={(e) => setApprovalComment(e.target.value)}
-              sx={{ mb: 3 }}
-            />
+  <DialogContent dividers>
+    <FormGroup sx={{ mb: 2 }}>
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={isAcknowledged}
+            onChange={(e) => setIsAcknowledged(e.target.checked)}
+          />
+        }
+        label="I confirm that the details are accurate and approve the digital authorization of this result."
+      />
+    </FormGroup>
 
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Electronic Signature
-            </Typography>
-            
-            <Box
-              sx={{
-                border: '1px solid',
-                borderColor: showSignatureError ? 'error.main' : 'divider',
-                borderRadius: 1,
-                mb: 1
-              }}
-            >
-              <canvas
-                ref={canvasRef}
-                width={500}
-                height={200}
-                onMouseDown={startDrawing}
-                onMouseMove={draw}
-                onMouseUp={stopDrawing}
-                onMouseLeave={stopDrawing}
-                style={{
-                  width: '100%',
-                  height: '200px',
-                  backgroundColor: '#fafafa',
-                  cursor: 'crosshair'
-                }}
-              />
-            </Box>
+    <TextField
+      fullWidth
+      label="User Name"
+      value={username}
+      onChange={(e) => setUsername(e.target.value)}
+      sx={{ mb: 2 }}
+    />
 
-            {showSignatureError && (
-              <Typography color="error" variant="caption" sx={{ mb: 2, display: 'block' }}>
-                Please provide your signature before approving
-              </Typography>
-            )}
+    <TextField
+      fullWidth
+      label="Password"
+      type="password"
+      value={password}
+      onChange={(e) => setPassword(e.target.value)}
+      sx={{ mb: 3 }}
+    />
 
-            <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={clearSignature}
-                startIcon={<i className="tabler-eraser" />}
-              >
-                Clear Signature
-              </Button>
-            </Box>
+    <Box display="flex" justifyContent="center" mb={2}>
+      <img
+        src="/images/tick-ico-image.png" 
+        alt="Digital Signature"
+        height={50}
+      />
+    </Box>
 
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-              This action cannot be undone. Please review the selected tests and provide your signature before confirming.
-            </Typography>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button 
-            onClick={handleCloseApprovalModal}
-            disabled={isApproving}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleApprovalSubmit}
-            color="primary"
-            variant="contained"
-            disabled={isApproving || !isSignatureValid}
-            startIcon={isApproving ? <i className="tabler-loader animate-spin" /> : <i className="tabler-check" />}
-          >
-            {isApproving ? 'Approving...' : 'Confirm Approval'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+    <Typography variant="caption" color="text.secondary">
+      Please provide your credentials to authorize the result. Your signature will be recorded digitally.
+    </Typography>
+  </DialogContent>
+
+  <DialogActions sx={{ justifyContent: 'center' }}>
+    <Button
+      variant="contained"
+      color="error"
+      onClick={handleReject}
+    >
+      Reject
+    </Button>
+    <Button
+      variant="contained"
+      color="success"
+      onClick={handleCloseApprovalModal}
+    >
+      Close
+    </Button>
+  </DialogActions>
+</Dialog>
 
       {/* Remarks Dialog */}
       <Dialog

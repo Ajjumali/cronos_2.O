@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 
 // Next Imports
 import { useParams } from 'next/navigation'
@@ -27,7 +27,9 @@ import {
   DialogContent,
   DialogActions,
   Checkbox,
-  CircularProgress
+  CircularProgress,
+  Typography,
+  Grid
 } from '@mui/material'
 import {
   Add as AddIcon,
@@ -77,6 +79,7 @@ import { formatDate } from '@/utils/dateUtils'
 // eslint-disable-next-line import/no-unresolved
 import TablePaginationComponent from '@/components/TablePaginationComponent'
 import TableFilters from './TableFilters'
+import BarcodePrintDialog from '@/components/dialogs/barcode-print'
 
 
 // Style Imports
@@ -92,6 +95,7 @@ declare module '@tanstack/table-core' {
 
 type SampleWithActionsType = SampleCollectionType & {
   actions?: string
+  barcodeId?: string
 }
 
 type collectionStatusType = {
@@ -147,6 +151,13 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
   const [selectedSampleForScan, setSelectedSampleForScan] = useState<SampleWithActionsType | null>(null)
   const [barcodeInput, setBarcodeInput] = useState('')
   const [isScanning, setIsScanning] = useState(false)
+  const [showBarcodeDialog, setShowBarcodeDialog] = useState<boolean>(false)
+  const [selectedSample, setSelectedSample] = useState<SampleWithActionsType | null>(null)
+  const [showSampleDetails, setShowSampleDetails] = useState(false)
+  const [selectedSampleForDetails, setSelectedSampleForDetails] = useState<SampleWithActionsType | null>(null)
+  const [showRemarkDialog, setShowRemarkDialog] = useState(false)
+  const [selectedSampleForRemark, setSelectedSampleForRemark] = useState<SampleWithActionsType | null>(null)
+  const [remark, setRemark] = useState('')
 
   // Hooks
   const { lang: locale } = useParams()
@@ -175,13 +186,54 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
     }
   }
 
-  const handleBulkPrintBarcode = () => {
-    const selectedIds = Object.keys(rowSelection).map(key => data[parseInt(key)].id)
-
-    if (selectedIds.length > 0) {
-      setSelectedSamplesForBulkAction(selectedIds)
-      setShowBulkPrintConfirm(true)
+  const handlePrintBarcode = async (id: number) => {
+    console.log('handlePrintBarcode called with id:', id)
+    const sample = data.find(item => item.id === id)
+    console.log('Found sample:', sample)
+    
+    if (!sample) {
+      toast.error('Sample not found')
+      return
     }
+
+    if (!sample.barcodeId) {
+      toast.error('No barcode ID available for this sample')
+      return
+    }
+
+    console.log('Setting selected sample and showing dialog')
+    setSelectedSample(sample)
+    setShowBarcodeDialog(true)
+  }
+
+  const handleBulkPrintBarcode = async () => {
+    console.log('handleBulkPrintBarcode called')
+    const selectedIds = Object.keys(rowSelection).map(key => data[parseInt(key)].id)
+    console.log('Selected IDs:', selectedIds)
+    
+    if (selectedIds.length === 0) {
+      toast.error('No samples selected')
+      return
+    }
+
+    const selectedSamples = data.filter(item => selectedIds.includes(item.id))
+    console.log('Selected samples:', selectedSamples)
+    
+    if (selectedSamples.length === 0) {
+      toast.error('Selected samples not found')
+      return
+    }
+
+    // Check if any sample is missing barcode ID
+    const sampleWithoutBarcode = selectedSamples.find(sample => !sample.barcodeId)
+    if (sampleWithoutBarcode) {
+      toast.error(`Sample ${sampleWithoutBarcode.id} has no barcode ID`)
+      return
+    }
+
+    console.log('Setting selected sample and showing dialog')
+    setSelectedSample(selectedSamples[0]) // Keep first sample for backward compatibility
+    setShowBarcodeDialog(true)
   }
 
   const handleBulkReject = () => {
@@ -321,6 +373,29 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
     }
   }
 
+  const handleAddRemark = (sample: SampleWithActionsType) => {
+    setSelectedSampleForRemark(sample)
+    setRemark(sample.remarks || '')
+    setShowRemarkDialog(true)
+  }
+
+  const handleRemarkSubmit = async () => {
+    if (!selectedSampleForRemark) return
+
+    try {
+      // TODO: Implement remark update API call
+      toast.success('Remark added successfully')
+      onDataChange?.()
+    } catch (error) {
+      console.error('Error adding remark:', error)
+      toast.error('Failed to add remark')
+    } finally {
+      setShowRemarkDialog(false)
+      setSelectedSampleForRemark(null)
+      setRemark('')
+    }
+  }
+
   const columns = useMemo<ColumnDef<SampleWithActionsType, any>[]>(
     () => [
       {
@@ -385,33 +460,46 @@ return (
         header: 'Actions',
         cell: ({ row }) => (
           <div className='flex items-center gap-4'>
-            <IconButton 
-              title="Add Volume"
-              onClick={() => handleVolumeInput(row.original)}
-              disabled={row.original.collectionStatus === 'Collected'}
-            >
-              <AddIcon />
-            </IconButton>
-            <IconButton title="Manual Collection">
-              <CheckCircleIcon />
-            </IconButton>
-            <IconButton 
-              title="View Audit Trail"
-              onClick={() => handleAuditTrail(row.original)}
-            >
-              <HistoryIcon />
-            </IconButton>
-            <IconButton 
-              title="Scan Barcode"
-              onClick={() => handleBarcodeScan(row.original)}
-              disabled={row.original.collectionStatus === 'Collected'}
-            >
-              <i className='tabler-scan' />
-            </IconButton>
             <OptionMenu
               iconButtonProps={{ size: 'medium' }}
               iconClassName='text-textSecondary'
               options={[
+                {
+                  text: 'Sample Collect',
+                  icon: 'tabler-check',
+                  menuItemProps: {
+                    onClick: () => {
+                      // TODO: Implement sample collection logic
+                      toast.success('Sample collected successfully')
+                      handleMenuClose()
+                    },
+                    disabled: row.original.collectionStatus === 'Collected',
+                    className: 'text-success'
+                  }
+                },
+                {
+                  text: 'Add Volume',
+                  icon: 'tabler-plus',
+                  menuItemProps: {
+                    onClick: () => {
+                      handleVolumeInput(row.original)
+                      handleMenuClose()
+                    },
+                    disabled: row.original.collectionStatus === 'Collected',
+                    className: 'text-primary'
+                  }
+                },
+                {
+                  text: 'View Audit Trail',
+                  icon: 'tabler-history',
+                  menuItemProps: {
+                    onClick: () => {
+                      handleAuditTrail(row.original)
+                      handleMenuClose()
+                    },
+                    className: 'text-info'
+                  }
+                },
                 {
                   text: 'Reject Sample',
                   icon: 'tabler-x',
@@ -424,7 +512,10 @@ return (
                   text: 'Print Barcode',
                   icon: 'tabler-printer',
                   menuItemProps: {
-                    onClick: () => handleMenuClose(),
+                    onClick: () => {
+                      handlePrintBarcode(row.original.id)
+                      handleMenuClose()
+                    },
                     className: 'text-primary'
                   }
                 },
@@ -432,7 +523,11 @@ return (
                   text: 'Sample Info',
                   icon: 'tabler-eye',
                   menuItemProps: {
-                    onClick: () => handleMenuClose(),
+                    onClick: () => {
+                      setSelectedSampleForDetails(row.original)
+                      setShowSampleDetails(true)
+                      handleMenuClose()
+                    },
                     className: 'text-info'
                   }
                 },
@@ -440,7 +535,10 @@ return (
                   text: 'Add Remark',
                   icon: 'tabler-message',
                   menuItemProps: {
-                    onClick: () => handleMenuClose(),
+                    onClick: () => {
+                      handleAddRemark(row.original)
+                      handleMenuClose()
+                    },
                     className: 'text-secondary'
                   }
                 },
@@ -581,12 +679,25 @@ return (
     }
   }
 
+  // Add useEffect to monitor dialog state
+  useEffect(() => {
+    console.log('Barcode dialog state:', { showBarcodeDialog, selectedSample })
+  }, [showBarcodeDialog, selectedSample])
+
   return (
     <Card>
       <CardHeader 
         title='Sample Collection List'
         action={
-          <Box sx={{ display: 'flex', gap: 2 }}>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <Button
+              variant='outlined'
+              startIcon={<i className='tabler-scan' />}
+              onClick={() => setShowBarcodeScanDialog(true)}
+              sx={{ color: 'lime.main', borderColor: 'lime.main' }}
+            >
+              Scan Barcode
+            </Button>
             <Button
               variant='outlined'
               startIcon={
@@ -891,6 +1002,154 @@ return (
             disabled={!barcodeInput || isScanning}
           >
             Submit
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={showSampleDetails}
+        onClose={() => setShowSampleDetails(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Typography variant="h5" component="div">
+            Sample Details
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Sample ID
+                </Typography>
+                <Typography variant="body1">{selectedSampleForDetails?.sampleId || '-'}</Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Employee Name
+                </Typography>
+                <Typography variant="body1">{selectedSampleForDetails?.employeeName || '-'}</Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Employee ID
+                </Typography>
+                <Typography variant="body1">{selectedSampleForDetails?.employeeId || '-'}</Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Barcode ID
+                </Typography>
+                <Typography variant="body1">{selectedSampleForDetails?.barcodeId || '-'}</Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Collected By
+                </Typography>
+                <Typography variant="body1">{selectedSampleForDetails?.collectedBy || '-'}</Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Collected On
+                </Typography>
+                <Typography variant="body1">{formatDate(selectedSampleForDetails?.collectedOn) || '-'}</Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Sample Type
+                </Typography>
+                <Typography variant="body1">{selectedSampleForDetails?.sampleType || '-'}</Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Collection Status
+                </Typography>
+                <Typography variant="body1">{selectedSampleForDetails?.collectionStatus || '-'}</Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Location
+                </Typography>
+                <Typography variant="body1">{selectedSampleForDetails?.location || '-'}</Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Laboratory
+                </Typography>
+                <Typography variant="body1">{selectedSampleForDetails?.laboratory || '-'}</Typography>
+              </Grid>
+              <Grid item xs={12}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Remarks
+                </Typography>
+                <Typography variant="body1">{selectedSampleForDetails?.remarks || '-'}</Typography>
+              </Grid>
+            </Grid>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowSampleDetails(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      <BarcodePrintDialog
+        open={showBarcodeDialog}
+        setOpen={setShowBarcodeDialog}
+        sampleId={selectedSample?.id || 0}
+        barcodeId={selectedSample?.barcodeId}
+        samples={Object.keys(rowSelection).map(key => {
+          const sample = data[parseInt(key)]
+          return {
+            id: sample.id,
+            barcodeId: sample.barcodeId || '',
+            subjectId: sample.employeeId,
+            sampleType: sample.sampleType,
+            collectedOn: sample.collectedOn
+          }
+        })}
+        sampleDetails={{
+          subjectId: selectedSample?.employeeId,
+          sampleType: selectedSample?.sampleType,
+          collectedOn: selectedSample?.collectedOn
+        }}
+      />
+
+      {/* Add Remark Dialog */}
+      <Dialog
+        open={showRemarkDialog}
+        onClose={() => setShowRemarkDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Typography variant="h5" component="div">
+            Add Remark
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2 }}>
+            <CustomTextField
+              fullWidth
+              multiline
+              rows={4}
+              label="Remark"
+              value={remark}
+              onChange={(e) => setRemark(e.target.value)}
+              placeholder="Enter your remark here..."
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowRemarkDialog(false)}>Cancel</Button>
+          <Button 
+            onClick={handleRemarkSubmit} 
+            color='primary' 
+            variant='contained'
+            disabled={!remark.trim()}
+          >
+            Save
           </Button>
         </DialogActions>
       </Dialog>

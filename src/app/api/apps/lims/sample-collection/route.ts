@@ -12,6 +12,7 @@ export type SampleCollectionType = {
   location: string
   laboratory: string
   remarks?: string
+  barcodeId?: string
 }
 
 const dummyData: SampleCollectionType[] = [
@@ -25,7 +26,8 @@ const dummyData: SampleCollectionType[] = [
     sampleType: 'Blood',
     collectionStatus: 'Pending',
     location: 'Main Lab',
-    laboratory: 'Central Lab'
+    laboratory: 'Central Lab',
+    barcodeId: 'BAR001'
   },
   {
     id: 2,
@@ -37,7 +39,8 @@ const dummyData: SampleCollectionType[] = [
     sampleType: 'Urine',
     collectionStatus: 'Collected',
     location: 'Branch Lab',
-    laboratory: 'North Lab'
+    laboratory: 'North Lab',
+    barcodeId: 'BAR002'
   },
   {
     id: 3,
@@ -49,7 +52,8 @@ const dummyData: SampleCollectionType[] = [
     sampleType: 'Blood',
     collectionStatus: 'Rejected',
     location: 'Main Lab',
-    laboratory: 'Central Lab'
+    laboratory: 'Central Lab',
+    barcodeId: 'BAR003'
   }
 ]
 

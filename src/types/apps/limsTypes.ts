@@ -94,79 +94,103 @@ export type SampleType = {
   updatedOn?: string
 }
 
-export type TestType = {
-  id: number
-  testName: string
-  isActive: boolean
-  createdBy?: string
-  createdOn?: string
-  updatedBy?: string
-  updatedOn?: string
-}
 
-// Base types for LIMS entities
 export interface TestResultType {
   id: number
-  registrationDateTime: string // Registration Date and Time
-  sampleId: number
+  registrationDateTime: string
+  sampleTypeId?: number
+  sampleType?: string
+  receivedBy?: string
+  receivedByName?: string
+  receivedOn?: string
   volunteerId: string
   gender: string
   name: string
-  testPanelName: string // Test and Panel Name
-  testId: number
-  testName: string
-  result: string
-  unit: string
-  referenceRange: string
-  status: string
-  performedBy: string
-  performedOn: string
-  verifiedBy: string
-  verifiedOn: string
-  remarks: string
-  activeFlag: string
-  modifyBy: string
-  modifyOn: string
+  statusId: number
+  testPanelName?: string
+  testId?: number
+  testName?: string
+  result?: string
+  unit?: string
+  referenceRange?: string
+  performedBy?: string
+  performedOn?: string
+  verifiedBy?: string
+  verifiedOn?: string
+  remarks?: string
+  activeFlag?: string
+  modifyBy?: string
+  modifyOn?: string
   projectNo?: string
   study?: string
-  studyProtocol?: string
-  sampleType?: string
   location?: string
   referenceId?: string
   lab?: string
   period?: string
 }
 
+export interface TestType {
+  id: number
+  name: string
+  description?: string
+  unit?: string
+  referenceRange?: string
+  activeFlag: string
+  modifyBy?: string
+  modifyOn?: string
+}
+
 export interface LabDto {
   id: number
-  labName: string
+  name: string
+  code: string
+  address?: string
   activeFlag: string
+  modifyBy?: string
+  modifyOn?: string
 }
 
-// Generic API response type
+export interface TestTypesResponse {
+  result: TestType[]
+  status: string
+  message?: string
+}
+
+export interface LabsResponse {
+  result: LabDto[]
+  status: string
+  message?: string
+}
+
+export interface SampleTypeDto {
+  id: number
+  name: string
+  code: string
+  description?: string
+  activeFlag: string
+  modifyBy?: string
+  modifyOn?: string
+}
+
+export interface LocationDto {
+  id: number
+  name: string
+  code: string
+  description?: string
+  activeFlag: string
+  modifyBy?: string
+  modifyOn?: string
+}
+
 export interface ApiResponse<T> {
   result: T
+  status: string
+  message?: string
 }
 
-
-export type TestTypesResponse = ApiResponse<TestType[]>
-export type LabsResponse = ApiResponse<LabDto[]>
-
-// Sample related types
-export interface SampleTypeDto {
-  sampleId: number
-  sampleType: string
-  activeFlag: string
-}
-
-export type SampleResponse = ApiResponse<SampleType>
-export type SamplesResponse = ApiResponse<SampleType[]>
-
-// Status types
-export type StatusType = 'Pending' | 'In Progress' | 'Received' | 'Rejected'
+export type StatusType = 'Pending' | 'In Progress' | 'Completed' | 'Rejected'
 export type PriorityType = 'Routine' | 'Urgent' | 'STAT'
 
-// Filter types
 export interface FilterOptions {
   status?: StatusType
   priority?: PriorityType
@@ -178,12 +202,6 @@ export interface FilterOptions {
   search?: string
 }
 
-export interface LocationDto {
-  id: number
-  name: string
-  activeFlag: string
-}
-
 export interface MethodType {
   methodId: number
   methodName: string
@@ -191,4 +209,29 @@ export interface MethodType {
   isActive: boolean
   updatedBy: string
   updatedOn: string
+}
+
+export interface TestAuthorizationType {
+  id: number
+  registrationDateTime: string
+  sampleId: number
+  volunteerId: string
+  gender: string
+  name: string
+  testPanelName: string
+  testId: number
+  testName: string
+  authorizationStatus: string
+  authorizedBy: string
+  authorizedOn: string
+  remarks: string
+  activeFlag: string
+  modifyBy: string
+  modifyOn: string
+  projectNo: string
+  study: string
+  sampleType: string
+  location: string
+  referenceId: string
+  lab: string
 }

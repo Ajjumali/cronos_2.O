@@ -63,7 +63,7 @@ import CustomAvatar from '@core/components/mui/Avatar'
 import CustomTextField from '@core/components/mui/TextField'
 import OptionMenu from '@core/components/option-menu'
 import TableFilters from './TableFilters'
-import BarcodePrintDialog from '@/components/dialogs/barcode-print'
+import BarcodePrintDialog from '@/components/dialogs/barcode-print/index'
 import RemarkDialog from '@/components/dialogs/remark-dialog/index'
 import ConfirmDialog from '@/components/dialogs/ConfirmDialog/ConfirmDialog'
 import SampleDetailsDialog from '@/components/dialogs/sample-details-dialog'
@@ -209,12 +209,10 @@ type Props = {
 }
 
 const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
-  console.log('Received sampleData prop:', sampleData)
   const router = useRouter()
   const { lang: locale } = useParams()
   const [rowSelection, setRowSelection] = useState({})
   const initialData = Array.isArray(sampleData) ? sampleData : []
-  console.log('Initial data after processing:', initialData)
   const [data, setData] = useState<SampleType[]>(initialData)
   const [filteredData, setFilteredData] = useState<SampleType[]>(initialData)
   const [globalFilter, setGlobalFilter] = useState('')
@@ -228,7 +226,9 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
   const [columnMenuAnchor, setColumnMenuAnchor] = useState<null | HTMLElement>(null)
   const [showRemarkDialog, setShowRemarkDialog] = useState<boolean>(false)
   const [selectedSampleForRemark, setSelectedSampleForRemark] = useState<SampleType | null>(null)
-  const [scannedBarcode, setScannedBarcode] = useState<string>('')
+  const [showBarcodeScanDialog, setShowBarcodeScanDialog] = useState(false)
+  const [barcodeInput, setBarcodeInput] = useState('')
+  const [isScanning, setIsScanning] = useState(false)
   const [highlightedSampleId, setHighlightedSampleId] = useState<number | null>(null)
   const barcodeInputRef = useRef<HTMLInputElement>(null)
   const [showOutsourceConfirm, setShowOutsourceConfirm] = useState(false)
@@ -243,6 +243,8 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
   const [showBulkRejectConfirm, setShowBulkRejectConfirm] = useState(false)
   const [selectedSamplesForReject, setSelectedSamplesForReject] = useState<number[]>([])
   const [bulkRejectReason, setBulkRejectReason] = useState('')
+  const [showBulkCentrifugeConfirm, setShowBulkCentrifugeConfirm] = useState(false)
+  const [selectedSamplesForCentrifuge, setSelectedSamplesForCentrifuge] = useState<number[]>([])
   const [showSampleDetails, setShowSampleDetails] = useState(false)
   const [selectedSampleForDetails, setSelectedSampleForDetails] = useState<SampleType | null>(null)
   const [showAuditTrail, setShowAuditTrail] = useState(false)
@@ -261,7 +263,6 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
           setFilteredData(sampleData)
         }
       } catch (error) {
-        console.error('Error loading data:', error)
         toast.error('Failed to load data')
       } finally {
         setIsLoading(false)
@@ -785,21 +786,31 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
   // }
 
   // Add barcode scanning handler
-  const handleBarcodeScan = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const barcode = event.target.value
-    setScannedBarcode(barcode)
-    
-    // Find the sample with matching barcode
-    const sample = data.find(item => item.barcodeId === barcode)
-    if (sample) {
-      setHighlightedSampleId(sample.id)
-      // Scroll to the highlighted row
-      const rowElement = document.getElementById(`sample-row-${sample.id}`)
-      if (rowElement) {
-        rowElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  const handleBarcodeSubmit = async () => {
+    if (!barcodeInput) return
+
+    try {
+      setIsScanning(true)
+      // Find the sample with matching barcode
+      const sample = data.find(item => item.barcodeId === barcodeInput)
+      if (sample) {
+        setHighlightedSampleId(sample.id)
+        // Scroll to the highlighted row
+        const rowElement = document.getElementById(`sample-row-${sample.id}`)
+        if (rowElement) {
+          rowElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+        toast.success('Sample found')
+      } else {
+        toast.error('Invalid barcode. Sample not found.')
       }
-    } else {
-      toast.error('Invalid barcode. Sample not found.')
+    } catch (error) {
+      console.error('Error scanning barcode:', error)
+      toast.error('Failed to scan barcode')
+    } finally {
+      setIsScanning(false)
+      setShowBarcodeScanDialog(false)
+      setBarcodeInput('')
     }
   }
 
@@ -1033,6 +1044,62 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
     }
   }
 
+  const handleBulkCentrifuge = () => {
+    const selectedIds = Object.keys(rowSelection).map(key => filteredData[parseInt(key)].id)
+    if (selectedIds.length > 0) {
+      setSelectedSamplesForCentrifuge(selectedIds)
+      setShowBulkCentrifugeConfirm(true)
+    }
+  }
+
+  const handleBulkCentrifugeConfirm = async () => {
+    try {
+      setIsBulkOperationLoading(true)
+      setBulkOperationProgress(0)
+      
+      const totalSamples = selectedSamplesForCentrifuge.length
+      let processedSamples = 0
+      
+      await Promise.all(
+        selectedSamplesForCentrifuge.map(async (id) => {
+          try {
+            const response = await fetch('/api/apps/lims/Sample-received?action=centrifuge', {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ ids: [id] })
+            });
+
+            if (!response.ok) {
+              throw new Error('Failed to centrifuge sample');
+            }
+
+            processedSamples++
+            setBulkOperationProgress((processedSamples / totalSamples) * 100)
+          } catch (error) {
+            console.error(`Error centrifuging sample ${id}:`, error)
+          }
+        })
+      )
+      
+      toast.success('Selected samples sent for centrifugation successfully')
+      const response = await fetch('/api/apps/lims/Sample-received')
+      const newData = await response.json()
+      setData(newData)
+      setFilteredData(newData)
+      onDataChange?.()
+    } catch (error) {
+      console.error('Error centrifuging samples:', error)
+      toast.error('Failed to centrifuge some samples. Please check the audit trail for details.')
+    } finally {
+      setShowBulkCentrifugeConfirm(false)
+      setSelectedSamplesForCentrifuge([])
+      setIsBulkOperationLoading(false)
+      setBulkOperationProgress(0)
+    }
+  }
+
   // Add audit trail type
   type AuditTrailType = {
     actionPerformed: string
@@ -1197,16 +1264,17 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
       <Divider />
       
       <div className='flex flex-wrap justify-between gap-4 p-6'>
-        {/* Barcode Scanner Input */}
+        {/* Barcode Scanner Button */}
         <div className='flex items-center gap-2'>
-          <CustomTextField
-            inputRef={barcodeInputRef}
-            value={scannedBarcode}
-            onChange={handleBarcodeScan}
-            placeholder='Scan Barcode'
+          <Button
+            variant='outlined'
+            startIcon={<i className='tabler-scan' />}
+            onClick={() => setShowBarcodeScanDialog(true)}
+            sx={{ color: 'lime.main', borderColor: 'lime.main' }}
             className='max-sm:is-full is-auto'
-            autoFocus
-          />
+          >
+            Scan Barcode
+          </Button>
         </div>
 
         {/* Search and other controls */}
@@ -1374,6 +1442,15 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
         >
           Print Barcode
         </Button>
+        <Button
+          variant='contained'
+          color='secondary'
+          startIcon={<i className='tabler-rotate' />}
+          disabled={Object.keys(rowSelection).length === 0}
+          onClick={handleBulkCentrifuge}
+        >
+          Centrifuge Selected
+        </Button>
       </div>
 
       <BarcodePrintDialog
@@ -1519,6 +1596,26 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
         handleConfirm={handleBulkRejectConfirm}
         disabled={isBulkOperationLoading || !bulkRejectReason.trim()}
       />
+      <ConfirmDialog
+        open={showBulkCentrifugeConfirm}
+        title="Confirm Centrifugation"
+        description={
+          <div className='flex flex-col gap-4'>
+            <Typography>
+              Do you want to send {selectedSamplesForCentrifuge.length} samples for centrifugation?
+            </Typography>
+            {isBulkOperationLoading && <BulkOperationProgress />}
+          </div>
+        }
+        okText="Yes"
+        cancelText="No"
+        handleClose={() => {
+          setShowBulkCentrifugeConfirm(false)
+          setSelectedSamplesForCentrifuge([])
+        }}
+        handleConfirm={handleBulkCentrifugeConfirm}
+        disabled={isBulkOperationLoading}
+      />
       <SampleDetailsDialog
         open={showSampleDetails}
         setOpen={setShowSampleDetails}
@@ -1529,6 +1626,39 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
         setOpen={setShowAuditTrail}
         sampleId={selectedSampleForAudit || 0}
       />
+      {/* Add Barcode Scan Dialog */}
+      <Dialog
+        open={showBarcodeScanDialog}
+        onClose={() => setShowBarcodeScanDialog(false)}
+      >
+        <DialogTitle>Scan Barcode</DialogTitle>
+        <DialogContent>
+          <Box sx={{ textAlign: 'center', py: 2 }}>
+            {isScanning ? (
+              <CircularProgress />
+            ) : (
+              <CustomTextField
+                fullWidth
+                label='Barcode'
+                value={barcodeInput}
+                onChange={(e) => setBarcodeInput(e.target.value)}
+                autoFocus
+              />
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowBarcodeScanDialog(false)}>Cancel</Button>
+          <Button 
+            onClick={handleBarcodeSubmit} 
+            color='primary' 
+            variant='contained'
+            disabled={!barcodeInput || isScanning}
+          >
+            Submit
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   )
 }

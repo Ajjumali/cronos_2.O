@@ -46,11 +46,12 @@ import type { RankingInfo } from '@tanstack/match-sorter-utils'
 import { toast } from 'react-toastify'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import dynamic from 'next/dynamic'
 
 // Type Imports
 import type { ThemeColor } from '@core/types'
 import type { Locale } from '@configs/i18n'
-import type { TestResultType, StatusType, SampleType } from '@/types/apps/limsTypes'
+import type { TestAuthorizationType } from '@/types/apps/limsTypes'
 
 // Component Imports
 import CustomAvatar from '@core/components/mui/Avatar'
@@ -59,7 +60,7 @@ import OptionMenu from '@core/components/option-menu'
 import TableFilters from './TableFilters'
 import RemarkDialog from '@/components/dialogs/test-result/remark-dialog'
 import BarcodePrintDialog from '@/components/dialogs/barcode-print'
-import SampleDetailsDialog from '@/components/dialogs/sample-details'
+import TestAuthorizationDetailsDialog from '@/components/dialogs/test-authorization-details'
 import ConfirmDialog from '@/components/dialogs/ConfirmDialog/ConfirmDialog'
 
 // Util Imports
@@ -70,7 +71,7 @@ import tableStyles from '@core/styles/table.module.css'
 import TablePaginationComponent from '@/components/TablePaginationComponent'
 
 // API Imports
-import { testResultsService } from '@/app/api/apps/lims/Test-results/route'
+import { testAuthorizationService } from '@/app/api/apps/lims/Test-authorization/route'
 
 declare module '@tanstack/table-core' {
   interface FilterFns {
@@ -79,6 +80,10 @@ declare module '@tanstack/table-core' {
   interface FilterMeta {
     itemRank: RankingInfo
   }
+}
+
+type TestAuthorizationWithActionsType = TestAuthorizationType & {
+  actions?: string
 }
 
 type TestStatusType = {
@@ -95,13 +100,12 @@ const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
 }
 
 const testStatusObj: TestStatusType = {
-  1: { title: 'Pending', color: 'warning' },
-  2: { title: 'In Progress', color: 'info' },
-  3: { title: 'Completed', color: 'success' },
-  4: { title: 'Rejected', color: 'error' }
+  Pending: { title: 'Pending', color: 'warning' },
+  Approved: { title: 'Approved', color: 'success' },
+  Rejected: { title: 'Rejected', color: 'error' }
 }
 
-const columnHelper = createColumnHelper<TestResultType>()
+const columnHelper = createColumnHelper<TestAuthorizationWithActionsType>()
 
 const formatDate = (dateString?: string) => {
   if (!dateString) return '-'
@@ -118,26 +122,26 @@ const formatDate = (dateString?: string) => {
   }
 }
 
-const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultType[], onDataChange?: () => void }) => {
+const TestAuthorizationTable = ({ testData }: { testData?: TestAuthorizationType[] }) => {
   const router = useRouter()
   const { lang: locale } = useParams()
   const initialData = Array.isArray(testData) ? testData : []
-  const [data, setData] = useState<TestResultType[]>(initialData)
-  const [filteredData, setFilteredData] = useState<TestResultType[]>(initialData)
+  const [data, setData] = useState<TestAuthorizationType[]>(initialData)
+  const [filteredData, setFilteredData] = useState<TestAuthorizationType[]>(initialData)
   const [globalFilter, setGlobalFilter] = useState('')
   const [selectedTestId, setSelectedTestId] = useState<number | null>(null)
   const [remarkDialogOpen, setRemarkDialogOpen] = useState(false)
   const [isPdfLoading, setIsPdfLoading] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const [showBarcodeDialog, setShowBarcodeDialog] = useState<boolean>(false)
-  const [selectedTest, setSelectedTest] = useState<TestResultType | null>(null)
+  const [selectedTest, setSelectedTest] = useState<TestAuthorizationType | null>(null)
   const [columnVisibility, setColumnVisibility] = useState({})
   const [columnMenuAnchor, setColumnMenuAnchor] = useState<null | HTMLElement>(null)
   const [showSampleDetails, setShowSampleDetails] = useState(false)
-  const [selectedSampleForDetails, setSelectedSampleForDetails] = useState<TestResultType | null>(null)
+  const [selectedSampleForDetails, setSelectedSampleForDetails] = useState<TestAuthorizationType | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [showRejectConfirm, setShowRejectConfirm] = useState(false)
-  const [selectedTestForReject, setSelectedTestForReject] = useState<TestResultType | null>(null)
+  const [selectedTestForReject, setSelectedTestForReject] = useState<TestAuthorizationType | null>(null)
   const [rejectReason, setRejectReason] = useState('')
   const [isNavigating, setIsNavigating] = useState(false)
 
@@ -149,15 +153,15 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
     }
   }, [testData])
 
-  const columns = useMemo<ColumnDef<TestResultType, any>[]>(
+  const columns = useMemo<ColumnDef<TestAuthorizationWithActionsType, any>[]>(
     () => [
       columnHelper.accessor('registrationDateTime', {
         header: 'Registration Date',
         cell: info => formatDate(info.getValue())
       }),
-      columnHelper.accessor('sampleTypeId', {
+      columnHelper.accessor('sampleId', {
         header: 'Sample ID',
-        cell: info => info.getValue() || '-'
+        cell: info => info.getValue()
       }),
       columnHelper.accessor('volunteerId', {
         header: 'Volunteer ID',
@@ -173,7 +177,7 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
       }),
       columnHelper.accessor('testPanelName', {
         header: 'Test Panel',
-        cell: info => info.getValue() || '-'
+        cell: info => info.getValue()
       }),
       columnHelper.accessor('sampleType', {
         header: 'Sample Type',
@@ -187,15 +191,15 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
             }}
             onClick={() => openValidateSample(info.row.original)}
           >
-            {info.getValue() || '-'}
+            {info.getValue()}
           </Typography>
         )
       }),
-      columnHelper.accessor('statusId', {
+      columnHelper.accessor('authorizationStatus', {
         header: 'Status',
         cell: info => {
-          const statusId = info.getValue()
-          const statusInfo = testStatusObj[statusId] || { title: 'Unknown', color: 'default' }
+          const authStatus = info.getValue() as string
+          const statusInfo = testStatusObj[authStatus] || { title: authStatus, color: 'default' }
 
           return (
             <Chip
@@ -207,8 +211,7 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
           )
         }
       }),
-      {
-        id: 'actions',
+      columnHelper.accessor('actions', {
         header: 'Actions',
         cell: info => {
           const test = info.row.original
@@ -257,13 +260,13 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
             </Box>
           )
         }
-      }
+      })
     ],
     []
   )
 
-  const table = useReactTable<TestResultType>({
-    data: filteredData,
+  const table = useReactTable<TestAuthorizationWithActionsType>({
+    data: filteredData as TestAuthorizationWithActionsType[],
     columns,
     state: {
       columnVisibility
@@ -285,16 +288,16 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
     let filtered = [...data]
 
     if (filters.status) {
-      filtered = filtered.filter(item => (item as TestResultType).statusId === filters.status)
+      filtered = filtered.filter(item => item.authorizationStatus === filters.status)
     }
 
     if (filters.testType) {
-      filtered = filtered.filter(item => (item as TestResultType).testName === filters.testType)
+      filtered = filtered.filter(item => item.testName === filters.testType)
     }
 
     if (filters.dateRange?.start && filters.dateRange?.end) {
       filtered = filtered.filter(item => {
-        const date = new Date((item as TestResultType).registrationDateTime)
+        const date = new Date(item.registrationDateTime)
         return date >= new Date(filters.dateRange.start) && date <= new Date(filters.dateRange.end)
       })
     }
@@ -309,7 +312,7 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
 
   const handleRemarkSuccess = async () => {
     try {
-      const response = await testResultsService.getTestResults()
+      const response = await testAuthorizationService.getTestAuthorizations()
       setData(response.result)
       toast.success('Remarks updated successfully')
     } catch (error) {
@@ -321,7 +324,7 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
   const handleExport = async () => {
     setIsExporting(true)
     try {
-      const response = await fetch('/api/apps/lims/test-results?action=download', {
+      const response = await fetch('/api/apps/lims/test-authorization?action=download', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -337,7 +340,7 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Test_Results_${new Date().toISOString().replace(/[:.]/g, '_')}.csv`;
+      a.download = `Test_Authorizations_${new Date().toISOString().replace(/[:.]/g, '_')}.csv`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -359,7 +362,7 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
       
       // Add title
       doc.setFontSize(16);
-      doc.text('Test Results List', 14, 15);
+      doc.text('Test Authorizations List', 14, 15);
       
       // Add date
       doc.setFontSize(10);
@@ -368,22 +371,20 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
       // Prepare table data
       const tableData = data.map(test => [
         test.registrationDateTime ? formatDate(test.registrationDateTime) : '-',
-        test.sampleTypeId || '-',
+        test.sampleId || '-',
         test.volunteerId || '-',
         test.gender || '-',
         test.name || '-',
         test.testPanelName || '-',
         test.sampleType || '-',
-        test.statusId || '-',
-        test.performedBy || '-',
-        test.performedOn ? formatDate(test.performedOn) : '-',
-        test.verifiedBy || '-',
-        test.verifiedOn ? formatDate(test.verifiedOn) : '-'
+        test.authorizationStatus || '-',
+        test.authorizedBy || '-',
+        test.authorizedOn ? formatDate(test.authorizedOn) : '-'
       ]);
 
       // Add table using autoTable
       autoTable(doc, {
-        head: [['Registration Date', 'Sample ID', 'Volunteer ID', 'Gender', 'Name', 'Test Panel', 'Sample Type', 'Status', 'Performed By', 'Performed On', 'Verified By', 'Verified On']],
+        head: [['Registration Date', 'Sample ID', 'Volunteer ID', 'Gender', 'Name', 'Test Panel', 'Sample Type', 'Status', 'Authorized By', 'Authorized On']],
         body: tableData,
         startY: 30,
         styles: { fontSize: 8 },
@@ -393,7 +394,7 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
       });
 
       // Save the PDF
-      doc.save(`test-results-${new Date().toISOString().split('T')[0]}.pdf`);
+      doc.save(`test-authorizations-${new Date().toISOString().split('T')[0]}.pdf`);
       toast.success('PDF file downloaded successfully');
     } catch (error) {
       console.error('PDF export failed:', error);
@@ -403,33 +404,33 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
     }
   }
 
-  const openSampleDetails = (row: TestResultType) => {
+  const openSampleDetails = (row: TestAuthorizationWithActionsType) => {
     // Example: navigate to a details page or open a modal
     // For navigation:
     router.push(getLocalizedUrl(`/apps/lims/test-results/Test-Detail/${row.id}`, locale as Locale));
     // Or for modal: set some state to show details
   };
 
-  const printBarcode = (row: TestResultType) => {
+  const printBarcode = (row: TestAuthorizationWithActionsType) => {
     // Example: Open a barcode print dialog or trigger print logic
     // setSelectedSample(row); setShowBarcodeDialog(true);
-    toast.info(`Print barcode for Sample ID: ${row.sampleTypeId}`);
+    toast.info(`Print barcode for Sample ID: ${row.sampleId}`);
   };
 
-  const openRemarkDialog = (row: TestResultType) => {
+  const openRemarkDialog = (row: TestAuthorizationWithActionsType) => {
     setSelectedTestId(row.id);
     setRemarkDialogOpen(true);
   };
 
-  const openOutsourceDialog = (row: TestResultType) => {
+  const openOutsourceDialog = (row: TestAuthorizationWithActionsType) => {
     // Example: Open an outsource dialog or trigger outsource logic
-    toast.info(`Outsource sample with ID: ${row.sampleTypeId}`);
+    toast.info(`Outsource sample with ID: ${row.sampleId}`);
   };
 
-  const openValidateSample = (row: TestResultType) => {
+  const openValidateSample = (row: TestAuthorizationWithActionsType) => {
     setIsNavigating(true)
     try {
-      router.push(getLocalizedUrl(`/apps/lims/test-results/validate-sample/${row.sampleTypeId}`, locale as Locale))
+      router.push(getLocalizedUrl(`/apps/lims/test-results/validate-sample/${row.sampleId}`, locale as Locale))
     } catch (error: unknown) {
       console.error('Navigation error:', error)
       setIsNavigating(false)
@@ -444,29 +445,9 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
     }
   }
 
-  const mapToSampleType = (testResult: TestResultType | null): SampleType | null => {
-    if (!testResult) return null;
-    return {
-      sampleId: testResult.sampleTypeId || 0,
-      volunteerId: testResult.volunteerId || '',
-      name: testResult.name || '',
-      gender: testResult.gender || '',
-      testPanelName: testResult.testPanelName || '',
-      testName: testResult.testName || '',
-      result: testResult.result || '',
-      unit: testResult.unit || '',
-      referenceRange: testResult.referenceRange || '',
-      status: testResult.statusId.toString() || '',
-      registrationDateTime: testResult.registrationDateTime || '',
-      performedBy: testResult.performedBy || '',
-      performedOn: testResult.performedOn || '',
-      verifiedBy: testResult.verifiedBy || '',
-      verifiedOn: testResult.verifiedOn || '',
-      remarks: testResult.remarks || '',
-      sampleType: testResult.sampleType || '',
-      isActive: true
-    };
-  };
+  const SampleDetailsDialog = dynamic(() => import('@/components/dialogs/sample-details'), {
+    ssr: false
+  })
 
   return (
     <Card>
@@ -568,13 +549,13 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
       <BarcodePrintDialog
         open={showBarcodeDialog}
         setOpen={setShowBarcodeDialog}
-        sampleId={selectedTest?.sampleTypeId || 0}
-        barcodeId={selectedTest?.sampleTypeId ? String(selectedTest.sampleTypeId) : undefined}
+        sampleId={(selectedTest as TestAuthorizationWithActionsType)?.sampleId || 0}
+        barcodeId={(selectedTest as TestAuthorizationWithActionsType)?.sampleId ? String((selectedTest as TestAuthorizationWithActionsType).sampleId) : undefined}
       />
-      <SampleDetailsDialog
+      <TestAuthorizationDetailsDialog
         open={showSampleDetails}
         onClose={() => setShowSampleDetails(false)}
-        sample={mapToSampleType(selectedSampleForDetails)}
+        sample={selectedSampleForDetails}
       />
       <ConfirmDialog
         open={showRejectConfirm}
@@ -582,7 +563,7 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
         description={
           <div className='flex flex-col gap-4'>
             <Typography>
-              Do you want to reject test for sample {selectedTestForReject?.sampleTypeId}?
+              Do you want to reject test for sample {(selectedTestForReject as TestAuthorizationWithActionsType)?.sampleId}?
             </Typography>
             <CustomTextField
               fullWidth
@@ -610,4 +591,4 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
   )
 }
 
-export default TestResultsTable 
+export default TestAuthorizationTable 

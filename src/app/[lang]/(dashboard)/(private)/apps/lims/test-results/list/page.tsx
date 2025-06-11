@@ -6,12 +6,10 @@ import { useEffect, useState } from 'react'
 // MUI Imports
 import CircularProgress from '@mui/material/CircularProgress'
 import Box from '@mui/material/Box'
+import Grid from '@mui/material/Grid2'
 
 // Component Imports
 import TestResultsTable from '@/views/apps/lims/test-results/TestResultsTable'
-
-// API Imports
-import { testResultsService } from '@/app/api/apps/lims/Test-results/route'
 
 // Type Imports
 import type { TestResultType } from '@/types/apps/limsTypes'
@@ -20,20 +18,26 @@ const TestResultsListPage = () => {
   const [testData, setTestData] = useState<TestResultType[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const fetchTestData = async () => {
-      try {
-        setLoading(true)
-        const response = await testResultsService.getTestResults()
-        setTestData(response.result || [])
-      } catch (error) {
-        console.error('Error fetching test data:', error)
-      } finally {
-        setLoading(false)
+  const fetchData = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/apps/lims/test-results')
+      if (!response.ok) {
+        throw new Error('Failed to fetch test results')
       }
+      const result = await response.json()
+      setTestData(result)
+    } catch (error) {
+      console.error('Error fetching test data:', error)
+      setTestData([])
+    } finally {
+      setLoading(false)
     }
+  }
 
-    fetchTestData()
+  // Initial data fetch
+  useEffect(() => {
+    fetchData()
   }, [])
 
   if (loading) {
@@ -44,7 +48,13 @@ const TestResultsListPage = () => {
     )
   }
 
-  return <TestResultsTable testData={testData} />
+  return (
+    <Grid container spacing={6}>
+      <Grid size={{ xs: 12 }}>
+        <TestResultsTable testData={testData} onDataChange={fetchData} />
+      </Grid>
+    </Grid>
+  )
 }
 
 export default TestResultsListPage 

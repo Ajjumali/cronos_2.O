@@ -36,7 +36,7 @@ const TestDetail = () => {
   useEffect(() => {
     const fetchTestData = async () => {
       try {
-        const response = await testResultsService.getTestResultById(Number(id))
+        const response = await testResultsService.getTestDetails(Number(id))
         if (response.result) {
           setTestData(response.result)
         }
@@ -60,7 +60,7 @@ const TestDetail = () => {
 
   const handleRemarkSuccess = async () => {
     try {
-      const response = await testResultsService.getTestResultById(Number(id))
+      const response = await testResultsService.getTestDetails(Number(id))
       if (response.result) {
         setTestData(response.result)
       }
@@ -102,7 +102,7 @@ const TestDetail = () => {
             <CustomTextField fullWidth label='Sr. No.' value={testData.id} disabled />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <CustomTextField fullWidth label='Sample Id' value={testData.sampleId} disabled />
+            <CustomTextField fullWidth label='Sample Id' value={testData.id} disabled />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
             <CustomTextField fullWidth label='Volunteer ID' value={testData.volunteerId} disabled />

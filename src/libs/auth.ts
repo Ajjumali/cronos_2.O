@@ -137,7 +137,6 @@ export const authOptions: NextAuthOptions = {
 
           throw new Error(data.message || 'Authentication failed')
         } catch (e: any) {
-          console.error('Authentication Error:', e)
           throw new Error(e.message || 'Authentication failed')
         }
       }
@@ -152,15 +151,7 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, user, account }): Promise<JWT> {
-      console.log('JWT Callback - Current token state:', {
-        hasAccessToken: !!token.accessToken,
-        hasRefreshToken: !!token.refreshToken,
-        expiresAt: token.accessTokenExpires ? new Date(token.accessTokenExpires).toISOString() : 'none',
-        currentTime: new Date().toISOString()
-      });
-
       if (account && user) {
-        console.log('Initial sign in - setting up new token');
         return {
           ...token,
           accessToken: (user as User).accessToken,
@@ -170,30 +161,9 @@ export const authOptions: NextAuthOptions = {
         } as JWT
       }
 
-      // Check if token needs refresh
-      // if (token.accessTokenExpires) {
-      //   const shouldRefresh = Date.now() >= token.accessTokenExpires - 30 * 1000; // Refresh 30 seconds before expiry
-      //   console.log('Token refresh check:', {
-      //     currentTime: new Date().toISOString(),
-      //     expiresAt: new Date(token.accessTokenExpires).toISOString(),
-      //     shouldRefresh
-      //   });
-
-      //   if (shouldRefresh) {
-      //     console.log('Token needs refresh - calling refreshAccessToken');
-      //     return refreshAccessToken(token);
-      //   }
-      // }
-
       return token;
     },
     async session({ session, token }) {
-      console.log('Session Callback - Token state:', {
-        hasAccessToken: !!token.accessToken,
-        hasRefreshToken: !!token.refreshToken,
-        expiresAt: token.accessTokenExpires ? new Date(token.accessTokenExpires).toISOString() : 'none'
-      });
-
       const customSession = session as CustomSession;
       
       if (token) {
@@ -214,7 +184,6 @@ export const authOptions: NextAuthOptions = {
       }
       
       if (token.error === "RefreshAccessTokenError") {
-        console.error('Refresh token error detected - signing out');
         await signOut();
         return customSession;
       }
@@ -226,18 +195,11 @@ export const authOptions: NextAuthOptions = {
 
 async function refreshAccessToken(token: JWT): Promise<JWT> {
   try {
-    console.log('Starting token refresh process...', {
-      currentTime: new Date().toISOString(),
-      tokenExpiry: token.accessTokenExpires ? new Date(token.accessTokenExpires).toISOString() : 'none'
-    });
-    
     if (!token.refreshToken) {
-      console.error('No refresh token available');
       throw new Error('No refresh token available');
     }
 
     const refreshUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/tokens/refresh`;
-    console.log('Making refresh token request to:', refreshUrl);
     
     const response = await fetch(refreshUrl, {
       method: 'POST',
@@ -250,46 +212,30 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
       }),
     });
 
-    console.log('Refresh token response status:', response.status);
     const responseText = await response.text();
-    console.log('Raw response:', responseText);
 
     let data;
     try {
       data = JSON.parse(responseText);
-      console.log('Parsed refresh token response:', data);
     } catch (e) {
-      console.error('Failed to parse response:', e);
       throw new Error('Invalid response from server');
     }
 
     if (!response.ok) {
-      console.error('Refresh token failed:', data.message);
       throw new Error(data.message || 'Failed to refresh token');
     }
 
     if (!data.result?.accessToken || !data.result?.refreshToken) {
-      console.error('Invalid response format:', data);
       throw new Error('Invalid response format from server');
     }
 
-    console.log('Token refresh successful, updating token...');
-    const newToken = {
+    return {
       ...token,
       accessToken: data.result.accessToken,
       refreshToken: data.result.refreshToken,
       accessTokenExpires: Date.now() + 15 * 60 * 1000, // 2 minutes
     };
-    
-    console.log('New token created:', {
-      hasAccessToken: !!newToken.accessToken,
-      hasRefreshToken: !!newToken.refreshToken,
-      expiresAt: new Date(newToken.accessTokenExpires).toISOString()
-    });
-    
-    return newToken;
   } catch (error) {
-    console.error('Error in refreshAccessToken:', error);
     return {
       ...token,
       error: "RefreshAccessTokenError",
