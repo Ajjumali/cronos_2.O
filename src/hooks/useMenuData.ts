@@ -58,6 +58,7 @@ export const useMenuData = () => {
         const session = await getSession()
         const token = (session?.user as any).accessToken
         const userTypeId = (session?.user as any)?.userTypeId
+       console.log("check", `${process.env.API_URL}/v1/personal/permissions?userTypeId=${userTypeId}`);
 
         const response = await fetch(
           `${process.env.API_URL}/v1/personal/permissions?userTypeId=${userTypeId}`,
