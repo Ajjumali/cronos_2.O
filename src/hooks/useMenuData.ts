@@ -83,7 +83,12 @@ export const useMenuData = () => {
         }
 
         const apiData = await response.json()
+
+        console.log('API Response:', apiData)
+        console.log('Raw Response:', response)
         const transformedData = apiData.result.map(mapMenuItem)
+
+        console.log('Transformed Menu Data:', transformedData)
 
         setMenuData(transformedData)
       } catch (err) {
