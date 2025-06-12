@@ -1,10 +1,10 @@
-"use client";
+'use client'
 
-import React from 'react';
-import PerfectScrollbar from 'react-perfect-scrollbar';
-import { styled } from '@mui/material/styles';
-import ListSubheader from '@mui/material/ListSubheader';
-import SwipeableDrawer from '@mui/material/SwipeableDrawer';
+import React from 'react'
+import PerfectScrollbar from 'react-perfect-scrollbar'
+import { styled } from '@mui/material/styles'
+import ListSubheader from '@mui/material/ListSubheader'
+import SwipeableDrawer from '@mui/material/SwipeableDrawer'
 import {
   List,
   ListItem,
@@ -15,74 +15,74 @@ import {
   RadioGroup,
   FormControlLabel,
   Radio,
-  TextField,
-} from '@mui/material';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import FolderIcon from '@mui/icons-material/Folder';
-import { useEffect, useState, ChangeEvent } from 'react';
+  TextField
+} from '@mui/material'
+import RefreshIcon from '@mui/icons-material/Refresh'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import ExpandLessIcon from '@mui/icons-material/ExpandLess'
+import AssignmentIcon from '@mui/icons-material/Assignment'
+import { useEffect, useState, ChangeEvent } from 'react'
 
 // Define types
 interface SiteItem {
-  studyNo: string | null;
-  siteName: string | null;
+  studyNo: string | null
+  siteName: string | null
 }
 
 interface ProjectStudyItem {
-  studyNo: string | null;
-  shortTitle: string;
-  isEnabled: boolean;
-  rowNo: number;
-  sites: SiteItem[];
+  studyNo: string | null
+  shortTitle: string
+  isEnabled: boolean
+  rowNo: number
+  sites: SiteItem[]
 }
 
 const StyledSwipeableDrawer = styled(SwipeableDrawer)(() => ({
   '& .MuiDrawer-paper': {
-    width: 400,
-  },
-}));
+    width: 400
+  }
+}))
 
 function ProjectPanel() {
-  const [open, setOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [projects, setProjects] = useState<ProjectStudyItem[]>([]);
-  const [search, setSearch] = useState('');
-  const [selectedStudy, setSelectedStudy] = useState<string>('');
-  const [expandedStudy, setExpandedStudy] = useState<string | null>(null);
+  const [open, setOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [projects, setProjects] = useState<ProjectStudyItem[]>([])
+  const [search, setSearch] = useState('')
+  const [selectedStudy, setSelectedStudy] = useState<string>('')
+  const [expandedStudy, setExpandedStudy] = useState<string | null>(null)
 
   const fetchProjects = async () => {
     try {
-      setIsLoading(true);
-      const response = await fetch('/api/apps/lims/project-panel');
+      setIsLoading(true)
+      const response = await fetch('/api/apps/lims/project-panel')
       if (!response.ok) {
-        throw new Error('Failed to fetch projects');
+        throw new Error('Failed to fetch projects')
       }
-      const data = await response.json();
-      setProjects(data.result || []);
+      const data = await response.json()
+      setProjects(data.result || [])
     } catch (error) {
-      console.error('Error fetching projects:', error);
+      console.error('Error fetching projects:', error)
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   useEffect(() => {
     if (open) {
-      fetchProjects();
+      fetchProjects()
     }
-  }, [open]);
+  }, [open])
 
   const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setSearch(e.target.value);
-  };
+    setSearch(e.target.value)
+  }
 
   const handleStudyChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const studyId = event.target.value;
-    setSelectedStudy(studyId);
-    const parentStudy = projects.find((study: ProjectStudyItem) => study.studyNo === studyId);
+    const studyId = event.target.value
+    setSelectedStudy(studyId)
+    const parentStudy = projects.find((study: ProjectStudyItem) => study.studyNo === studyId)
     if (parentStudy?.sites?.length) {
-      setExpandedStudy(studyId); 
+      setExpandedStudy(studyId)
     }
 
     // TODO: Implement AddStudyAsPerUserSet API call
@@ -90,49 +90,49 @@ function ProjectPanel() {
       const response = await fetch('/api/apps/lims/project-panel/set-study', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ studyId }),
-      });
+        body: JSON.stringify({ studyId })
+      })
       if (!response.ok) {
-        throw new Error('Failed to set study');
+        throw new Error('Failed to set study')
       }
     } catch (error) {
-      console.error('Error setting study:', error);
+      console.error('Error setting study:', error)
     }
-  };
+  }
 
   const handleSiteChange = (event: ChangeEvent<HTMLInputElement>, parentStudyId: string) => {
-    setSelectedStudy(event.target.value);
-    setExpandedStudy(parentStudyId); 
-  };
+    setSelectedStudy(event.target.value)
+    setExpandedStudy(parentStudyId)
+  }
 
   const toggleExpand = (studyId: string) => {
-    setExpandedStudy((prev) => (prev === studyId ? null : studyId));
-  };
+    setExpandedStudy(prev => (prev === studyId ? null : studyId))
+  }
 
   const filteredProjects = projects.filter((study: ProjectStudyItem) =>
     study.shortTitle?.toLowerCase().includes(search.toLowerCase())
-  );
+  )
 
   return (
     <>
-      <Tooltip title="Projects">
+      <Tooltip title='Projects'>
         <IconButton onClick={() => setOpen(true)}>
-          <FolderIcon />
+          <AssignmentIcon />
         </IconButton>
       </Tooltip>
       <StyledSwipeableDrawer
         open={open}
-        anchor="right"
+        anchor='right'
         onOpen={() => {}}
         onClose={() => setOpen(false)}
         disableSwipeToOpen
       >
         <PerfectScrollbar options={{ wheelPropagation: false, suppressScrollX: true }}>
-          <ListSubheader component="div">
+          <ListSubheader component='div'>
             Projects
-            <Tooltip title="Refresh">
+            <Tooltip title='Refresh'>
               <IconButton onClick={fetchProjects}>
                 <RefreshIcon />
               </IconButton>
@@ -140,14 +140,12 @@ function ProjectPanel() {
           </ListSubheader>
           <Divider />
 
-          {isLoading && (
-            <CircularProgress sx={{ display: 'block', margin: '16px auto' }} />
-          )}
+          {isLoading && <CircularProgress sx={{ display: 'block', margin: '16px auto' }} />}
 
           <TextField
             fullWidth
-            variant="outlined"
-            placeholder="Search project"
+            variant='outlined'
+            placeholder='Search project'
             value={search}
             onChange={handleSearchChange}
             sx={{ margin: '10px' }}
@@ -157,7 +155,7 @@ function ProjectPanel() {
             {filteredProjects.map((study: ProjectStudyItem) => (
               <div key={study.studyNo}>
                 {/* Parent Project */}
-                <ListItem component="div" sx={{ cursor: 'pointer' }}>
+                <ListItem component='div' sx={{ cursor: 'pointer' }}>
                   <FormControlLabel
                     value={study.studyNo}
                     control={<Radio disabled={!study.isEnabled} />}
@@ -175,15 +173,15 @@ function ProjectPanel() {
                     <ListSubheader sx={{ pl: 4, color: 'gray', fontSize: '12px', fontWeight: 'bold' }}>
                       Project/Group
                     </ListSubheader>
-                    
+
                     <List sx={{ paddingLeft: '20px' }}>
                       {study.sites.map((site: SiteItem) => (
                         <ListItem
                           key={site.studyNo}
-                          component="div"
+                          component='div'
                           sx={{
-                            pl: 4, 
-                            backgroundColor: '#f5f5f5', 
+                            pl: 4,
+                            backgroundColor: '#f5f5f5',
                             borderRadius: '8px',
                             marginY: 0.5,
                             cursor: 'pointer'
@@ -192,12 +190,13 @@ function ProjectPanel() {
                           <FormControlLabel
                             value={site.studyNo}
                             control={<Radio />}
-                            label={
-                              <span style={{ fontSize: '14px', color: '#333' }}>{site.siteName}</span>
-                            }
+                            label={<span style={{ fontSize: '14px', color: '#333' }}>{site.siteName}</span>}
                             onChange={(_, checked) => {
                               if (checked) {
-                                handleSiteChange({ target: { value: site.studyNo || '' } } as React.ChangeEvent<HTMLInputElement>, study.studyNo || '');
+                                handleSiteChange(
+                                  { target: { value: site.studyNo || '' } } as React.ChangeEvent<HTMLInputElement>,
+                                  study.studyNo || ''
+                                )
                               }
                             }}
                           />
@@ -212,8 +211,7 @@ function ProjectPanel() {
         </PerfectScrollbar>
       </StyledSwipeableDrawer>
     </>
-  );
+  )
 }
 
-export default ProjectPanel;
-
+export default ProjectPanel
