@@ -97,16 +97,16 @@ export type SampleType = {
 
 export interface TestResultType {
   id: number
-  registrationDateTime: string
+  registrationDate: string
   sampleTypeId?: number
   sampleType?: string
   receivedBy?: string
   receivedByName?: string
   receivedOn?: string
-  volunteerId: string
+  subjectId: string
   gender: string
-  name: string
-  statusId: number
+  VolunteerName: string
+  StatusID: number
   testPanelName?: string
   testId?: number
   testName?: string

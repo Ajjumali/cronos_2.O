@@ -226,6 +226,22 @@ export const testResultsService = {
   }
 }
 
+/**
+ * Test Results API Endpoints
+ * 
+ * GET /api/apps/lims/Test-results
+ * Query Parameters:
+ * - id (optional): Get specific test result by ID
+ * 
+ * Example usage:
+ * - Get all test results: GET /api/apps/lims/Test-results
+ * - Get specific test result: GET /api/apps/lims/Test-results?id=123
+ * 
+ * Response format:
+ * - Success: { result: TestResult[] | TestResult, status: string }
+ * - Error: { message: string }
+ */
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -281,3 +297,31 @@ export async function GET(request: NextRequest) {
     )
   }
 }
+
+/**
+ * Service Methods Documentation
+ * 
+ * 1. downloadFile(fileType: 'CSV' | 'PDF')
+ *    Downloads test results in specified format
+ *    Usage: await testResultsService.downloadFile('CSV')
+ * 
+ * 2. updateStatus(ids: number[], statusId: number, reason?: string)
+ *    Updates status of test results
+ *    Usage: await testResultsService.updateStatus([1, 2, 3], 2, 'Rejection reason')
+ * 
+ * 3. updateRemark(id: number, remark: string)
+ *    Updates remark for a specific test result
+ *    Usage: await testResultsService.updateRemark(1, 'New remark')
+ * 
+ * 4. getTestTypes()
+ *    Fetches all available test types
+ *    Usage: await testResultsService.getTestTypes()
+ * 
+ * 5. getTestDetails(id: string | number)
+ *    Fetches detailed information for a specific test
+ *    Usage: await testResultsService.getTestDetails(123)
+ * 
+ * 6. getTestResults()
+ *    Fetches all test results
+ *    Usage: await testResultsService.getTestResults()
+ */

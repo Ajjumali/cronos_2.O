@@ -81,12 +81,8 @@ declare module '@tanstack/table-core' {
   }
 }
 
-type TestStatusType = {
-  [key: string]: {
-    title: string
-    color: ThemeColor
-  }
-}
+type StatusKey = 'null' | 1 | 2 | 3 | 4 | 5 | 6;
+type StatusMapType = Record<StatusKey, { label: string; color: 'warning' | 'success' | 'error' | 'info' | 'secondary' }>;
 
 const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
   const itemRank = rankItem(row.getValue(columnId), value)
@@ -94,11 +90,14 @@ const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
   return itemRank.passed
 }
 
-const testStatusObj: TestStatusType = {
-  1: { title: 'Pending', color: 'warning' },
-  2: { title: 'In Progress', color: 'info' },
-  3: { title: 'Completed', color: 'success' },
-  4: { title: 'Rejected', color: 'error' }
+const statusMap: StatusMapType = {
+  'null': { label: 'Pending', color: 'warning' },
+  1: { label: 'Received', color: 'success' },
+  2: { label: 'Rejected', color: 'error' },
+  3: { label: 'Pending', color: 'warning' },
+  4: { label: 'In Progress', color: 'info' },
+  5: { label: 'Completed', color: 'success' },
+  6: { label: 'Outsourced', color: 'secondary' }
 }
 
 const columnHelper = createColumnHelper<TestResultType>()
@@ -111,8 +110,10 @@ const formatDate = (dateString?: string) => {
     const day = date.getDate().toString().padStart(2, '0')
     const month = (date.getMonth() + 1).toString().padStart(2, '0')
     const year = date.getFullYear()
+    const hours = date.getHours().toString().padStart(2, '0')
+    const minutes = date.getMinutes().toString().padStart(2, '0')
 
-    return `${day}-${month}-${year}`
+    return `${day}-${month}-${year} ${hours}:${minutes}`
   } catch (error) {
     return '-'
   }
@@ -151,7 +152,7 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
 
   const columns = useMemo<ColumnDef<TestResultType, any>[]>(
     () => [
-      columnHelper.accessor('registrationDateTime', {
+      columnHelper.accessor('registrationDate', {
         header: 'Registration Date',
         cell: info => formatDate(info.getValue())
       }),
@@ -159,7 +160,7 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
         header: 'Sample ID',
         cell: info => info.getValue() || '-'
       }),
-      columnHelper.accessor('volunteerId', {
+      columnHelper.accessor('subjectId', {
         header: 'Volunteer ID',
         cell: info => info.getValue()
       }),
@@ -167,8 +168,8 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
         header: 'Gender',
         cell: info => info.getValue()
       }),
-      columnHelper.accessor('name', {
-        header: 'Name',
+      columnHelper.accessor('VolunteerName', {
+        header: 'VolunteerName',
         cell: info => info.getValue()
       }),
       columnHelper.accessor('testPanelName', {
@@ -191,20 +192,25 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
           </Typography>
         )
       }),
-      columnHelper.accessor('statusId', {
+      columnHelper.accessor('StatusID', {
         header: 'Status',
-        cell: info => {
-          const statusId = info.getValue()
-          const statusInfo = testStatusObj[statusId] || { title: 'Unknown', color: 'default' }
-
+        enableHiding: true,
+        cell: ({ row }) => {
+          const statusId = row.original.StatusID;
+          const statusInfo = statusMap[statusId as keyof StatusMapType] || statusMap['null'];
           return (
             <Chip
-              label={statusInfo.title}
+              label={statusInfo.label}
+              variant='tonal'
               color={statusInfo.color}
-              size="small"
-              sx={{ minWidth: '100px' }}
+              size='small'
+              sx={{ 
+                minWidth: '100px',
+                justifyContent: 'center',
+                fontWeight: 500
+              }}
             />
-          )
+          );
         }
       }),
       {
@@ -285,7 +291,7 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
     let filtered = [...data]
 
     if (filters.status) {
-      filtered = filtered.filter(item => (item as TestResultType).statusId === filters.status)
+      filtered = filtered.filter(item => (item as TestResultType).StatusID === filters.status)
     }
 
     if (filters.testType) {
@@ -294,7 +300,7 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
 
     if (filters.dateRange?.start && filters.dateRange?.end) {
       filtered = filtered.filter(item => {
-        const date = new Date((item as TestResultType).registrationDateTime)
+        const date = new Date((item as TestResultType).registrationDate)
         return date >= new Date(filters.dateRange.start) && date <= new Date(filters.dateRange.end)
       })
     }
@@ -367,14 +373,14 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
 
       // Prepare table data
       const tableData = data.map(test => [
-        test.registrationDateTime ? formatDate(test.registrationDateTime) : '-',
+        test.registrationDate ? formatDate(test.registrationDate) : '-',
         test.sampleTypeId || '-',
-        test.volunteerId || '-',
+        test.subjectId || '-',
         test.gender || '-',
-        test.name || '-',
+        test.VolunteerName || '-',
         test.testPanelName || '-',
         test.sampleType || '-',
-        test.statusId || '-',
+        test.StatusID || '-',
         test.performedBy || '-',
         test.performedOn ? formatDate(test.performedOn) : '-',
         test.verifiedBy || '-',
@@ -448,16 +454,16 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
     if (!testResult) return null;
     return {
       sampleId: testResult.sampleTypeId || 0,
-      volunteerId: testResult.volunteerId || '',
-      name: testResult.name || '',
+      volunteerId: testResult.subjectId || '',
+      name: testResult.VolunteerName || '',
       gender: testResult.gender || '',
       testPanelName: testResult.testPanelName || '',
       testName: testResult.testName || '',
       result: testResult.result || '',
       unit: testResult.unit || '',
       referenceRange: testResult.referenceRange || '',
-      status: testResult.statusId.toString() || '',
-      registrationDateTime: testResult.registrationDateTime || '',
+      status: testResult.StatusID.toString() || '',
+      registrationDateTime: testResult.registrationDate || '',
       performedBy: testResult.performedBy || '',
       performedOn: testResult.performedOn || '',
       verifiedBy: testResult.verifiedBy || '',

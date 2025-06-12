@@ -21,12 +21,13 @@ const TestResultsListPage = () => {
   const fetchData = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/apps/lims/test-results')
+      const response = await fetch('/api/apps/lims/Test-results')
       if (!response.ok) {
-        throw new Error('Failed to fetch test results')
+        const error = await response.json()
+        throw new Error(error.message || 'Failed to fetch test results')
       }
-      const result = await response.json()
-      setTestData(result)
+      const data = await response.json()
+      setTestData(data)
     } catch (error) {
       console.error('Error fetching test data:', error)
       setTestData([])
