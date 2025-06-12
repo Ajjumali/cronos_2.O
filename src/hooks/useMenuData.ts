@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
-import type { VerticalMenuDataType } from '@/types/menuTypes'
+
 import { getSession } from 'next-auth/react'
+
+import type { VerticalMenuDataType } from '@/types/menuTypes'
 
 // Define the API menu item type
 interface ApiMenuItem {
@@ -58,17 +60,15 @@ export const useMenuData = () => {
         const session = await getSession()
         const token = (session?.user as any).accessToken
         const userTypeId = (session?.user as any)?.userTypeId
-       console.log("check", `${process.env.API_URL}/v1/personal/permissions?userTypeId=${userTypeId}`);
 
-        const response = await fetch(
-          `${process.env.API_URL}/v1/personal/permissions?userTypeId=${userTypeId}`,
-          {
-            method: 'GET',
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
+        console.log('check', `${process.env.API_URL}/v1/personal/permissions?userTypeId=${userTypeId}`)
+
+        const response = await fetch(`${process.env.API_URL}/v1/personal/permissions?userTypeId=${userTypeId}`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`
           }
-        )
+        })
 
         if (!response.ok) {
           throw new Error('Failed to fetch menu data')
@@ -76,6 +76,7 @@ export const useMenuData = () => {
 
         const apiData = await response.json()
         const transformedData = apiData.result.map(mapMenuItem)
+
         setMenuData(transformedData)
       } catch (err) {
         console.error('Error fetching menu data:', err)
