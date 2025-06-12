@@ -60,14 +60,16 @@ export const useMenuData = () => {
         const userTypeId = (session?.user as any)?.userTypeId
        console.log("check", `${process.env.API_URL}/v1/personal/permissions?userTypeId=${userTypeId}`);
 
-        const response = await fetch(
-          `${process.env.API_URL}/v1/personal/permissions?userTypeId=${userTypeId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          }
-        )
+ const response = await fetch(
+  `${process.env.API_URL}/v1/personal/permissions?userTypeId=${userTypeId}`,
+  {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  }
+ );
+
 
         if (!response.ok) {
           throw new Error('Failed to fetch menu data')
