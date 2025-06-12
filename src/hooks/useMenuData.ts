@@ -4,7 +4,6 @@ import { getSession } from 'next-auth/react'
 
 import type { VerticalMenuDataType } from '@/types/menuTypes'
 
-// Define the API menu item type
 interface ApiMenuItem {
   id: string
   title: string
