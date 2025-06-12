@@ -60,7 +60,7 @@ export const useMenuData = () => {
         const userTypeId = (session?.user as any)?.userTypeId
 
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/personal/permissions?userTypeId=${userTypeId}`,
+          `${process.env.API_URL}/v1/personal/permissions?userTypeId=${userTypeId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`
