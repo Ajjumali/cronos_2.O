@@ -65,7 +65,8 @@ export const useMenuData = () => {
         const response = await fetch(`${process.env.API_URL}/v1/personal/permissions?userTypeId=${userTypeId}`, {
           method: 'GET',
           headers: {
-            Authorization: `Bearer ${token}`
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
           }
         })
 
