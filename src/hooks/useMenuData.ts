@@ -70,13 +70,24 @@ export const useMenuData = () => {
           throw new Error('API URL is not configured')
         }
 
-        const response = await fetch(`${apiUrl}/v1/personal/permissions?userTypeId=${userTypeId}`, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
+        // const response = await fetch(`${apiUrl}/v1/personal/permissions?userTypeId=${userTypeId}`, {
+        //   method: 'GET',
+        //   headers: {
+        //     Authorization: `Bearer ${token}`,
+        //     'Content-Type': 'application/json'
+        //   }
+        // })
+
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/v1/personal/permissions?userTypeId=${userTypeId}`,
+          {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
           }
-        })
+        )
 
         if (!response.ok) {
           throw new Error('Failed to fetch menu data')
