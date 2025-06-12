@@ -26,6 +26,9 @@ import InputAdornment from '@mui/material/InputAdornment'
 import IconButton from '@mui/material/IconButton'
 import Menu from '@mui/material/Menu'
 import type { TextFieldProps } from '@mui/material/TextField'
+import TablePagination from '@mui/material/TablePagination'
+import classnames from 'classnames'
+import { rankItem } from '@tanstack/match-sorter-utils'
 import {
   createColumnHelper,
   flexRender,
@@ -39,7 +42,9 @@ import {
   getSortedRowModel
 } from '@tanstack/react-table'
 import type { ColumnDef, FilterFn } from '@tanstack/react-table'
-import { rankItem, type RankingInfo } from '@tanstack/match-sorter-utils'
+import type { RankingInfo } from '@tanstack/match-sorter-utils'
+import TablePaginationComponent from '@/components/TablePaginationComponent'
+import styles from '@core/styles/table.module.css'
 import Accordion from '@mui/material/Accordion'
 import AccordionSummary from '@mui/material/AccordionSummary'
 import AccordionDetails from '@mui/material/AccordionDetails'
@@ -219,7 +224,7 @@ const ACCEPTED_FILE_TYPES = {
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
-const ValidateSample = () => {
+const AuthorizeSample = () => {
   const params = useParams()
   const router = useRouter()
   const sampleId = params?.id as string
@@ -427,18 +432,14 @@ const ValidateSample = () => {
   })
 
   const handleBackToGrid = () => {
-    router.push(getLocalizedUrl('/apps/lims/test-results/list', params?.lang as string))
+    router.push(getLocalizedUrl('/apps/lims/test-authorization/list', params?.lang as string))
   }
 
   useEffect(() => {
     const fetchSampleData = async () => {
       try {
         setLoading(true)
-        // TODO: Replace with actual API call to fetch sample data
-        // const response = await testResultsService.getSampleDetails(sampleId)
-        // setSample(response.result)
-        // setTestRows(response.result.testRows)
-        // setQcAcceptance(response.result.qcAcceptance)
+        
       } catch (error) {
         console.error('Error fetching sample data:', error)
         toast.error('Failed to fetch sample data')
@@ -595,7 +596,14 @@ const ValidateSample = () => {
     try {
       setIsSavingRemarks(true)
       
-    
+      // TODO: Replace with actual API call
+      // await testResultsService.addTestRemarks(sampleId, selectedTestForRemarks.testName, {
+      //   remarks,
+      //   timestamp: new Date().toISOString(),
+      //   action: 'Manual Remark'
+      // })
+
+      // Update local state
       setTestRows(prev => prev.map(row => {
         if (row.testName === selectedTestForRemarks.testName) {
           return {
@@ -640,7 +648,14 @@ const ValidateSample = () => {
 
     try {
       setIsSaving(true)
+      // TODO: Replace with actual API call
+      // await testResultsService.updateTestResults(sampleId, {
+      //   testRows,
+      //   qcAcceptance,
+      //   reason
+      // })
       
+      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000))
       
       toast.success('Test results saved successfully')
@@ -776,6 +791,16 @@ const ValidateSample = () => {
 
     try {
       setIsApproving(true)
+      
+      // TODO: Replace with actual API call
+      // await testResultsService.approveTestResults(sampleId, {
+      //   testNames: selectedTestNames,
+      //   comment: approvalComment,
+      //   signature: signatureData,
+      //   signedBy: 'Current User', // Replace with actual user info
+      //   signedAt: new Date().toISOString()
+      // })
+      
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000))
       
@@ -1353,7 +1378,7 @@ const ValidateSample = () => {
             onClick={() => handleBulkAction('Validate')}
             startIcon={<i className='tabler-check' />}
           >
-            Validate
+            Approve Select Results
           </Button>
           <Button
             variant='outlined'
@@ -1361,7 +1386,7 @@ const ValidateSample = () => {
             onClick={() => handleBulkAction('Non-Validate')}
             startIcon={<i className='tabler-x' />}
           >
-            Non-Validate
+            Unapprove Select Results
           </Button>
           <Button
             variant='outlined'
@@ -1797,47 +1822,54 @@ const ValidateSample = () => {
   maxWidth="xs"
   fullWidth
 >
-  <DialogTitle>Test Result Declaration</DialogTitle>
+  <DialogTitle sx={{ textAlign: 'center' }}>Test Approval Declaration</DialogTitle>
 
   <DialogContent dividers>
-    <FormGroup sx={{ mb: 2 }}>
-      <FormControlLabel
-        control={
-          <Checkbox
-            checked={isAcknowledged}
-            onChange={(e) => setIsAcknowledged(e.target.checked)}
-          />
-        }
-        label="I confirm that the details are accurate and approve the digital authorization of this result."
+    <Box sx={{ mb: 2 }}>
+      <Typography variant="body2">
+        Acknowledgment:
+      </Typography>
+      <FormGroup sx={{ mb: 2 }}>
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={isAcknowledged}
+              onChange={(e) => setIsAcknowledged(e.target.checked)}
+            />
+          }
+          label="I confirm that the details are accurate and approve the digital authorization of this result."
+        />
+      </FormGroup>
+    </Box>
+
+    <Box sx={{ mb: 3 }}>
+      <TextField
+        fullWidth
+        label="User Name"
+        value={username}
+        onChange={(e) => setUsername(e.target.value)}
+        sx={{ mb: 2 }}
       />
-    </FormGroup>
 
-    <TextField
-      fullWidth
-      label="User Name"
-      value={username}
-      onChange={(e) => setUsername(e.target.value)}
-      sx={{ mb: 2 }}
-    />
-
-    <TextField
-      fullWidth
-      label="Password"
-      type="password"
-      value={password}
-      onChange={(e) => setPassword(e.target.value)}
-      sx={{ mb: 3 }}
-    />
+      <TextField
+        fullWidth
+        label="Password"
+        type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        sx={{ mb: 2 }}
+      />
+    </Box>
 
     <Box display="flex" justifyContent="center" mb={2}>
       <img
-        src="/images/tick-ico-image.png" 
+        src="/images/tick-ico-image.png" // Ensure this path is correct
         alt="Digital Signature"
         height={50}
       />
     </Box>
 
-    <Typography variant="caption" color="text.secondary">
+    <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
       Please provide your credentials to authorize the result. Your signature will be recorded digitally.
     </Typography>
   </DialogContent>
@@ -1847,6 +1879,7 @@ const ValidateSample = () => {
       variant="contained"
       color="error"
       onClick={handleReject}
+      sx={{ marginRight: 2 }}
     >
       Reject
     </Button>
@@ -1859,6 +1892,7 @@ const ValidateSample = () => {
     </Button>
   </DialogActions>
 </Dialog>
+
 
       {/* Remarks Dialog */}
       <Dialog
@@ -2018,4 +2052,4 @@ const ValidateSample = () => {
   )
 }
 
-export default ValidateSample 
+export default AuthorizeSample 

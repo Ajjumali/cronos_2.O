@@ -277,7 +277,7 @@ const TableFilters = ({
   const handleApplyFilters = () => {
     const filteredData = testData?.filter(testResult => {
       if (projectNo && testResult.projectNo !== projectNo.toString()) return false
-      if (testStatus && testResult.status !== testStatus) return false
+      if (testStatus && testResult.StatusID !== Number(testStatus)) return false
       if (test && testResult.testName !== test) return false
       if (panel && testResult.testPanelName !== panel) return false
       if (location && testResult.location !== location) return false
@@ -285,8 +285,8 @@ const TableFilters = ({
       if (lab && testResult.lab !== lab) return false
       if (study && testResult.study !== study) return false
       if (period && testResult.period !== period) return false
-      if (fromDate && new Date(testResult.registrationDateTime) < new Date(fromDate)) return false
-      if (toDate && new Date(testResult.registrationDateTime) > new Date(toDate)) return false
+      if (fromDate && new Date(testResult.registrationDate) < new Date(fromDate)) return false
+      if (toDate && new Date(testResult.registrationDate) > new Date(toDate)) return false
 
       return true
     })

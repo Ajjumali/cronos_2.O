@@ -27,7 +27,7 @@ import { testResultsService } from '@/app/api/apps/lims/Test-results/route'
 // Type Imports
 import type { TestResultType } from '@/types/apps/limsTypes'
 
-const TestDetail = () => {
+const AuthorisaTestDetails = () => {
   const router = useRouter()
   const { id } = useParams()
   const [testData, setTestData] = useState<TestResultType | null>(null)
@@ -249,4 +249,4 @@ const TestDetail = () => {
   )
 }
 
-export default TestDetail 
+export default AuthorisaTestDetails 

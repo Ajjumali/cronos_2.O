@@ -430,11 +430,11 @@ const TestAuthorizationTable = ({ testData }: { testData?: TestAuthorizationType
   const openValidateSample = (row: TestAuthorizationWithActionsType) => {
     setIsNavigating(true)
     try {
-      router.push(getLocalizedUrl(`/apps/lims/test-results/validate-sample/${row.sampleId}`, locale as Locale))
+      router.push(getLocalizedUrl(`/apps/lims/test-authorization/Authorize-Sample/${row.sampleId}`, locale as Locale))
     } catch (error: unknown) {
       console.error('Navigation error:', error)
       setIsNavigating(false)
-      toast.error('Failed to navigate to validate sample page')
+      toast.error('Failed to navigate to authorize sample page')
     }
   }
 

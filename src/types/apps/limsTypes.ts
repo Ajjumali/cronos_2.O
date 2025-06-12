@@ -212,6 +212,7 @@ export interface MethodType {
 }
 
 export interface TestAuthorizationType {
+  StatusID: number
   id: number
   registrationDateTime: string
   sampleId: number

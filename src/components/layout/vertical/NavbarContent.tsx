@@ -13,6 +13,7 @@ import ModeDropdown from '@components/layout/shared/ModeDropdown'
 import ShortcutsDropdown from '@components/layout/shared/ShortcutsDropdown'
 import NotificationsDropdown from '@components/layout/shared/NotificationsDropdown'
 import UserDropdown from '@components/layout/shared/UserDropdown'
+import ProjectPanel from './ProjectPanel'
 
 // Util Imports
 import { verticalLayoutClasses } from '@layouts/utils/layoutClasses'
@@ -113,6 +114,7 @@ const NavbarContent = () => {
         <NavSearch />
       </div>
       <div className='flex items-center'>
+        <ProjectPanel />
         <LanguageDropdown />
         <ModeDropdown />
         <ShortcutsDropdown shortcuts={shortcuts} />
