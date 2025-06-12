@@ -60,9 +60,17 @@ export const useMenuData = () => {
         const token = (session?.user as any).accessToken
         const userTypeId = (session?.user as any)?.userTypeId
 
-        console.log('check', `${process.env.NEXT_PUBLIC_API_URL}/v1/personal/permissions?userTypeId=${userTypeId}`)
+        if (!userTypeId) {
+          throw new Error('User type ID is not available')
+        }
 
-        const response = await fetch(`${process.env.API_URL}/v1/personal/permissions?userTypeId=${userTypeId}`, {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL
+
+        if (!apiUrl) {
+          throw new Error('API URL is not configured')
+        }
+
+        const response = await fetch(`${apiUrl}/v1/personal/permissions?userTypeId=${userTypeId}`, {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`,
