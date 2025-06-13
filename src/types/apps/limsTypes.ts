@@ -61,7 +61,7 @@ export type AnalyteCodeType = {
   testName: string
   analyteName: string
   analyteCode: string
-  remark?: string 
+  remark?: string
   isActive: boolean
   createdBy?: string
   createdOn?: string
@@ -93,7 +93,6 @@ export type SampleType = {
   updatedBy?: string
   updatedOn?: string
 }
-
 
 export interface TestResultType {
   id: number

@@ -8,7 +8,6 @@ import Box from '@mui/material/Box'
 
 // Component Imports
 import StrainListTable from '@/views/apps/lims/strain-master/StrainListTable'
-import { strainService } from '@/app/api/apps/lims/Strain-master/route'
 import { StrainType } from '@/types/apps/limsTypes'
 
 const LimsStrainsList = () => {
@@ -18,8 +17,12 @@ const LimsStrainsList = () => {
   const fetchStrains = async () => {
     try {
       setLoading(true)
-      const data = await strainService.getStrains()
-      setStrains(data)
+      const response = await fetch('/api/apps/lims/Strain-master')
+      if (!response.ok) {
+        throw new Error('Failed to fetch strains')
+      }
+      const data = await response.json()
+      setStrains(data.result)
     } catch (error) {
       console.error('Error fetching strains:', error)
     } finally {
@@ -42,13 +45,10 @@ const LimsStrainsList = () => {
   return (
     <Grid container spacing={6}>
       <Grid size={{ xs: 12 }}>
-        <StrainListTable 
-          strainData={strains} 
-          onDataChange={fetchStrains}
-        />
+        <StrainListTable strainData={strains} onDataChange={fetchStrains} />
       </Grid>
     </Grid>
   )
 }
 
-export default LimsStrainsList 
+export default LimsStrainsList

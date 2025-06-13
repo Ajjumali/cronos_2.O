@@ -20,7 +20,7 @@ import MenuItem from '@mui/material/MenuItem'
 import TablePagination from '@mui/material/TablePagination'
 import Typography from '@mui/material/Typography'
 import type { TextFieldProps } from '@mui/material/TextField'
-import { formatDate  } from '@/utils/dateUtils'
+import { formatDate } from '@/utils/dateUtils'
 import Box from '@mui/material/Box'
 
 // Third-party Imports
@@ -56,7 +56,6 @@ import ConfirmDialog from '@/components/dialogs/ConfirmDialog/ConfirmDialog'
 import ReasonModal from '@/components/dialogs/ReasonModal/ReasonModal'
 
 // Service Imports
-import { analyteCodeService } from '@/app/api/apps/lims/Analytecode-master/route'
 import { toast } from 'react-toastify'
 
 // Style Imports
@@ -193,7 +192,6 @@ const AnalyteCodeListTable = ({ analyteCodeData = [], onDataChange }: Props) => 
   const handleDeleteRecord = async () => {
     if (deleteId !== null) {
       try {
-        // Close the confirmation dialog and open the reason modal
         setIsDeleteDialogOpen(false)
         setPendingAction({ type: 'delete', data: data.find(item => item.analyteId === deleteId) })
         setIsReasonModalOpen(true)
@@ -220,20 +218,32 @@ const AnalyteCodeListTable = ({ analyteCodeData = [], onDataChange }: Props) => 
 
     try {
       if (pendingAction.type === 'delete' && pendingAction.data) {
-        // Delete the analyte code with the provided reason
-        await analyteCodeService.deleteAnalyteCode(pendingAction.data.analyteId, reason)
-        
-        // Refresh the data after successful deletion
-        const updatedData = data?.filter(analyteCode => analyteCode.analyteId !== pendingAction.data?.analyteId)
-        setData(updatedData)
-        setFilteredData(updatedData)
-        
-        //toast.success('Record deleted successfully')
-        onDataChange?.()
+        const response = await fetch(`/api/apps/lims/Analytecode-master?id=${pendingAction.data.analyteId}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ reason })
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to delete record')
+        }
+
+        const result = await response.json()
+        if (result.success) {
+          const updatedData = data?.filter(analyteCode => analyteCode.analyteId !== pendingAction.data?.analyteId)
+          setData(updatedData)
+          setFilteredData(updatedData)
+          toast.success(result.message)
+          onDataChange?.()
+        } else {
+          throw new Error(result.message)
+        }
       }
     } catch (error) {
       console.error('Error performing action:', error)
-      toast.error('Failed to perform action')
+      toast.error(error instanceof Error ? error.message : 'Failed to perform action')
     } finally {
       setIsReasonModalOpen(false)
       setPendingAction(null)
@@ -258,7 +268,7 @@ const AnalyteCodeListTable = ({ analyteCodeData = [], onDataChange }: Props) => 
 
   const columns = useMemo<ColumnDef<AnalyteCodeWithActionsType, any>[]>(
     () => [
-        columnHelper.accessor('actions', {
+      columnHelper.accessor('actions', {
         header: 'Actions',
         cell: ({ row }) => (
           <div className='flex items-center gap-4'>
@@ -315,8 +325,7 @@ const AnalyteCodeListTable = ({ analyteCodeData = [], onDataChange }: Props) => 
       columnHelper.accessor('updatedOn', {
         header: 'Performed On',
         cell: ({ row }) => <Typography>{row.original.updatedOn ? formatDate(row.original.updatedOn) : '-'}</Typography>
-      }),
-      
+      })
     ],
     []
   )
@@ -326,7 +335,7 @@ const AnalyteCodeListTable = ({ analyteCodeData = [], onDataChange }: Props) => 
     columns,
     filterFns: { fuzzy: fuzzyFilter },
     state: { rowSelection, globalFilter },
-    initialState: { 
+    initialState: {
       pagination: { pageSize: 10 },
       sorting: [{ id: 'updatedOn', desc: true }]
     },
@@ -347,7 +356,20 @@ const AnalyteCodeListTable = ({ analyteCodeData = [], onDataChange }: Props) => 
   const handleExport = async () => {
     setIsExporting(true)
     try {
-      await analyteCodeService.downloadFile('CSV')
+      const response = await fetch('/api/apps/lims/Analytecode-master/download?fileType=download&type=CSV')
+      if (!response.ok) {
+        throw new Error('Failed to download CSV file')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'AnalyteCode_List.csv'
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
       toast.success('CSV file downloaded successfully')
     } catch (error) {
       console.error('Export failed:', error)
@@ -361,41 +383,20 @@ const AnalyteCodeListTable = ({ analyteCodeData = [], onDataChange }: Props) => 
   const handlePdfExport = async () => {
     setIsPdfLoading(true)
     try {
-      const doc = new jsPDF()
-      
-      // Add title
-      doc.setFontSize(16)
-      doc.text('Analyte Codes Master', 14, 15)
-      
-      // Add date
-      doc.setFontSize(10)
-      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22)
+      const response = await fetch('/api/apps/lims/Analytecode-master/download?fileType=download&type=PDF')
+      if (!response.ok) {
+        throw new Error('Failed to download PDF file')
+      }
 
-      // Prepare table data
-      const tableData = table.getFilteredRowModel().rows.map(row => [
-        row.original.analyteName || '-',
-        row.original.analyteCode || '-',
-        row.original.instrumentName || '-',
-        row.original.sampletype || '-',
-        row.original.testName || '-',
-        row.original.isActive ? 'Active' : 'Inactive',
-        row.original.updatedBy || '-',
-        row.original.updatedOn ? formatDate(row.original.updatedOn) : '-'
-      ])
-
-      // Add table
-      autoTable(doc, {
-        head: [['Analyte Name', 'Analyte Code', 'Instrument', 'Sample Type', 'Test', 'Status', 'Performed By', 'Performed On']],
-        body: tableData,
-        startY: 30,
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [41, 128, 185] },
-        alternateRowStyles: { fillColor: [245, 245, 245] },
-        margin: { top: 30 }
-      })
-
-      // Save the PDF
-      doc.save(`analyte-codes-${new Date().toISOString().split('T')[0]}.pdf`)
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'AnalyteCode_List.pdf'
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
       toast.success('PDF file downloaded successfully')
     } catch (error) {
       console.error('PDF export failed:', error)
@@ -417,18 +418,14 @@ const AnalyteCodeListTable = ({ analyteCodeData = [], onDataChange }: Props) => 
 
   return (
     <Card>
-      <CardHeader 
+      <CardHeader
         title='Analyte Codes Master'
         action={
           <Box sx={{ display: 'flex', gap: 2 }}>
             <Button
               variant='outlined'
               startIcon={
-                isExporting ? (
-                  <i className='tabler-loader animate-spin' />
-                ) : (
-                  <i className='tabler-file-spreadsheet' />
-                )
+                isExporting ? <i className='tabler-loader animate-spin' /> : <i className='tabler-file-spreadsheet' />
               }
               onClick={handleExport}
               disabled={isExporting}
@@ -438,11 +435,7 @@ const AnalyteCodeListTable = ({ analyteCodeData = [], onDataChange }: Props) => 
             <Button
               variant='outlined'
               startIcon={
-                isPdfLoading ? (
-                  <i className='tabler-loader animate-spin' />
-                ) : (
-                  <i className='tabler-file-text' />
-                )
+                isPdfLoading ? <i className='tabler-loader animate-spin' /> : <i className='tabler-file-text' />
               }
               onClick={handlePdfExport}
               disabled={isPdfLoading}
@@ -533,7 +526,7 @@ const AnalyteCodeListTable = ({ analyteCodeData = [], onDataChange }: Props) => 
           table.setPageIndex(page)
         }}
       />
-      
+
       <AddAnalyteCodeDrawer
         open={analyteCodeDrawerOpen}
         handleClose={handleCloseDrawer}
@@ -541,13 +534,13 @@ const AnalyteCodeListTable = ({ analyteCodeData = [], onDataChange }: Props) => 
         analyteCodeData={data}
         selectedAnalyteCode={selectedAnalyteCode}
       />
-      
+
       <ConfirmDialog
         open={isDeleteDialogOpen}
         handleClose={handleCloseDelete}
-        title="Delete"
+        title='Delete'
         handleConfirm={handleDeleteRecord}
-        description="Are you sure want to delete record?"
+        description='Are you sure want to delete record?'
       />
 
       <ReasonModal
@@ -555,15 +548,14 @@ const AnalyteCodeListTable = ({ analyteCodeData = [], onDataChange }: Props) => 
         handleClose={handleCloseReasonModal}
         handleConfirm={handleReasonConfirm}
         title={pendingAction?.type === 'update' ? 'Update Reason' : 'Delete Reason'}
-        description={pendingAction?.type === 'update' 
-          ? 'Please provide a reason for updating this analyte code.'
-          : 'Please provide a reason for deleting this analyte code.'}
+        description={
+          pendingAction?.type === 'update'
+            ? 'Please provide a reason for updating this analyte code.'
+            : 'Please provide a reason for deleting this analyte code.'
+        }
       />
     </Card>
   )
 }
 
 export default AnalyteCodeListTable
-
-
-

@@ -20,9 +20,6 @@ import { toast } from 'react-toastify'
 import type { InstrumentType } from '@/types/apps/limsTypes'
 import type { Category } from '@/types/apps/limsTypes'
 
-// Service Imports
-import { instrumentService } from '@/app/api/apps/lims/Instrument-master/route'
-
 // Component Imports
 import CustomTextField from '@core/components/mui/TextField'
 import CustomAutocomplete from '@/@core/components/mui/Autocomplete'
@@ -125,8 +122,12 @@ const AddInstrumentDrawer = (props: Props) => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const categories = await instrumentService.getCategories()
-        setCategoryList(categories)
+        const response = await fetch('/api/apps/lims/Instrument-master/categories')
+        if (!response.ok) {
+          throw new Error('Failed to fetch categories')
+        }
+        const data = await response.json()
+        setCategoryList(data.result)
       } catch (error) {
         console.error('Error fetching categories:', error)
         setError('Failed to load categories. Please try again later.')
@@ -173,10 +174,32 @@ const AddInstrumentDrawer = (props: Props) => {
       }
 
       if (selectedInstrument) {
-        await instrumentService.updateInstrument(selectedInstrument.instrumentId, { ...instrumentPayload, reason })
+        const response = await fetch(`/api/apps/lims/Instrument-master/${selectedInstrument.instrumentId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ ...instrumentPayload, reason })
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to update instrument')
+        }
+
         toast.success('Record Updated successfully')
       } else {
-        await instrumentService.addInstrument(instrumentPayload)
+        const response = await fetch('/api/apps/lims/Instrument-master', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(instrumentPayload)
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to add instrument')
+        }
+
         toast.success('Record created successfully!')
       }
       onDataChange?.(instrumentPayload)
@@ -213,11 +236,11 @@ const AddInstrumentDrawer = (props: Props) => {
       variant='temporary'
       onClose={handleReset}
       ModalProps={{ keepMounted: true }}
-      sx={{ 
-        '& .MuiDrawer-paper': { 
+      sx={{
+        '& .MuiDrawer-paper': {
           width: { xs: '100%', sm: 500 },
           maxWidth: '100vw'
-        } 
+        }
       }}
     >
       <div className='flex items-center justify-between plb-5 pli-6 border-be'>
@@ -240,10 +263,10 @@ const AddInstrumentDrawer = (props: Props) => {
               <Typography color='text.primary' className='font-medium'>
                 Basic Information
               </Typography>
-              
+
               <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
                 <Controller
-                  name='instrumentName' 
+                  name='instrumentName'
                   control={control}
                   rules={{ required: 'Instrument name is required' }}
                   render={({ field }) => (
@@ -251,7 +274,7 @@ const AddInstrumentDrawer = (props: Props) => {
                       {...field}
                       fullWidth
                       label='Instrument Name'
-                      size='small' 
+                      size='small'
                       placeholder='e.g., HPLC System'
                       error={!!errors.instrumentName}
                       helperText={errors.instrumentName?.message}
@@ -277,7 +300,7 @@ const AddInstrumentDrawer = (props: Props) => {
                         <TextField
                           {...params}
                           label='Category'
-                          size='small' 
+                          size='small'
                           placeholder='Select Category'
                           error={!!errors.categoryId}
                           helperText={errors.categoryId?.message}
@@ -300,7 +323,7 @@ const AddInstrumentDrawer = (props: Props) => {
                       {...field}
                       fullWidth
                       label='Serial Number'
-                      size='small' 
+                      size='small'
                       placeholder='e.g., SN123456'
                       error={!!errors.instrumentSerialNumber}
                       helperText={errors.instrumentSerialNumber?.message}
@@ -318,7 +341,7 @@ const AddInstrumentDrawer = (props: Props) => {
                       {...field}
                       fullWidth
                       label='Name to be Printed'
-                      size='small' 
+                      size='small'
                       placeholder='e.g., HPLC-001'
                       error={!!errors.nameToBePrinted}
                       helperText={errors.nameToBePrinted?.message}
@@ -329,7 +352,6 @@ const AddInstrumentDrawer = (props: Props) => {
               </div>
 
               <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-
                 <Controller
                   name='ipAddress'
                   control={control}
@@ -339,7 +361,7 @@ const AddInstrumentDrawer = (props: Props) => {
                       {...field}
                       fullWidth
                       label='IP Address'
-                      size='small' 
+                      size='small'
                       placeholder='e.g., 192.168.1.1'
                       error={!!errors.ipAddress}
                       helperText={errors.ipAddress?.message}
@@ -357,7 +379,7 @@ const AddInstrumentDrawer = (props: Props) => {
                       {...field}
                       fullWidth
                       label='Port'
-                      size='small' 
+                      size='small'
                       placeholder='e.g., 8080'
                       error={!!errors.port}
                       helperText={errors.port?.message}
@@ -378,22 +400,16 @@ const AddInstrumentDrawer = (props: Props) => {
                       multiline
                       rows={3}
                       label='Remarks'
-                      size='small' 
+                      size='small'
                       placeholder='Additional notes about the instrument'
                     />
                   )}
                 />
-                
               </div>
             </div>
 
             <div className='flex items-center justify-between pt-6 border-t mb-6'>
-              <Button
-                variant='tonal'
-                color='error'
-                onClick={handleReset}
-                disabled={isSubmitting}
-              >
+              <Button variant='tonal' color='error' onClick={handleReset} disabled={isSubmitting}>
                 Cancel
               </Button>
               <Button

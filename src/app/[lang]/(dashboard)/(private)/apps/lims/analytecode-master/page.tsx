@@ -8,8 +8,8 @@ import Box from '@mui/material/Box'
 
 // Component Imports
 import AnalyteCodeListTable from '@/views/apps/lims/analytecode-master/AnalytecodeListTable'
-import { analyteCodeService } from '@/app/api/apps/lims/Analytecode-master/route'
 import { AnalyteCodeType } from '@/types/apps/limsTypes'
+import { toast } from 'react-toastify'
 
 const LimsAnalyteCodesList = () => {
   const [analyteCodes, setAnalyteCodes] = useState<AnalyteCodeType[]>([])
@@ -18,10 +18,15 @@ const LimsAnalyteCodesList = () => {
   const fetchAnalyteCodes = async () => {
     try {
       setLoading(true)
-      const data = await analyteCodeService.getAllAnalyteCodes()
+      const response = await fetch('/api/apps/lims/Analytecode-master')
+      if (!response.ok) {
+        throw new Error('Failed to fetch analyte codes')
+      }
+      const data = await response.json()
       setAnalyteCodes(data)
     } catch (error) {
       console.error('Error fetching analyte codes:', error)
+      toast.error('Failed to fetch analyte codes')
     } finally {
       setLoading(false)
     }
@@ -42,10 +47,7 @@ const LimsAnalyteCodesList = () => {
   return (
     <Grid container spacing={6}>
       <Grid size={{ xs: 12 }}>
-        <AnalyteCodeListTable 
-          analyteCodeData={analyteCodes} 
-          onDataChange={fetchAnalyteCodes}
-        />
+        <AnalyteCodeListTable analyteCodeData={analyteCodes} onDataChange={fetchAnalyteCodes} />
       </Grid>
     </Grid>
   )

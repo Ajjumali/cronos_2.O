@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react'
 
 // MUI Imports
@@ -21,9 +20,6 @@ import type { AnalyteCodeType } from '@/types/apps/limsTypes'
 import type { InstrumentType } from '@/types/apps/limsTypes'
 import type { SampleType } from '@/types/apps/limsTypes'
 import type { TestType } from '@/types/apps/limsTypes'
-
-// Service Imports
-import { analyteCodeService } from '@/app/api/apps/lims/Analytecode-master/route'
 
 // Component Imports
 import CustomTextField from '@core/components/mui/TextField'
@@ -112,11 +108,22 @@ const AddAnalyteCodeDrawer = (props: Props) => {
   useEffect(() => {
     const fetchLists = async () => {
       try {
-        const [instruments, sampleTypes, tests] = await Promise.all([
-          analyteCodeService.getInstruments(),
-          analyteCodeService.getSampleTypes(),
-          analyteCodeService.getTests()
+        const [instrumentsResponse, sampleTypesResponse, testsResponse] = await Promise.all([
+          fetch('/api/apps/lims/Analytecode-master?endpoint=instruments'),
+          fetch('/api/apps/lims/Analytecode-master?endpoint=sampletypes'),
+          fetch('/api/apps/lims/Analytecode-master?endpoint=tests')
         ])
+
+        if (!instrumentsResponse.ok || !sampleTypesResponse.ok || !testsResponse.ok) {
+          throw new Error('Failed to fetch data')
+        }
+
+        const [instruments, sampleTypes, tests] = await Promise.all([
+          instrumentsResponse.json(),
+          sampleTypesResponse.json(),
+          testsResponse.json()
+        ])
+
         setInstrumentList(instruments)
         setSampleTypeList(sampleTypes)
         setTestList(tests)
@@ -156,7 +163,7 @@ const AddAnalyteCodeDrawer = (props: Props) => {
         testId: formData.testId || 0,
         instrumentName: instrumentList.find(i => i.instrumentId === formData.instrumentId)?.instrumentName || '',
         sampletype: sampleTypeList.find(s => s.sampleId === formData.sampleTypeId)?.sampleType || '',
-        testName: testList.find(t => t.id === formData.testId)?.testName || '',
+        testName: testList.find(t => t.id === formData.testId)?.name || '',
         remark: formData.remark,
         isActive: formData.isActive,
         createdBy: selectedAnalyteCode?.createdBy || 'System',
@@ -169,16 +176,55 @@ const AddAnalyteCodeDrawer = (props: Props) => {
         if (!updateReason) {
           throw new Error('Update reason is required')
         }
-        await analyteCodeService.updateAnalyteCode(selectedAnalyteCode.analyteId, analyteCodePayload, updateReason)
-        //toast.success('Record updated successfully!')
+
+        const response = await fetch(`/api/apps/lims/Analytecode-master`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            id: selectedAnalyteCode.analyteId,
+            analyteCode: analyteCodePayload,
+            reason: updateReason
+          })
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.message || 'Failed to update record')
+        }
+
+        const result = await response.json()
+        if (result.success) {
+          toast.success('Record updated successfully!')
+        } else {
+          throw new Error(result.message)
+        }
       } else {
-        await analyteCodeService.addAnalyteCode(analyteCodePayload)
-        //toast.success('Record added successfully!')
+        const response = await fetch('/api/apps/lims/Analytecode-master', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(analyteCodePayload)
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.message || 'Failed to add record')
+        }
+
+        const result = await response.json()
+        if (result.success) {
+          toast.success('Record added successfully!')
+        } else {
+          throw new Error(result.message)
+        }
       }
       onDataChange?.()
       handleClose()
     } catch (error) {
-      setError('Failed to save analyte code. Please try again.')
+      setError(error instanceof Error ? error.message : 'Failed to save analyte code. Please try again.')
     } finally {
       setIsSubmitting(false)
     }
@@ -205,7 +251,9 @@ const AddAnalyteCodeDrawer = (props: Props) => {
     setIsSubmitting(false)
   }
 
-  function handleChange(arg0: string): import("react").ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement> | undefined {
+  function handleChange(
+    arg0: string
+  ): import('react').ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement> | undefined {
     throw new Error('Function not implemented.')
   }
 
@@ -217,11 +265,11 @@ const AddAnalyteCodeDrawer = (props: Props) => {
         variant='temporary'
         onClose={handleReset}
         ModalProps={{ keepMounted: true }}
-        sx={{ 
-          '& .MuiDrawer-paper': { 
+        sx={{
+          '& .MuiDrawer-paper': {
             width: { xs: '100%', sm: 400 },
             maxWidth: '100vw'
-          } 
+          }
         }}
       >
         <div className='flex items-center justify-between plb-5 pli-6 border-be'>
@@ -244,7 +292,7 @@ const AddAnalyteCodeDrawer = (props: Props) => {
                 <Typography color='text.primary' className='font-medium'>
                   Basic Information
                 </Typography>
-                
+
                 <div className='grid grid-col-1 sm:grid-cols-2 gap-4'>
                   <Controller
                     name='analyteName'
@@ -254,35 +302,33 @@ const AddAnalyteCodeDrawer = (props: Props) => {
                       <TextField
                         {...field}
                         fullWidth
-                        size='small' 
+                        size='small'
                         label='Analyte Name'
                         placeholder='Enter analyte name'
                         error={!!errors.analyteName}
                         helperText={errors.analyteName?.message}
                         required
                       />
-                      
                     )}
                   />
 
-                  
                   <Controller
-  name='analyteCode'
-  control={control}
-  rules={{ required: 'Analyte code is required' }}
-  render={({ field }) => (
-    <TextField
-      {...field}
-      fullWidth
-      size='small' // Makes the TextField smaller row-wise
-      label='Analyte Code'
-      placeholder='e.g., GLU'
-      error={!!errors.analyteCode}
-      helperText={errors.analyteCode?.message}
-      required
-    />
-  )}
-/>
+                    name='analyteCode'
+                    control={control}
+                    rules={{ required: 'Analyte code is required' }}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        size='small' // Makes the TextField smaller row-wise
+                        label='Analyte Code'
+                        placeholder='e.g., GLU'
+                        error={!!errors.analyteCode}
+                        helperText={errors.analyteCode?.message}
+                        required
+                      />
+                    )}
+                  />
                 </div>
 
                 <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
@@ -303,7 +349,7 @@ const AddAnalyteCodeDrawer = (props: Props) => {
                           <TextField
                             {...params}
                             label='Instrument'
-                            size='small' 
+                            size='small'
                             placeholder='Select Instrument'
                             error={!!errors.instrumentId}
                             helperText={errors.instrumentId?.message}
@@ -332,7 +378,7 @@ const AddAnalyteCodeDrawer = (props: Props) => {
                           <TextField
                             {...params}
                             label='Sample Type'
-                            size='small' 
+                            size='small'
                             placeholder='Select Sample Type'
                             error={!!errors.sampleTypeId}
                             helperText={errors.sampleTypeId?.message}
@@ -353,7 +399,7 @@ const AddAnalyteCodeDrawer = (props: Props) => {
                     render={({ field }) => (
                       <CustomAutocomplete
                         options={testList}
-                        getOptionLabel={option => option?.testName || ''}
+                        getOptionLabel={option => option?.name || ''}
                         isOptionEqualToValue={(option, value) => option?.id === value?.id}
                         value={testList.find(test => test.id === field.value) || null}
                         onChange={(_, newValue) => {
@@ -363,7 +409,7 @@ const AddAnalyteCodeDrawer = (props: Props) => {
                           <TextField
                             {...params}
                             label='Test'
-                            size='small' 
+                            size='small'
                             placeholder='Select Test'
                             error={!!errors.testId}
                             helperText={errors.testId?.message}
@@ -387,7 +433,7 @@ const AddAnalyteCodeDrawer = (props: Props) => {
                         multiline
                         rows={3}
                         label='Remarks'
-                        size='small' 
+                        size='small'
                         placeholder='Additional notes about the analyte code'
                       />
                     )}
@@ -396,12 +442,7 @@ const AddAnalyteCodeDrawer = (props: Props) => {
               </div>
 
               <div className='flex items-center justify-between pt-6 border-t mb-6'>
-                <Button
-                  variant='tonal'
-                  color='error'
-                  onClick={handleReset}
-                  disabled={isSubmitting}
-                >
+                <Button variant='tonal' color='error' onClick={handleReset} disabled={isSubmitting}>
                   Cancel
                 </Button>
                 <Button
@@ -422,8 +463,8 @@ const AddAnalyteCodeDrawer = (props: Props) => {
         open={isUpdateReasonDialogOpen}
         handleClose={handleUpdateReasonClose}
         handleConfirm={handleUpdateReasonConfirm}
-        title="Update Reason Required"
-        description="Please provide a reason for updating this analyte code. This will be recorded in the audit trail."
+        title='Update Reason Required'
+        description='Please provide a reason for updating this analyte code. This will be recorded in the audit trail.'
       />
     </>
   )

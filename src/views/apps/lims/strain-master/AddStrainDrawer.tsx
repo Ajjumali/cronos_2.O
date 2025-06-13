@@ -17,9 +17,6 @@ import { toast } from 'react-toastify'
 // Type Imports
 import type { StrainType } from '@/types/apps/limsTypes'
 
-// Service Imports
-import { strainService } from '@/app/api/apps/lims/Strain-master/route'
-
 // Component Imports
 import CustomTextField from '@core/components/mui/TextField'
 import ReasonInputDialog from '@/components/dialogs/ReasonInputDialog/ReasonInputDialog'
@@ -111,16 +108,39 @@ const AddStrainDrawer = (props: Props) => {
       }
 
       if (selectedStrain) {
-        await strainService.updateStrain(selectedStrain.strainId, { ...strainPayload, reason })
+        const response = await fetch(`/api/apps/lims/Strain-master/${selectedStrain.strainId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ ...strainPayload, reason })
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to update strain')
+        }
+
         toast.success('Record Updated successfully')
       } else {
-        await strainService.addStrain(strainPayload)
+        const response = await fetch('/api/apps/lims/Strain-master', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(strainPayload)
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to add strain')
+        }
+
         toast.success('Record created successfully')
       }
       onDataChange?.()
       handleClose()
     } catch (error) {
       setError('Failed to save strain. Please try again.')
+      toast.error('Failed to save strain. Please try again.')
     } finally {
       setIsSubmitting(false)
     }
@@ -144,77 +164,75 @@ const AddStrainDrawer = (props: Props) => {
     setPendingFormData(null)
   }
 
-  function handleChange(arg0: string) {
-    throw new Error('Function not implemented.')
-  }
+  return (
+    <Drawer
+      open={open}
+      anchor='right'
+      onClose={handleClose}
+      PaperProps={{
+        sx: { width: { xs: '100%', sm: 400 } }
+      }}
+    >
+      <Box className='p-6'>
+        <div className='flex items-center justify-between mb-6'>
+          <Typography variant='h5'>{selectedStrain ? 'Edit Strain' : 'Add New Strain'}</Typography>
+          <IconButton onClick={handleClose}>
+            <i className='tabler-x' />
+          </IconButton>
+        </div>
 
-   return (
-      <Drawer
-        open={open}
-        anchor='right'
-        onClose={handleClose}
-        PaperProps={{
-          sx: { width: { xs: '100%', sm: 400 } }
-        }}
-      >
-        <Box className='p-6'>
-          <div className='flex items-center justify-between mb-6'>
-            <Typography variant='h5'>{selectedStrain ? 'Edit Strain' : 'Add New Strain'}</Typography>
-            <IconButton onClick={handleClose}>
-              <i className='tabler-x' />
-            </IconButton>
+        <form onSubmit={handleSubmit(onSubmit)} className='space-y-6'>
+          <Controller
+            name='strainName'
+            control={control}
+            rules={{ required: 'Strain name is required' }}
+            render={({ field }) => (
+              <CustomTextField
+                {...field}
+                fullWidth
+                label='Strain Name'
+                error={Boolean(errors.strainName)}
+                helperText={errors.strainName?.message}
+              />
+            )}
+          />
+
+          <Controller
+            name='remarks'
+            control={control}
+            render={({ field }) => <CustomTextField {...field} fullWidth label='Remarks' multiline rows={4} />}
+          />
+
+          <div className='flex items-center justify-between'>
+            <Typography>Status</Typography>
+            <Switch checked={isActive} onChange={e => setIsActive(e.target.checked)} color='success' />
           </div>
-  
-          <form onSubmit={handleSubmit(onSubmit)} className='space-y-6'>
-            <TextField
-              fullWidth
-              label='Strain Name'
-              value={control._defaultValues.strainName}
-              onChange={(e) => reset({ ...control._defaultValues, strainName: e.target.value })}
-              required
-            />
-  
-            <TextField
-              fullWidth
-              label='Remarks'
-              value={control._defaultValues.remarks}
-              onChange={(e) => reset({ ...control._defaultValues, remarks: e.target.value })}
-              multiline
-              rows={4}
-            />
-  
-            
+
           <div className='flex items-center justify-between pt-6 border-t mb-6'>
-              <Button
-                variant='tonal'
-                color='error'
-                onClick={handleReset}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-              <Button
-                type='submit'
-                variant='contained'
-                disabled={isSubmitting}
-                startIcon={isSubmitting ? <i className='tabler-loader animate-spin' /> : null}
-              >
-                {isSubmitting ? 'Saving...' : selectedStrain ? 'Update' : 'Add'}
-              </Button>
-            </div>
-            
-          </form>
-        </Box>
-  
-        <ReasonInputDialog
-          open={isReasonDialogOpen}
-          handleClose={() => setIsReasonDialogOpen(false)}
-          handleConfirm={handleReasonSubmit}
-          title='Provide Reason for Update'
-          description='Please provide a reason for updating this species.'
-        />
-      </Drawer>
-    )
+            <Button variant='tonal' color='error' onClick={handleReset} disabled={isSubmitting}>
+              Cancel
+            </Button>
+            <Button
+              type='submit'
+              variant='contained'
+              disabled={isSubmitting}
+              startIcon={isSubmitting ? <i className='tabler-loader animate-spin' /> : null}
+            >
+              {isSubmitting ? 'Saving...' : selectedStrain ? 'Update' : 'Add'}
+            </Button>
+          </div>
+        </form>
+      </Box>
+
+      <ReasonInputDialog
+        open={isReasonDialogOpen}
+        handleClose={() => setIsReasonDialogOpen(false)}
+        handleConfirm={handleReasonSubmit}
+        title='Provide Reason for Update'
+        description='Please provide a reason for updating this strain.'
+      />
+    </Drawer>
+  )
 }
 
-export default AddStrainDrawer 
+export default AddStrainDrawer

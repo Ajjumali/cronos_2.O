@@ -43,11 +43,9 @@ import ReasonInputDialog from '@/components/dialogs/ReasonInputDialog/ReasonInpu
 import tableStyles from '@core/styles/table.module.css'
 import TablePaginationComponent from '@/components/TablePaginationComponent'
 import { StrainType } from '@/types/apps/limsTypes'
-import { strainService } from '@/app/api/apps/lims/Strain-master/route'
 import { toast } from 'react-toastify'
 import { Divider } from '@mui/material'
 import { formatDate } from '@/utils/dateUtils'
-
 
 declare module '@tanstack/table-core' {
   interface FilterFns {
@@ -133,18 +131,26 @@ const StrainListTable = ({ strainData = [], onDataChange }: Props) => {
   // Update data when strainData prop changes
   useEffect(() => {
     const sortedData = [...strainData].sort((a, b) => {
-      const dateA = a.updatedOn ? new Date(a.updatedOn).getTime() : 0;
-      const dateB = b.updatedOn ? new Date(b.updatedOn).getTime() : 0;
-      return dateB - dateA;
-    });
-    setData(sortedData);
-    setFilteredData(sortedData);
-  }, [strainData]);
+      const dateA = a.updatedOn ? new Date(a.updatedOn).getTime() : 0
+      const dateB = b.updatedOn ? new Date(b.updatedOn).getTime() : 0
+      return dateB - dateA
+    })
+    setData(sortedData)
+    setFilteredData(sortedData)
+  }, [strainData])
 
   const handleDeleteRecord = async (reason: string) => {
     if (deleteId !== null) {
       try {
-        await strainService.deleteStrain(deleteId, reason)
+        const response = await fetch(`/api/apps/lims/Strain-master/${deleteId}?reason=${encodeURIComponent(reason)}`, {
+          method: 'DELETE'
+        })
+
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.message || 'Failed to delete strain')
+        }
+
         const updatedData = data?.filter(strain => strain.strainId !== deleteId)
         setData(updatedData)
         setFilteredData(updatedData)
@@ -197,7 +203,19 @@ const StrainListTable = ({ strainData = [], onDataChange }: Props) => {
   const handleExport = async () => {
     setIsExporting(true)
     try {
-      await strainService.downloadFile('CSV')
+      const response = await fetch('/api/apps/lims/Strain-master/download?fileType=CSV')
+      if (!response.ok) {
+        throw new Error('Failed to download CSV file')
+      }
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'Strain_List.csv'
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
       toast.success('CSV file downloaded successfully')
     } catch (error) {
       console.error('Export failed:', error)
@@ -211,7 +229,19 @@ const StrainListTable = ({ strainData = [], onDataChange }: Props) => {
   const handlePdfExport = async () => {
     setIsPdfLoading(true)
     try {
-      await strainService.downloadFile('PDF')
+      const response = await fetch('/api/apps/lims/Strain-master/download?fileType=PDF')
+      if (!response.ok) {
+        throw new Error('Failed to download PDF file')
+      }
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'Strain_List.pdf'
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
       toast.success('PDF file downloaded successfully')
     } catch (error) {
       console.error('PDF export failed:', error)
@@ -269,12 +299,8 @@ const StrainListTable = ({ strainData = [], onDataChange }: Props) => {
       }),
       columnHelper.accessor('updatedOn', {
         header: 'Performed On',
-        cell: ({ row }) => (
-          <Typography>
-            {formatDate(row.original.updatedOn)}
-          </Typography>
-        )
-      }),
+        cell: ({ row }) => <Typography>{formatDate(row.original.updatedOn)}</Typography>
+      })
     ],
     []
   )
@@ -300,18 +326,14 @@ const StrainListTable = ({ strainData = [], onDataChange }: Props) => {
 
   return (
     <Card>
-      <CardHeader 
+      <CardHeader
         title='Strain Master'
         action={
           <div className='flex gap-2'>
             <Button
               variant='outlined'
               startIcon={
-                isExporting ? (
-                  <i className='tabler-loader animate-spin' />
-                ) : (
-                  <i className='tabler-file-spreadsheet' />
-                )
+                isExporting ? <i className='tabler-loader animate-spin' /> : <i className='tabler-file-spreadsheet' />
               }
               onClick={handleExport}
               disabled={isExporting}
@@ -321,11 +343,7 @@ const StrainListTable = ({ strainData = [], onDataChange }: Props) => {
             <Button
               variant='outlined'
               startIcon={
-                isPdfLoading ? (
-                  <i className='tabler-loader animate-spin' />
-                ) : (
-                  <i className='tabler-file-text' />
-                )
+                isPdfLoading ? <i className='tabler-loader animate-spin' /> : <i className='tabler-file-text' />
               }
               onClick={handlePdfExport}
               disabled={isPdfLoading}
@@ -419,4 +437,4 @@ const StrainListTable = ({ strainData = [], onDataChange }: Props) => {
   )
 }
 
-export default StrainListTable 
+export default StrainListTable

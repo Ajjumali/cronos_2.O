@@ -8,7 +8,6 @@ import Box from '@mui/material/Box'
 
 // Component Imports
 import InstrumentListTable from '@/views/apps/lims/instrument/list/InstrumentListTable'
-import { instrumentService } from '@/app/api/apps/lims/Instrument-master/route'
 import { InstrumentType } from '@/types/apps/limsTypes'
 
 const LimsInstrumentsList = () => {
@@ -18,8 +17,12 @@ const LimsInstrumentsList = () => {
   const fetchInstruments = async () => {
     try {
       setLoading(true)
-      const data = await instrumentService.getInstruments()
-      setInstruments(data)
+      const response = await fetch('/api/apps/lims/Instrument-master')
+      if (!response.ok) {
+        throw new Error('Failed to fetch instruments')
+      }
+      const data = await response.json()
+      setInstruments(data.result)
     } catch (error) {
       console.error('Error fetching instruments:', error)
     } finally {
@@ -46,10 +49,7 @@ const LimsInstrumentsList = () => {
         ``
       </Grid> */}
       <Grid size={{ xs: 12 }}>
-        <InstrumentListTable 
-          instrumentData={instruments} 
-          onDataChange={fetchInstruments}
-        />
+        <InstrumentListTable instrumentData={instruments} onDataChange={fetchInstruments} />
       </Grid>
     </Grid>
   )
