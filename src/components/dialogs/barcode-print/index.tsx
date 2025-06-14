@@ -21,18 +21,18 @@ import Alert from '@mui/material/Alert'
 import CircularProgress from '@mui/material/CircularProgress'
 import { toast } from 'react-toastify'
 
-type BarcodePrintDialogProps = {
+export interface BarcodePrintDialogProps {
   open: boolean
   setOpen: (open: boolean) => void
   sampleId: number
   barcodeId?: string
-  samples?: Array<{
+  samples?: {
     id: number
     barcodeId: string
     subjectId?: string
     sampleType?: string
     collectedOn?: string
-  }>
+  }[]
   sampleDetails?: {
     subjectId?: string
     sampleType?: string
@@ -42,7 +42,14 @@ type BarcodePrintDialogProps = {
 
 type PrintType = 'pdf' | 'printer'
 
-const BarcodePrintDialog = ({ open, setOpen, sampleId, barcodeId, samples, sampleDetails }: BarcodePrintDialogProps) => {
+const BarcodePrintDialog = ({
+  open,
+  setOpen,
+  sampleId,
+  barcodeId,
+  samples,
+  sampleDetails
+}: BarcodePrintDialogProps) => {
   // States
   const [printType, setPrintType] = useState<PrintType>('pdf')
   const [isLoading, setIsLoading] = useState(false)
@@ -204,13 +211,9 @@ const BarcodePrintDialog = ({ open, setOpen, sampleId, barcodeId, samples, sampl
 
           <FormControl>
             <FormLabel>Print Type</FormLabel>
-            <RadioGroup
-              value={printType}
-              onChange={e => setPrintType(e.target.value as PrintType)}
-              row
-            >
-              <FormControlLabel value="pdf" control={<Radio />} label="Print to PDF" />
-              <FormControlLabel value="printer" control={<Radio />} label="Print to Printer" />
+            <RadioGroup value={printType} onChange={e => setPrintType(e.target.value as PrintType)} row>
+              <FormControlLabel value='pdf' control={<Radio />} label='Print to PDF' />
+              <FormControlLabel value='printer' control={<Radio />} label='Print to Printer' />
             </RadioGroup>
           </FormControl>
 
@@ -286,4 +289,4 @@ const BarcodePrintDialog = ({ open, setOpen, sampleId, barcodeId, samples, sampl
   )
 }
 
-export default BarcodePrintDialog 
+export default BarcodePrintDialog

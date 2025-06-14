@@ -81,8 +81,8 @@ declare module '@tanstack/table-core' {
   }
 }
 
-type StatusKey = 'null' | 1 | 2 | 3 | 4 | 5 | 6;
-type StatusMapType = Record<StatusKey, { label: string; color: 'warning' | 'success' | 'error' | 'info' | 'secondary' }>;
+type StatusKey = 'null' | 1 | 2 | 3 | 4 | 5 | 6
+type StatusMapType = Record<StatusKey, { label: string; color: 'warning' | 'success' | 'error' | 'info' | 'secondary' }>
 
 const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
   const itemRank = rankItem(row.getValue(columnId), value)
@@ -91,7 +91,7 @@ const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
 }
 
 const statusMap: StatusMapType = {
-  'null': { label: 'Pending', color: 'warning' },
+  null: { label: 'Pending', color: 'warning' },
   1: { label: 'Received', color: 'success' },
   2: { label: 'Rejected', color: 'error' },
   3: { label: 'Pending', color: 'warning' },
@@ -119,7 +119,7 @@ const formatDate = (dateString?: string) => {
   }
 }
 
-const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultType[], onDataChange?: () => void }) => {
+const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultType[]; onDataChange?: () => void }) => {
   const router = useRouter()
   const { lang: locale } = useParams()
   const initialData = Array.isArray(testData) ? testData : []
@@ -152,67 +152,6 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
 
   const columns = useMemo<ColumnDef<TestResultType, any>[]>(
     () => [
-      columnHelper.accessor('registrationDate', {
-        header: 'Registration Date',
-        cell: info => formatDate(info.getValue())
-      }),
-      columnHelper.accessor('sampleTypeId', {
-        header: 'Sample ID',
-        cell: info => info.getValue() || '-'
-      }),
-      columnHelper.accessor('subjectId', {
-        header: 'Volunteer ID',
-        cell: info => info.getValue()
-      }),
-      columnHelper.accessor('gender', {
-        header: 'Gender',
-        cell: info => info.getValue()
-      }),
-      columnHelper.accessor('VolunteerName', {
-        header: 'VolunteerName',
-        cell: info => info.getValue()
-      }),
-      columnHelper.accessor('testPanelName', {
-        header: 'Test Panel',
-        cell: info => info.getValue() || '-'
-      }),
-      columnHelper.accessor('sampleType', {
-        header: 'Sample Type',
-        cell: info => (
-          <Typography
-            component="span"
-            sx={{ 
-              color: 'primary.main', 
-              cursor: 'pointer',
-              '&:hover': { textDecoration: 'underline' }
-            }}
-            onClick={() => openValidateSample(info.row.original)}
-          >
-            {info.getValue() || '-'}
-          </Typography>
-        )
-      }),
-      columnHelper.accessor('StatusID', {
-        header: 'Status',
-        enableHiding: true,
-        cell: ({ row }) => {
-          const statusId = row.original.StatusID;
-          const statusInfo = statusMap[statusId as keyof StatusMapType] || statusMap['null'];
-          return (
-            <Chip
-              label={statusInfo.label}
-              variant='tonal'
-              color={statusInfo.color}
-              size='small'
-              sx={{ 
-                minWidth: '100px',
-                justifyContent: 'center',
-                fontWeight: 500
-              }}
-            />
-          );
-        }
-      }),
       {
         id: 'actions',
         header: 'Actions',
@@ -263,7 +202,68 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
             </Box>
           )
         }
-      }
+      },
+      columnHelper.accessor('registrationDate', {
+        header: 'Registration Date',
+        cell: info => formatDate(info.getValue())
+      }),
+      columnHelper.accessor('sampleTypeId', {
+        header: 'Sample ID',
+        cell: info => info.getValue() || '-'
+      }),
+      columnHelper.accessor('subjectId', {
+        header: 'Volunteer ID',
+        cell: info => info.getValue()
+      }),
+      columnHelper.accessor('gender', {
+        header: 'Gender',
+        cell: info => info.getValue()
+      }),
+      columnHelper.accessor('VolunteerName', {
+        header: 'VolunteerName',
+        cell: info => info.getValue()
+      }),
+      columnHelper.accessor('testPanelName', {
+        header: 'Test Panel',
+        cell: info => info.getValue() || '-'
+      }),
+      columnHelper.accessor('sampleType', {
+        header: 'Sample Type',
+        cell: info => (
+          <Typography
+            component='span'
+            sx={{
+              color: 'primary.main',
+              cursor: 'pointer',
+              '&:hover': { textDecoration: 'underline' }
+            }}
+            onClick={() => openValidateSample(info.row.original)}
+          >
+            {info.getValue() || '-'}
+          </Typography>
+        )
+      }),
+      columnHelper.accessor('StatusID', {
+        header: 'Status',
+        enableHiding: true,
+        cell: ({ row }) => {
+          const statusId = row.original.StatusID
+          const statusInfo = statusMap[statusId as keyof StatusMapType] || statusMap['null']
+          return (
+            <Chip
+              label={statusInfo.label}
+              variant='tonal'
+              color={statusInfo.color}
+              size='small'
+              sx={{
+                minWidth: '100px',
+                justifyContent: 'center',
+                fontWeight: 500
+              }}
+            />
+          )
+        }
+      })
     ],
     []
   )
@@ -330,29 +330,29 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
       const response = await fetch('/api/apps/lims/test-results?action=download', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ fileType: 'CSV' })
-      });
+      })
 
       if (!response.ok) {
-        throw new Error('Failed to download file');
+        throw new Error('Failed to download file')
       }
 
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Test_Results_${new Date().toISOString().replace(/[:.]/g, '_')}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Test_Results_${new Date().toISOString().replace(/[:.]/g, '_')}.csv`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
 
-      toast.success('CSV file downloaded successfully');
+      toast.success('CSV file downloaded successfully')
     } catch (error) {
       console.error('Export failed:', error)
-      toast.error('Failed to download CSV file');
+      toast.error('Failed to download CSV file')
     } finally {
       setIsExporting(false)
     }
@@ -361,15 +361,15 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
   const handlePdfExport = async () => {
     setIsPdfLoading(true)
     try {
-      const doc = new jsPDF();
-      
+      const doc = new jsPDF()
+
       // Add title
-      doc.setFontSize(16);
-      doc.text('Test Results List', 14, 15);
-      
+      doc.setFontSize(16)
+      doc.text('Test Results List', 14, 15)
+
       // Add date
-      doc.setFontSize(10);
-      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
+      doc.setFontSize(10)
+      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22)
 
       // Prepare table data
       const tableData = data.map(test => [
@@ -385,25 +385,40 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
         test.performedOn ? formatDate(test.performedOn) : '-',
         test.verifiedBy || '-',
         test.verifiedOn ? formatDate(test.verifiedOn) : '-'
-      ]);
+      ])
 
       // Add table using autoTable
       autoTable(doc, {
-        head: [['Registration Date', 'Sample ID', 'Volunteer ID', 'Gender', 'Name', 'Test Panel', 'Sample Type', 'Status', 'Performed By', 'Performed On', 'Verified By', 'Verified On']],
+        head: [
+          [
+            'Registration Date',
+            'Sample ID',
+            'Volunteer ID',
+            'Gender',
+            'Name',
+            'Test Panel',
+            'Sample Type',
+            'Status',
+            'Performed By',
+            'Performed On',
+            'Verified By',
+            'Verified On'
+          ]
+        ],
         body: tableData,
         startY: 30,
         styles: { fontSize: 8 },
         headStyles: { fillColor: [41, 128, 185] },
         alternateRowStyles: { fillColor: [245, 245, 245] },
         margin: { top: 30 }
-      });
+      })
 
       // Save the PDF
-      doc.save(`test-results-${new Date().toISOString().split('T')[0]}.pdf`);
-      toast.success('PDF file downloaded successfully');
+      doc.save(`test-results-${new Date().toISOString().split('T')[0]}.pdf`)
+      toast.success('PDF file downloaded successfully')
     } catch (error) {
-      console.error('PDF export failed:', error);
-      toast.error('Failed to download PDF file');
+      console.error('PDF export failed:', error)
+      toast.error('Failed to download PDF file')
     } finally {
       setIsPdfLoading(false)
     }
@@ -412,25 +427,25 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
   const openSampleDetails = (row: TestResultType) => {
     // Example: navigate to a details page or open a modal
     // For navigation:
-    router.push(getLocalizedUrl(`/apps/lims/test-results/Test-Detail/${row.id}`, locale as Locale));
+    router.push(getLocalizedUrl(`/apps/lims/test-results/Test-Detail/${row.id}`, locale as Locale))
     // Or for modal: set some state to show details
-  };
+  }
 
   const printBarcode = (row: TestResultType) => {
     // Example: Open a barcode print dialog or trigger print logic
     // setSelectedSample(row); setShowBarcodeDialog(true);
-    toast.info(`Print barcode for Sample ID: ${row.sampleTypeId}`);
-  };
+    toast.info(`Print barcode for Sample ID: ${row.sampleTypeId}`)
+  }
 
   const openRemarkDialog = (row: TestResultType) => {
-    setSelectedTestId(row.id);
-    setRemarkDialogOpen(true);
-  };
+    setSelectedTestId(row.id)
+    setRemarkDialogOpen(true)
+  }
 
   const openOutsourceDialog = (row: TestResultType) => {
     // Example: Open an outsource dialog or trigger outsource logic
-    toast.info(`Outsource sample with ID: ${row.sampleTypeId}`);
-  };
+    toast.info(`Outsource sample with ID: ${row.sampleTypeId}`)
+  }
 
   const openValidateSample = (row: TestResultType) => {
     setIsNavigating(true)
@@ -451,7 +466,7 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
   }
 
   const mapToSampleType = (testResult: TestResultType | null): SampleType | null => {
-    if (!testResult) return null;
+    if (!testResult) return null
     return {
       sampleId: testResult.sampleTypeId || 0,
       volunteerId: testResult.subjectId || '',
@@ -471,38 +486,32 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
       remarks: testResult.remarks || '',
       sampleType: testResult.sampleType || '',
       isActive: true
-    };
-  };
+    }
+  }
 
   return (
     <Card>
       <Backdrop
         sx={{
           color: '#fff',
-          zIndex: (theme) => theme.zIndex.drawer + 1,
+          zIndex: theme => theme.zIndex.drawer + 1,
           display: 'flex',
           flexDirection: 'column',
           gap: 2
         }}
         open={isNavigating}
       >
-        <CircularProgress color="inherit" />
-        <Typography variant="body1">
-          Navigating to validate sample...
-        </Typography>
+        <CircularProgress color='inherit' />
+        <Typography variant='body1'>Navigating to validate sample...</Typography>
       </Backdrop>
-      <CardHeader 
-        title="Test Results" 
+      <CardHeader
+        title='Test Validation'
         action={
           <Box sx={{ display: 'flex', gap: 2 }}>
             <Button
               variant='outlined'
               startIcon={
-                isExporting ? (
-                  <i className='tabler-loader animate-spin' />
-                ) : (
-                  <i className='tabler-file-spreadsheet' />
-                )
+                isExporting ? <i className='tabler-loader animate-spin' /> : <i className='tabler-file-spreadsheet' />
               }
               onClick={handleExport}
               disabled={isExporting}
@@ -512,11 +521,7 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
             <Button
               variant='outlined'
               startIcon={
-                isPdfLoading ? (
-                  <i className='tabler-loader animate-spin' />
-                ) : (
-                  <i className='tabler-file-text' />
-                )
+                isPdfLoading ? <i className='tabler-loader animate-spin' /> : <i className='tabler-file-text' />
               }
               onClick={handlePdfExport}
               disabled={isPdfLoading}
@@ -540,9 +545,7 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map(header => (
                     <th key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
+                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     </th>
                   ))}
                 </tr>
@@ -561,8 +564,7 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
         )}
       </div>
       <TablePaginationComponent table={table} />
-      <div className='flex items-center justify-center gap-4 p-4 border-t'>
-      </div>
+      <div className='flex items-center justify-center gap-4 p-4 border-t'></div>
 
       <RemarkDialog
         open={remarkDialogOpen}
@@ -584,27 +586,25 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
       />
       <ConfirmDialog
         open={showRejectConfirm}
-        title="Confirm Rejection"
+        title='Confirm Rejection'
         description={
           <div className='flex flex-col gap-4'>
-            <Typography>
-              Do you want to reject test for sample {selectedTestForReject?.sampleTypeId}?
-            </Typography>
+            <Typography>Do you want to reject test for sample {selectedTestForReject?.sampleTypeId}?</Typography>
             <CustomTextField
               fullWidth
               multiline
               rows={3}
               label='Reason for Rejection'
               value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
+              onChange={e => setRejectReason(e.target.value)}
               required
               error={!rejectReason.trim()}
               helperText={!rejectReason.trim() ? 'Please provide a reason for rejection' : ''}
             />
           </div>
         }
-        okText="Yes"
-        cancelText="No"
+        okText='Yes'
+        cancelText='No'
         handleClose={() => {
           setShowRejectConfirm(false)
           setSelectedTestForReject(null)
@@ -616,4 +616,4 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
   )
 }
 
-export default TestResultsTable 
+export default TestResultsTable

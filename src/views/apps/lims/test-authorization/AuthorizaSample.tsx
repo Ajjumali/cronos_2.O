@@ -55,6 +55,7 @@ import MenuItem from '@mui/material/MenuItem'
 import BarcodePrintDialog from '@/components/dialogs/barcode-print'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import { FormGroup, TextField } from '@mui/material'
+import TestAuthorizationDetailsDialog from '@/components/dialogs/test-authorization-details'
 
 // Dummy data for demonstration
 const dummySample = {
@@ -67,14 +68,27 @@ const dummySample = {
   age: 29,
   projectNumber: 'PRJ-001',
   volunteerId: 'VOL-001',
-  qcAcceptance: true
+  qcAcceptance: true,
+  name: 'John Doe',
+  gender: 'Male',
+  testPanelName: 'Complete Blood Count',
+  testName: 'CBC',
+  authorizationStatus: 'Pending',
+  registrationDateTime: '2024-03-15T10:00:00',
+  authorizedBy: null,
+  authorizedOn: null,
+  projectNo: 'PRJ-001',
+  study: 'Clinical Trial A',
+  sampleType: 'Blood',
+  lab: 'Main Lab',
+  remarks: 'Initial screening'
 }
 
 const dummyTestRows = [
-  { checked: true, testName: 'HIV', result: 'Reactive', referenceRange: '10-15', remark: 'XYZ' },
-  { checked: true, testName: 'HBA1c', result: '9', referenceRange: '5-6', remark: 'XYZ' },
-  { checked: true, testName: 'Chloride', result: '15', referenceRange: '10-15', remark: 'XYZ' },
-  { checked: false, testName: 'Glucose', result: '99', referenceRange: '80-100', remark: 'ABC' }
+  { checked: true, testName: 'HIV', result: 'Reactive', referenceRange: '10-15', remark: 'XYZ', status: 'pending' },
+  { checked: true, testName: 'HBA1c', result: '9', referenceRange: '5-6', remark: 'XYZ', status: 'validated' },
+  { checked: true, testName: 'Chloride', result: '15', referenceRange: '10-15', remark: 'XYZ', status: 'rejected' },
+  { checked: false, testName: 'Glucose', result: '99', referenceRange: '80-100', remark: 'ABC', status: 'outsourced' }
 ]
 
 declare module '@tanstack/table-core' {
@@ -159,6 +173,7 @@ interface TestRow {
   remark: string
   remarks: string
   actionRemarks: TestRemark[]
+  status: string
 }
 
 interface TestAction {
@@ -203,7 +218,8 @@ const TEST_ACTIONS: TestAction[] = [
     label: 'Hold Test',
     icon: 'tabler-pause',
     color: 'success',
-    description: 'This will put the test on hold. The test will remain in a pending state until further action is taken.'
+    description:
+      'This will put the test on hold. The test will remain in a pending state until further action is taken.'
   },
   {
     type: 'document',
@@ -229,11 +245,13 @@ const AuthorizeSample = () => {
   const router = useRouter()
   const sampleId = params?.id as string
   const [sample, setSample] = useState(dummySample)
-  const [testRows, setTestRows] = useState<TestRow[]>(dummyTestRows.map(row => ({
-    ...row,
-    remarks: row.remark || '',
-    actionRemarks: []
-  })))
+  const [testRows, setTestRows] = useState<TestRow[]>(
+    dummyTestRows.map(row => ({
+      ...row,
+      remarks: row.remark || '',
+      actionRemarks: []
+    }))
+  )
   const [qcAcceptance, setQcAcceptance] = useState(dummySample.qcAcceptance)
   const [loading, setLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -280,12 +298,93 @@ const AuthorizeSample = () => {
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [showBarcodeDialog, setShowBarcodeDialog] = useState<boolean>(false)
   const [selectedTestForBarcode, setSelectedTestForBarcode] = useState<any>(null)
-  const [isAcknowledged, setIsAcknowledged] = useState(false);
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  
+  const [isAcknowledged, setIsAcknowledged] = useState(false)
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false)
+  const [selectedSample, setSelectedSample] = useState<any>(null)
+  const [editingCell, setEditingCell] = useState<{ testName: string; field: 'result' | 'remark' } | null>(null)
+  const [editValue, setEditValue] = useState('')
+
   const columns = useMemo<ColumnDef<any, any>[]>(
     () => [
+      {
+        id: 'actions',
+        header: 'Actions',
+        cell: ({ row }) => (
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <OptionMenu
+              iconButtonProps={{ size: 'small' }}
+              options={[
+                {
+                  text: 'View Details',
+                  icon: 'tabler-eye',
+                  menuItemProps: {
+                    onClick: () => handleViewDetails(row.original.testName),
+                    className: 'text-info'
+                  }
+                },
+                {
+                  text: 'Test Information',
+                  icon: 'tabler-info-circle',
+                  menuItemProps: {
+                    onClick: () => handleTestInfoOpen(row.original.testName),
+                    className: 'text-info'
+                  }
+                },
+                {
+                  text: 'Test Remark',
+                  icon: 'tabler-message',
+                  menuItemProps: {
+                    onClick: () => handleRemarksOpen(row.original.testName),
+                    className: 'text-primary'
+                  }
+                },
+                {
+                  text: 'Repeat Test',
+                  icon: 'tabler-refresh',
+                  menuItemProps: {
+                    onClick: () => handleActionOpen(TEST_ACTIONS[0], row.original.testName),
+                    className: 'text-primary'
+                  }
+                },
+                {
+                  text: 'Print Barcode',
+                  icon: 'tabler-printer',
+                  menuItemProps: {
+                    onClick: () => handlePrintBarcode(row.original.testName),
+                    className: 'text-primary'
+                  }
+                },
+                {
+                  text: 'Dilute',
+                  icon: 'tabler-droplet',
+                  menuItemProps: {
+                    onClick: () => handleActionOpen(TEST_ACTIONS[2], row.original.testName),
+                    className: 'text-info'
+                  }
+                },
+                {
+                  text: 'Attach Document',
+                  icon: 'tabler-paperclip',
+                  menuItemProps: {
+                    onClick: () => handleActionOpen(TEST_ACTIONS[5], row.original.testName),
+                    className: 'text-success'
+                  }
+                },
+                {
+                  text: 'QC',
+                  icon: 'tabler-check',
+                  menuItemProps: {
+                    onClick: () => handleActionOpen(TEST_ACTIONS[4], row.original.testName),
+                    className: 'text-warning'
+                  }
+                }
+              ]}
+            />
+          </Box>
+        )
+      },
       {
         id: 'select',
         header: ({ table }) => (
@@ -315,7 +414,63 @@ const AuthorizeSample = () => {
       }),
       columnHelper.accessor('result', {
         header: 'Test Result',
-        cell: ({ row }) => <Typography>{row.original.result}</Typography>
+        cell: ({ row }) => {
+          const [isEditing, setIsEditing] = useState(false)
+          const [value, setValue] = useState(row.original.result)
+
+          const handleSave = () => {
+            const updatedRows = testRows.map(testRow => {
+              if (testRow.testName === row.original.testName) {
+                return { ...testRow, result: value }
+              }
+              return testRow
+            })
+            setTestRows(updatedRows)
+            setIsEditing(false)
+          }
+
+          return isEditing ? (
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              <CustomTextField
+                size='small'
+                value={value}
+                onChange={e => setValue(e.target.value)}
+                onBlur={handleSave}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    handleSave()
+                  }
+                }}
+                autoFocus
+              />
+            </Box>
+          ) : (
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                cursor: 'pointer',
+                '&:hover': { bgcolor: 'action.hover' }
+              }}
+              onClick={() => {
+                const newValue = prompt('Enter new test result:', row.original.result)
+                if (newValue !== null) {
+                  const updatedRows = testRows.map(testRow => {
+                    if (testRow.testName === row.original.testName) {
+                      return { ...testRow, result: newValue }
+                    }
+                    return testRow
+                  })
+                  setTestRows(updatedRows)
+                }
+              }}
+            >
+              <Typography>{row.original.result}</Typography>
+              <i className='tabler-edit' style={{ fontSize: '1rem', opacity: 0.5 }} />
+            </Box>
+          )
+        }
       }),
       columnHelper.accessor('referenceRange', {
         header: 'Reference Range',
@@ -323,14 +478,70 @@ const AuthorizeSample = () => {
       }),
       columnHelper.accessor('remark', {
         header: 'Report Remark',
-        cell: ({ row }) => <Typography>{row.original.remark}</Typography>
+        cell: ({ row }) => {
+          const [isEditing, setIsEditing] = useState(false)
+          const [value, setValue] = useState(row.original.remark)
+
+          const handleSave = () => {
+            const updatedRows = testRows.map(testRow => {
+              if (testRow.testName === row.original.testName) {
+                return { ...testRow, remark: value }
+              }
+              return testRow
+            })
+            setTestRows(updatedRows)
+            setIsEditing(false)
+          }
+
+          return isEditing ? (
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              <CustomTextField
+                size='small'
+                value={value}
+                onChange={e => setValue(e.target.value)}
+                onBlur={handleSave}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    handleSave()
+                  }
+                }}
+                autoFocus
+              />
+            </Box>
+          ) : (
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                cursor: 'pointer',
+                '&:hover': { bgcolor: 'action.hover' }
+              }}
+              onClick={() => {
+                const newValue = prompt('Enter new remark:', row.original.remark)
+                if (newValue !== null) {
+                  const updatedRows = testRows.map(testRow => {
+                    if (testRow.testName === row.original.testName) {
+                      return { ...testRow, remark: newValue }
+                    }
+                    return testRow
+                  })
+                  setTestRows(updatedRows)
+                }
+              }}
+            >
+              <Typography>{row.original.remark}</Typography>
+              <i className='tabler-edit' style={{ fontSize: '1rem', opacity: 0.5 }} />
+            </Box>
+          )
+        }
       }),
       columnHelper.accessor('status', {
         header: 'Status',
         cell: ({ row }) => {
           const status = row.original.status || 'pending'
           const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG]
-          
+
           return (
             <Box
               sx={{
@@ -364,44 +575,24 @@ const AuthorizeSample = () => {
                         fontSize: '0.875rem'
                       }}
                     >
-                      <Typography variant="body2" sx={{ mb: 0.5 }}>
+                      <Typography variant='body2' sx={{ mb: 0.5 }}>
                         {remark.text}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant='caption' color='text.secondary'>
                         {new Date(remark.timestamp).toLocaleString()}
                       </Typography>
                     </Box>
                   ))}
                 </Box>
               ) : (
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant='body2' color='text.secondary'>
                   No remarks
                 </Typography>
               )}
             </Box>
           )
         }
-      }),
-      {
-        id: 'actions',
-        header: 'Actions',
-        cell: ({ row }) => (
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            {TEST_ACTIONS.map((action) => (
-              <Button
-                key={action.type}
-                size="small"
-                variant="outlined"
-                color={action.color}
-                onClick={() => handleActionOpen(action, row.original.testName)}
-                startIcon={<i className={action.icon} />}
-              >
-                {action.label}
-              </Button>
-            ))}
-          </Box>
-        )
-      }
+      })
     ],
     []
   )
@@ -439,7 +630,6 @@ const AuthorizeSample = () => {
     const fetchSampleData = async () => {
       try {
         setLoading(true)
-        
       } catch (error) {
         console.error('Error fetching sample data:', error)
         toast.error('Failed to fetch sample data')
@@ -468,7 +658,7 @@ const AuthorizeSample = () => {
     }
 
     const selectedTestNames = selectedRows.map(row => row.original.testName)
-    
+
     switch (action) {
       case 'Validate':
         setIsApprovalModalOpen(true)
@@ -532,11 +722,11 @@ const AuthorizeSample = () => {
     try {
       setIsLoadingTestDetails(true)
       setIsTestDetailsModalOpen(true)
-      
+
       // TODO: Replace with actual API call
       // const response = await testResultsService.getTestDetails(sampleId, testName)
       // setSelectedTestDetails(response.result)
-      
+
       // Dummy data for demonstration
       setSelectedTestDetails({
         testInfo: {
@@ -595,7 +785,7 @@ const AuthorizeSample = () => {
 
     try {
       setIsSavingRemarks(true)
-      
+
       // TODO: Replace with actual API call
       // await testResultsService.addTestRemarks(sampleId, selectedTestForRemarks.testName, {
       //   remarks,
@@ -604,22 +794,24 @@ const AuthorizeSample = () => {
       // })
 
       // Update local state
-      setTestRows(prev => prev.map(row => {
-        if (row.testName === selectedTestForRemarks.testName) {
-          return {
-            ...row,
-            actionRemarks: [
-              ...row.actionRemarks,
-              {
-                text: remarks,
-                timestamp: new Date().toISOString(),
-                action: 'Manual Remark'
-              }
-            ]
+      setTestRows(prev =>
+        prev.map(row => {
+          if (row.testName === selectedTestForRemarks.testName) {
+            return {
+              ...row,
+              actionRemarks: [
+                ...row.actionRemarks,
+                {
+                  text: remarks,
+                  timestamp: new Date().toISOString(),
+                  action: 'Manual Remark'
+                }
+              ]
+            }
           }
-        }
-        return row
-      }))
+          return row
+        })
+      )
 
       toast.success('Remarks added successfully')
       handleCloseRemarksModal()
@@ -654,10 +846,10 @@ const AuthorizeSample = () => {
       //   qcAcceptance,
       //   reason
       // })
-      
+
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000))
-      
+
       toast.success('Test results saved successfully')
       handleCloseReasonModal()
     } catch (error) {
@@ -742,7 +934,7 @@ const AuthorizeSample = () => {
 
       // TODO: Replace with actual API call
       // const response = await testResultsService.uploadTestDocuments(formData)
-      
+
       // Simulate file upload progress
       for (let i = 0; i <= 100; i += 10) {
         await new Promise(resolve => setTimeout(resolve, 100))
@@ -791,7 +983,7 @@ const AuthorizeSample = () => {
 
     try {
       setIsApproving(true)
-      
+
       // TODO: Replace with actual API call
       // await testResultsService.approveTestResults(sampleId, {
       //   testNames: selectedTestNames,
@@ -800,13 +992,13 @@ const AuthorizeSample = () => {
       //   signedBy: 'Current User', // Replace with actual user info
       //   signedAt: new Date().toISOString()
       // })
-      
+
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000))
-      
+
       toast.success(`Successfully approved ${selectedTestNames.length} test(s)`)
       handleCloseApprovalModal()
-      
+
       // Refresh the test results
       // await fetchSampleData()
     } catch (error) {
@@ -916,7 +1108,7 @@ const AuthorizeSample = () => {
 
     try {
       setIsProcessingAction(true)
-      
+
       // TODO: Replace with actual API call
       // await testResultsService.processTestAction(sampleId, selectedTestForAction.testName, {
       //   action: selectedAction.type,
@@ -925,22 +1117,24 @@ const AuthorizeSample = () => {
       // })
 
       // Update local state
-      setTestRows(prev => prev.map(row => {
-        if (row.testName === selectedTestForAction.testName) {
-          return {
-            ...row,
-            actionRemarks: [
-              ...row.actionRemarks,
-              {
-                text: `Action taken: ${selectedAction.label}${actionComment ? ` - ${actionComment}` : ''}`,
-                timestamp: new Date().toISOString(),
-                action: selectedAction.type
-              }
-            ]
+      setTestRows(prev =>
+        prev.map(row => {
+          if (row.testName === selectedTestForAction.testName) {
+            return {
+              ...row,
+              actionRemarks: [
+                ...row.actionRemarks,
+                {
+                  text: `Action taken: ${selectedAction.label}${actionComment ? ` - ${actionComment}` : ''}`,
+                  timestamp: new Date().toISOString(),
+                  action: selectedAction.type
+                }
+              ]
+            }
           }
-        }
-        return row
-      }))
+          return row
+        })
+      )
 
       toast.success(`Successfully processed ${selectedAction.label}`)
       handleCloseActionModal()
@@ -972,138 +1166,149 @@ const AuthorizeSample = () => {
     throw new Error('Function not implemented.')
   }
 
+  const handleViewDetails = (testName: string) => {
+    const test = testRows.find(row => row.testName === testName)
+    if (test) {
+      setSelectedSample({
+        ...dummySample,
+        testName: test.testName,
+        result: test.result,
+        referenceRange: test.referenceRange,
+        remark: test.remark,
+        status: test.status
+      })
+      setIsDetailsDialogOpen(true)
+    }
+  }
+
+  const handleEditStart = (testName: string, field: 'result' | 'remark', currentValue: string) => {
+    setEditingCell({ testName, field })
+    setEditValue(currentValue)
+  }
+
+  const handleEditSave = () => {
+    if (editingCell) {
+      const updatedRows = testRows.map(testRow => {
+        if (testRow.testName === editingCell.testName) {
+          return { ...testRow, [editingCell.field]: editValue }
+        }
+        return testRow
+      })
+      setTestRows(updatedRows)
+      setEditingCell(null)
+      setEditValue('')
+    }
+  }
+
+  const handleEditCancel = () => {
+    setEditingCell(null)
+    setEditValue('')
+  }
+
   return (
     <Card>
-      <CardHeader 
+      <CardHeader
         title='Validate Sample'
         action={
           <Box sx={{ display: 'flex', gap: 2 }}>
             <Button
               variant='outlined'
               color='primary'
-              onClick={handleFilterMenuOpen}
-              startIcon={<i className='tabler-filter' />}
-            >
-              Filters
-            </Button>
-            <Button
-              variant='outlined'
-              color='primary'
               onClick={handleBackToGrid}
               startIcon={<i className='tabler-arrow-left' />}
             >
-              Back to Test Grid
+              Back to Grid
             </Button>
           </Box>
         }
       />
       <Divider />
       <CardContent>
-        {/* Status Legend */}
-        <Paper sx={{ p: 2, mb: 3 }}>
-          <Typography variant="subtitle2" sx={{ mb: 1 }}>Status Legend</Typography>
-          <Grid container spacing={2}>
-            {Object.entries(STATUS_CONFIG).map(([key, config]) => (
-              <Grid size={{ xs: 6, sm: 3 }} key={key}>
-                <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1,
-                    color: config.color
-                  }}
-                >
-                  <i className={config.icon} />
-                  <Typography variant="body2">{config.label}</Typography>
-                </Box>
-              </Grid>
-            ))}
-          </Grid>
-        </Paper>
-
         {/* Project and Sample Details */}
-        <Typography variant='h6' sx={{ mb: 2 }}>1. Project and Sample Details</Typography>
+        <Typography variant='h6' sx={{ mb: 2 }}>
+          1. Project and Sample Details
+        </Typography>
         <Paper sx={{ p: 3, mb: 4 }}>
           <Grid container spacing={3}>
             <Grid size={{ xs: 12, sm: 6 }}>
               <Box sx={{ mb: 2 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mb: 0.5 }}>
                   Laboratory
                 </Typography>
-                <Typography variant="body1">{sample.laboratory}</Typography>
+                <Typography variant='body1'>{sample.laboratory}</Typography>
               </Box>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               <Box sx={{ mb: 2 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mb: 0.5 }}>
                   Location
                 </Typography>
-                <Typography variant="body1">{sample.location}</Typography>
+                <Typography variant='body1'>{sample.location}</Typography>
               </Box>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               <Box sx={{ mb: 2 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mb: 0.5 }}>
                   Requested By
                 </Typography>
-                <Typography variant="body1">{sample.requestedBy}</Typography>
+                <Typography variant='body1'>{sample.requestedBy}</Typography>
               </Box>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               <Box sx={{ mb: 2 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mb: 0.5 }}>
                   Sample ID
                 </Typography>
-                <Typography variant="body1">{sample.sampleId}</Typography>
+                <Typography variant='body1'>{sample.sampleId}</Typography>
               </Box>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               <Box sx={{ mb: 2 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mb: 0.5 }}>
                   Period
                 </Typography>
-                <Typography variant="body1">{sample.period}</Typography>
+                <Typography variant='body1'>{sample.period}</Typography>
               </Box>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               <Box sx={{ mb: 2 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mb: 0.5 }}>
                   Reference ID
                 </Typography>
-                <Typography variant="body1">{sample.referenceId}</Typography>
+                <Typography variant='body1'>{sample.referenceId}</Typography>
               </Box>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               <Box sx={{ mb: 2 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mb: 0.5 }}>
                   Age
                 </Typography>
-                <Typography variant="body1">{sample.age}</Typography>
+                <Typography variant='body1'>{sample.age}</Typography>
               </Box>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               <Box sx={{ mb: 2 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mb: 0.5 }}>
                   Project Number
                 </Typography>
-                <Typography variant="body1">{sample.projectNumber}</Typography>
+                <Typography variant='body1'>{sample.projectNumber}</Typography>
               </Box>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               <Box sx={{ mb: 2 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mb: 0.5 }}>
                   Volunteer ID
                 </Typography>
-                <Typography variant="body1">{sample.volunteerId}</Typography>
+                <Typography variant='body1'>{sample.volunteerId}</Typography>
               </Box>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               <Box sx={{ mb: 2 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mb: 0.5 }}>
                   QC Acceptance
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography variant="body1">{qcAcceptance ? 'Yes' : 'No'}</Typography>
+                  <Typography variant='body1'>{qcAcceptance ? 'Yes' : 'No'}</Typography>
                   <Switch checked={qcAcceptance} onChange={handleSwitch} />
                 </Box>
               </Box>
@@ -1111,7 +1316,7 @@ const AuthorizeSample = () => {
           </Grid>
         </Paper>
         <Divider sx={{ my: 4 }} />
-        
+
         {/* Test Details Grid */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant='h6'>2. Test Details</Typography>
@@ -1126,14 +1331,14 @@ const AuthorizeSample = () => {
             fullWidth
             InputProps={{
               startAdornment: (
-                <InputAdornment position="start">
+                <InputAdornment position='start'>
                   <i className='tabler-search' />
                 </InputAdornment>
               ),
               endAdornment: globalFilter && (
-                <InputAdornment position="end">
-                  <i 
-                    className='tabler-x cursor-pointer' 
+                <InputAdornment position='end'>
+                  <i
+                    className='tabler-x cursor-pointer'
                     onClick={() => setGlobalFilter('')}
                     style={{ cursor: 'pointer' }}
                   />
@@ -1153,69 +1358,63 @@ const AuthorizeSample = () => {
           }}
         >
           <Box sx={{ mb: 3 }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>Filter Test Results</Typography>
-            
+            <Typography variant='h6' sx={{ mb: 2 }}>
+              Filter Test Results
+            </Typography>
+
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <CustomTextField
                   fullWidth
-                  size="small"
-                  type="date"
-                  label="Start Date"
+                  size='small'
+                  type='date'
+                  label='Start Date'
                   value={filters.startDate}
-                  onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                  onChange={e => handleFilterChange('startDate', e.target.value)}
                   InputLabelProps={{ shrink: true }}
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <CustomTextField
                   fullWidth
-                  size="small"
-                  type="date"
-                  label="End Date"
+                  size='small'
+                  type='date'
+                  label='End Date'
                   value={filters.endDate}
-                  onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                  onChange={e => handleFilterChange('endDate', e.target.value)}
                   InputLabelProps={{ shrink: true }}
                 />
               </Grid>
             </Grid>
 
-            <FormControl fullWidth size="small" sx={{ mt: 2 }}>
+            <FormControl fullWidth size='small' sx={{ mt: 2 }}>
               <InputLabel>Sample Status</InputLabel>
               <Select
                 value={filters.status}
-                label="Sample Status"
-                onChange={(e) => handleFilterChange('status', e.target.value)}
+                label='Sample Status'
+                onChange={e => handleFilterChange('status', e.target.value)}
               >
-                <MenuItem value="">All</MenuItem>
-                <MenuItem value="pending">Pending</MenuItem>
-                <MenuItem value="validated">Validated</MenuItem>
-                <MenuItem value="rejected">Rejected</MenuItem>
-                <MenuItem value="outsourced">Outsourced</MenuItem>
+                <MenuItem value=''>All</MenuItem>
+                <MenuItem value='pending'>Pending</MenuItem>
+                <MenuItem value='validated'>Validated</MenuItem>
+                <MenuItem value='rejected'>Rejected</MenuItem>
+                <MenuItem value='outsourced'>Outsourced</MenuItem>
               </Select>
             </FormControl>
 
             <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
               <Switch
                 checked={filters.isOutsourced}
-                onChange={(e) => handleFilterChange('isOutsourced', e.target.checked)}
+                onChange={e => handleFilterChange('isOutsourced', e.target.checked)}
               />
               <Typography>Show Outsourced Samples Only</Typography>
             </Box>
 
             <Box sx={{ mt: 3, display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-              <Button
-                variant="outlined"
-                onClick={handleClearFilters}
-                startIcon={<i className="tabler-x" />}
-              >
+              <Button variant='outlined' onClick={handleClearFilters} startIcon={<i className='tabler-x' />}>
                 Clear Filters
               </Button>
-              <Button
-                variant="contained"
-                onClick={applyFilters}
-                startIcon={<i className="tabler-filter" />}
-              >
+              <Button variant='contained' onClick={applyFilters} startIcon={<i className='tabler-filter' />}>
                 Apply Filters
               </Button>
             </Box>
@@ -1226,15 +1425,26 @@ const AuthorizeSample = () => {
           <Grid container spacing={2}>
             {/* Header */}
             <Grid size={{ xs: 12 }}>
-              <Grid container spacing={2} sx={{ fontWeight: 'bold', borderBottom: '1px solid', borderColor: 'divider', pb: 2 }}>
+              <Grid
+                container
+                spacing={2}
+                sx={{ fontWeight: 'bold', borderBottom: '1px solid', borderColor: 'divider', pb: 2 }}
+              >
                 <Grid size={{ xs: 1 }}>
-                  <Box sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: 1,
-                    height: '100%',
-                    minHeight: '40px'
-                  }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Typography sx={{ fontWeight: 'bold' }}>Actions</Typography>
+                  </Box>
+                </Grid>
+                <Grid size={{ xs: 1 }}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      height: '100%',
+                      minHeight: '40px'
+                    }}
+                  >
                     <Checkbox
                       checked={table.getIsAllRowsSelected()}
                       indeterminate={table.getIsSomeRowsSelected()}
@@ -1245,57 +1455,51 @@ const AuthorizeSample = () => {
                 <Grid size={{ xs: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Typography sx={{ fontWeight: 'bold' }}>Test Name</Typography>
-                    <Typography 
-                      variant='body2' 
-                      sx={{ 
+                    <Typography
+                      variant='body2'
+                      sx={{
                         color: 'text.secondary',
                         fontWeight: 'bold',
                         display: 'flex',
                         alignItems: 'center'
                       }}
                     >
-                      ({table.getSelectedRowModel().rows.length} {table.getSelectedRowModel().rows.length === 1 ? 'selected' : 'selected'})
+                      ({table.getSelectedRowModel().rows.length}{' '}
+                      {table.getSelectedRowModel().rows.length === 1 ? 'selected' : 'selected'})
                     </Typography>
                   </Box>
                 </Grid>
                 <Grid size={{ xs: 2 }}>Test Result</Grid>
                 <Grid size={{ xs: 2 }}>Reference Range</Grid>
                 <Grid size={{ xs: 2 }}>Report Remark</Grid>
-                <Grid size={{ xs: 3 }}>Actions</Grid>
               </Grid>
             </Grid>
             {/* Rows */}
             {table.getRowModel().rows.map((row, idx) => (
               <Grid size={{ xs: 12 }} key={row.id}>
-                <Grid container spacing={2} sx={{ 
-                  py: 2, 
-                  borderBottom: idx !== table.getRowModel().rows.length - 1 ? '1px solid' : 'none', 
-                  borderColor: 'divider',
-                  backgroundColor: row.getIsSelected() ? 'action.selected' : 'transparent'
-                }}>
+                <Grid
+                  container
+                  spacing={2}
+                  sx={{
+                    py: 2,
+                    borderBottom: idx !== table.getRowModel().rows.length - 1 ? '1px solid' : 'none',
+                    borderColor: 'divider',
+                    backgroundColor: row.getIsSelected() ? 'action.selected' : 'transparent'
+                  }}
+                >
                   <Grid size={{ xs: 1 }}>
-                    <Checkbox 
-                      checked={row.getIsSelected()}
-                      onChange={row.getToggleSelectedHandler()}
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 2 }}>
-                    <Typography>{row.original.testName}</Typography>
-                  </Grid>
-                  <Grid size={{ xs: 2 }}>
-                    <Typography>{row.original.result}</Typography>
-                  </Grid>
-                  <Grid size={{ xs: 2 }}>
-                    <Typography>{row.original.referenceRange}</Typography>
-                  </Grid>
-                  <Grid size={{ xs: 2 }}>
-                    <Typography>{row.original.remark}</Typography>
-                  </Grid>
-                  <Grid size={{ xs: 3 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
                       <OptionMenu
                         iconButtonProps={{ size: 'small' }}
                         options={[
+                          {
+                            text: 'View Details',
+                            icon: 'tabler-eye',
+                            menuItemProps: {
+                              onClick: () => handleViewDetails(row.original.testName),
+                              className: 'text-info'
+                            }
+                          },
                           {
                             text: 'Test Information',
                             icon: 'tabler-info-circle',
@@ -1356,6 +1560,51 @@ const AuthorizeSample = () => {
                       />
                     </Box>
                   </Grid>
+                  <Grid size={{ xs: 1 }}>
+                    <Checkbox checked={row.getIsSelected()} onChange={row.getToggleSelectedHandler()} />
+                  </Grid>
+                  <Grid size={{ xs: 2 }}>
+                    <Typography>{row.original.testName}</Typography>
+                  </Grid>
+                  <Grid size={{ xs: 2 }}>
+                    <CustomTextField
+                      size='small'
+                      fullWidth
+                      value={row.original.result}
+                      onChange={e => {
+                        const newTestRows = [...testRows]
+                        const index = newTestRows.findIndex(item => item.testName === row.original.testName)
+                        if (index !== -1) {
+                          newTestRows[index] = {
+                            ...newTestRows[index],
+                            result: e.target.value
+                          }
+                          setTestRows(newTestRows)
+                        }
+                      }}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 2 }}>
+                    <Typography>{row.original.referenceRange}</Typography>
+                  </Grid>
+                  <Grid size={{ xs: 2 }}>
+                    <CustomTextField
+                      size='small'
+                      fullWidth
+                      value={row.original.remark}
+                      onChange={e => {
+                        const newTestRows = [...testRows]
+                        const index = newTestRows.findIndex(item => item.testName === row.original.testName)
+                        if (index !== -1) {
+                          newTestRows[index] = {
+                            ...newTestRows[index],
+                            remark: e.target.value
+                          }
+                          setTestRows(newTestRows)
+                        }
+                      }}
+                    />
+                  </Grid>
                 </Grid>
               </Grid>
             ))}
@@ -1363,15 +1612,17 @@ const AuthorizeSample = () => {
         </Paper>
 
         {/* Bulk Actions */}
-        <Box sx={{ 
-          display: 'flex', 
-          gap: 2, 
-          flexWrap: 'wrap', 
-          justifyContent: 'center', 
-          mt: 4,
-          opacity: table.getSelectedRowModel().rows.length > 0 ? 1 : 0.5,
-          pointerEvents: table.getSelectedRowModel().rows.length > 0 ? 'auto' : 'none'
-        }}>
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 2,
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+            mt: 4,
+            opacity: table.getSelectedRowModel().rows.length > 0 ? 1 : 0.5,
+            pointerEvents: table.getSelectedRowModel().rows.length > 0 ? 'auto' : 'none'
+          }}
+        >
           <Button
             variant='outlined'
             color='primary'
@@ -1427,79 +1678,63 @@ const AuthorizeSample = () => {
       <Dialog
         open={isReasonModalOpen}
         onClose={handleCloseReasonModal}
-        aria-labelledby="reason-dialog-title"
-        aria-describedby="reason-dialog-description"
+        aria-labelledby='reason-dialog-title'
+        aria-describedby='reason-dialog-description'
       >
-        <DialogTitle id="reason-dialog-title">Save Changes</DialogTitle>
+        <DialogTitle id='reason-dialog-title'>Save Changes</DialogTitle>
         <DialogContent>
           <CustomTextField
             fullWidth
             multiline
             rows={3}
             value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Enter reason for changes..."
+            onChange={e => setReason(e.target.value)}
+            placeholder='Enter reason for changes...'
             sx={{ mt: 2 }}
           />
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseReasonModal}>Cancel</Button>
-          <Button 
-            onClick={handleReasonSubmit} 
-            color="primary"
-            disabled={isSaving}
-          >
+          <Button onClick={handleReasonSubmit} color='primary' disabled={isSaving}>
             {isSaving ? 'Saving...' : 'Save'}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Document Upload Dialog */}
-      <Dialog
-        open={isDocumentModalOpen}
-        onClose={handleCloseDocumentModal}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          Upload Documents for {selectedTestName}
-        </DialogTitle>
+      <Dialog open={isDocumentModalOpen} onClose={handleCloseDocumentModal} maxWidth='md' fullWidth>
+        <DialogTitle>Upload Documents for {selectedTestName}</DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 2 }}>
             <input
-              type="file"
+              type='file'
               multiple
               onChange={handleFileChange}
               style={{ display: 'none' }}
-              id="document-upload"
+              id='document-upload'
               accept={Object.entries(ACCEPTED_FILE_TYPES)
                 .map(([mimeType, extensions]) => [...extensions, mimeType].join(','))
                 .join(',')}
             />
-            <label htmlFor="document-upload">
-              <Button
-                variant="outlined"
-                component="span"
-                startIcon={<i className="tabler-upload" />}
-                sx={{ mb: 2 }}
-              >
+            <label htmlFor='document-upload'>
+              <Button variant='outlined' component='span' startIcon={<i className='tabler-upload' />} sx={{ mb: 2 }}>
                 Select Files
               </Button>
             </label>
 
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+            <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mb: 2 }}>
               Supported formats: PDF, JPG, PNG, DOC, DOCX (Max size: 10MB per file)
             </Typography>
 
             {uploadError && (
-              <Typography color="error" sx={{ mb: 2, whiteSpace: 'pre-line' }}>
+              <Typography color='error' sx={{ mb: 2, whiteSpace: 'pre-line' }}>
                 {uploadError}
               </Typography>
             )}
 
             {uploadedFiles.length > 0 && (
               <Box sx={{ mt: 2 }}>
-                <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                <Typography variant='subtitle2' sx={{ mb: 1 }}>
                   Selected Files:
                 </Typography>
                 {uploadedFiles.map((file, index) => (
@@ -1518,16 +1753,12 @@ const AuthorizeSample = () => {
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <i className={`tabler-file-${file.type.includes('pdf') ? 'pdf' : 'text'}`} />
-                      <Typography variant="body2">
+                      <Typography variant='body2'>
                         {file.name} ({(file.size / 1024).toFixed(2)} KB)
                       </Typography>
                     </Box>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleRemoveFile(index)}
-                      color="error"
-                    >
-                      <i className="tabler-x" />
+                    <IconButton size='small' onClick={() => handleRemoveFile(index)} color='error'>
+                      <i className='tabler-x' />
                     </IconButton>
                   </Box>
                 ))}
@@ -1536,7 +1767,7 @@ const AuthorizeSample = () => {
 
             {isUploading && (
               <Box sx={{ mt: 2 }}>
-                <Typography variant="body2" sx={{ mb: 1 }}>
+                <Typography variant='body2' sx={{ mb: 1 }}>
                   Uploading... {uploadProgress}%
                 </Typography>
                 <Box
@@ -1563,30 +1794,21 @@ const AuthorizeSample = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDocumentModal}>Cancel</Button>
-          <Button
-            onClick={handleUploadSubmit}
-            color="primary"
-            disabled={isUploading || uploadedFiles.length === 0}
-          >
+          <Button onClick={handleUploadSubmit} color='primary' disabled={isUploading || uploadedFiles.length === 0}>
             {isUploading ? 'Uploading...' : 'Upload'}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Test Details Dialog */}
-      <Dialog
-        open={isTestDetailsModalOpen}
-        onClose={handleCloseTestDetailsModal}
-        maxWidth="md"
-        fullWidth
-      >
+      <Dialog open={isTestDetailsModalOpen} onClose={handleCloseTestDetailsModal} maxWidth='md' fullWidth>
         <DialogTitle>
           <Box>
-            <Typography variant="h5" component="div">
+            <Typography variant='h5' component='div'>
               Test Details
             </Typography>
             {selectedTestDetails?.testInfo?.name && (
-              <Typography variant="subtitle1" color="text.secondary" component="div">
+              <Typography variant='subtitle1' color='text.secondary' component='div'>
                 {selectedTestDetails.testInfo.name}
               </Typography>
             )}
@@ -1595,7 +1817,7 @@ const AuthorizeSample = () => {
         <DialogContent>
           {isLoadingTestDetails ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-              <i className="tabler-loader animate-spin" style={{ fontSize: '2rem' }} />
+              <i className='tabler-loader animate-spin' style={{ fontSize: '2rem' }} />
             </Box>
           ) : selectedTestDetails ? (
             <Box sx={{ mt: 2 }}>
@@ -1606,29 +1828,24 @@ const AuthorizeSample = () => {
                 sx={{ mb: 2 }}
               >
                 <AccordionSummary
-                  expandIcon={<i className="tabler-chevron-down" />}
-                  aria-controls="test-info-content"
-                  id="test-info-header"
+                  expandIcon={<i className='tabler-chevron-down' />}
+                  aria-controls='test-info-content'
+                  id='test-info-header'
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <i className="tabler-microscope" />
-                    <Typography variant="h6">Test Information</Typography>
+                    <i className='tabler-microscope' />
+                    <Typography variant='h6'>Test Information</Typography>
                   </Box>
                 </AccordionSummary>
                 <AccordionDetails>
                   <Grid container spacing={2}>
                     <Grid size={{ xs: 12, sm: 6 }}>
-                      <CustomTextField
-                        fullWidth
-                        label="Test Code"
-                        value={selectedTestDetails.testInfo.code}
-                        disabled
-                      />
+                      <CustomTextField fullWidth label='Test Code' value={selectedTestDetails.testInfo.code} disabled />
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <CustomTextField
                         fullWidth
-                        label="Category"
+                        label='Category'
                         value={selectedTestDetails.testInfo.category}
                         disabled
                       />
@@ -1636,7 +1853,7 @@ const AuthorizeSample = () => {
                     <Grid size={{ xs: 12 }}>
                       <CustomTextField
                         fullWidth
-                        label="Description"
+                        label='Description'
                         value={selectedTestDetails.testInfo.description}
                         multiline
                         rows={2}
@@ -1646,18 +1863,13 @@ const AuthorizeSample = () => {
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <CustomTextField
                         fullWidth
-                        label="Turnaround Time"
+                        label='Turnaround Time'
                         value={selectedTestDetails.testInfo.turnaroundTime}
                         disabled
                       />
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6 }}>
-                      <CustomTextField
-                        fullWidth
-                        label="Status"
-                        value={selectedTestDetails.testInfo.status}
-                        disabled
-                      />
+                      <CustomTextField fullWidth label='Status' value={selectedTestDetails.testInfo.status} disabled />
                     </Grid>
                   </Grid>
                 </AccordionDetails>
@@ -1670,13 +1882,13 @@ const AuthorizeSample = () => {
                 sx={{ mb: 2 }}
               >
                 <AccordionSummary
-                  expandIcon={<i className="tabler-chevron-down" />}
-                  aria-controls="panel-info-content"
-                  id="panel-info-header"
+                  expandIcon={<i className='tabler-chevron-down' />}
+                  aria-controls='panel-info-content'
+                  id='panel-info-header'
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <i className="tabler-clipboard-list" />
-                    <Typography variant="h6">Panel Information</Typography>
+                    <i className='tabler-clipboard-list' />
+                    <Typography variant='h6'>Panel Information</Typography>
                   </Box>
                 </AccordionSummary>
                 <AccordionDetails>
@@ -1684,7 +1896,7 @@ const AuthorizeSample = () => {
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <CustomTextField
                         fullWidth
-                        label="Panel Name"
+                        label='Panel Name'
                         value={selectedTestDetails.panelInfo.name}
                         disabled
                       />
@@ -1692,7 +1904,7 @@ const AuthorizeSample = () => {
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <CustomTextField
                         fullWidth
-                        label="Panel Code"
+                        label='Panel Code'
                         value={selectedTestDetails.panelInfo.code}
                         disabled
                       />
@@ -1700,7 +1912,7 @@ const AuthorizeSample = () => {
                     <Grid size={{ xs: 12 }}>
                       <CustomTextField
                         fullWidth
-                        label="Description"
+                        label='Description'
                         value={selectedTestDetails.panelInfo.description}
                         multiline
                         rows={2}
@@ -1710,18 +1922,13 @@ const AuthorizeSample = () => {
                     <Grid size={{ xs: 12 }}>
                       <CustomTextField
                         fullWidth
-                        label="Included Tests"
+                        label='Included Tests'
                         value={selectedTestDetails.panelInfo.tests.join(', ')}
                         disabled
                       />
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6 }}>
-                      <CustomTextField
-                        fullWidth
-                        label="Price"
-                        value={selectedTestDetails.panelInfo.price}
-                        disabled
-                      />
+                      <CustomTextField fullWidth label='Price' value={selectedTestDetails.panelInfo.price} disabled />
                     </Grid>
                   </Grid>
                 </AccordionDetails>
@@ -1733,13 +1940,13 @@ const AuthorizeSample = () => {
                 onChange={handleAccordionChange('instrumentInfo')}
               >
                 <AccordionSummary
-                  expandIcon={<i className="tabler-chevron-down" />}
-                  aria-controls="instrument-info-content"
-                  id="instrument-info-header"
+                  expandIcon={<i className='tabler-chevron-down' />}
+                  aria-controls='instrument-info-content'
+                  id='instrument-info-header'
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <i className="tabler-device-analytics" />
-                    <Typography variant="h6">Instrument Information</Typography>
+                    <i className='tabler-device-analytics' />
+                    <Typography variant='h6'>Instrument Information</Typography>
                   </Box>
                 </AccordionSummary>
                 <AccordionDetails>
@@ -1747,7 +1954,7 @@ const AuthorizeSample = () => {
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <CustomTextField
                         fullWidth
-                        label="Instrument Name"
+                        label='Instrument Name'
                         value={selectedTestDetails.instrumentInfo.name}
                         disabled
                       />
@@ -1755,7 +1962,7 @@ const AuthorizeSample = () => {
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <CustomTextField
                         fullWidth
-                        label="Model"
+                        label='Model'
                         value={selectedTestDetails.instrumentInfo.model}
                         disabled
                       />
@@ -1763,7 +1970,7 @@ const AuthorizeSample = () => {
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <CustomTextField
                         fullWidth
-                        label="Serial Number"
+                        label='Serial Number'
                         value={selectedTestDetails.instrumentInfo.serialNumber}
                         disabled
                       />
@@ -1771,7 +1978,7 @@ const AuthorizeSample = () => {
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <CustomTextField
                         fullWidth
-                        label="Manufacturer"
+                        label='Manufacturer'
                         value={selectedTestDetails.instrumentInfo.manufacturer}
                         disabled
                       />
@@ -1779,7 +1986,7 @@ const AuthorizeSample = () => {
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <CustomTextField
                         fullWidth
-                        label="Last Calibration"
+                        label='Last Calibration'
                         value={selectedTestDetails.instrumentInfo.lastCalibration}
                         disabled
                       />
@@ -1787,7 +1994,7 @@ const AuthorizeSample = () => {
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <CustomTextField
                         fullWidth
-                        label="Next Calibration"
+                        label='Next Calibration'
                         value={selectedTestDetails.instrumentInfo.nextCalibration}
                         disabled
                       />
@@ -1795,7 +2002,7 @@ const AuthorizeSample = () => {
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <CustomTextField
                         fullWidth
-                        label="Status"
+                        label='Status'
                         value={selectedTestDetails.instrumentInfo.status}
                         disabled
                       />
@@ -1806,7 +2013,7 @@ const AuthorizeSample = () => {
             </Box>
           ) : (
             <Box sx={{ p: 4, textAlign: 'center' }}>
-              <Typography color="text.secondary">No test details available</Typography>
+              <Typography color='text.secondary'>No test details available</Typography>
             </Box>
           )}
         </DialogContent>
@@ -1816,95 +2023,68 @@ const AuthorizeSample = () => {
       </Dialog>
 
       {/* Approval Confirmation Dialog */}
-      <Dialog
-  open={isApprovalModalOpen}
-  onClose={handleCloseApprovalModal}
-  maxWidth="xs"
-  fullWidth
->
-  <DialogTitle sx={{ textAlign: 'center' }}>Test Approval Declaration</DialogTitle>
+      <Dialog open={isApprovalModalOpen} onClose={handleCloseApprovalModal} maxWidth='xs' fullWidth>
+        <DialogTitle sx={{ textAlign: 'center' }}>Test Approval Declaration</DialogTitle>
 
-  <DialogContent dividers>
-    <Box sx={{ mb: 2 }}>
-      <Typography variant="body2">
-        Acknowledgment:
-      </Typography>
-      <FormGroup sx={{ mb: 2 }}>
-        <FormControlLabel
-          control={
-            <Checkbox
-              checked={isAcknowledged}
-              onChange={(e) => setIsAcknowledged(e.target.checked)}
+        <DialogContent dividers>
+          <Box sx={{ mb: 2 }}>
+            <Typography variant='body2'>Acknowledgment:</Typography>
+            <FormGroup sx={{ mb: 2 }}>
+              <FormControlLabel
+                control={<Checkbox checked={isAcknowledged} onChange={e => setIsAcknowledged(e.target.checked)} />}
+                label='I confirm that the details are accurate and approve the digital authorization of this result.'
+              />
+            </FormGroup>
+          </Box>
+
+          <Box sx={{ mb: 3 }}>
+            <TextField
+              fullWidth
+              label='User Name'
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              sx={{ mb: 2 }}
             />
-          }
-          label="I confirm that the details are accurate and approve the digital authorization of this result."
-        />
-      </FormGroup>
-    </Box>
 
-    <Box sx={{ mb: 3 }}>
-      <TextField
-        fullWidth
-        label="User Name"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-        sx={{ mb: 2 }}
-      />
+            <TextField
+              fullWidth
+              label='Password'
+              type='password'
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              sx={{ mb: 2 }}
+            />
+          </Box>
 
-      <TextField
-        fullWidth
-        label="Password"
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        sx={{ mb: 2 }}
-      />
-    </Box>
+          <Box display='flex' justifyContent='center' mb={2}>
+            <img
+              src='/images/tick-ico-image.png' // Ensure this path is correct
+              alt='Digital Signature'
+              height={50}
+            />
+          </Box>
 
-    <Box display="flex" justifyContent="center" mb={2}>
-      <img
-        src="/images/tick-ico-image.png" // Ensure this path is correct
-        alt="Digital Signature"
-        height={50}
-      />
-    </Box>
+          <Typography variant='caption' color='text.secondary' sx={{ textAlign: 'center' }}>
+            Please provide your credentials to authorize the result. Your signature will be recorded digitally.
+          </Typography>
+        </DialogContent>
 
-    <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
-      Please provide your credentials to authorize the result. Your signature will be recorded digitally.
-    </Typography>
-  </DialogContent>
-
-  <DialogActions sx={{ justifyContent: 'center' }}>
-    <Button
-      variant="contained"
-      color="error"
-      onClick={handleReject}
-      sx={{ marginRight: 2 }}
-    >
-      Reject
-    </Button>
-    <Button
-      variant="contained"
-      color="success"
-      onClick={handleCloseApprovalModal}
-    >
-      Close
-    </Button>
-  </DialogActions>
-</Dialog>
-
+        <DialogActions sx={{ justifyContent: 'center' }}>
+          <Button variant='contained' color='error' onClick={handleReject} sx={{ marginRight: 2 }}>
+            Reject
+          </Button>
+          <Button variant='contained' color='success' onClick={handleCloseApprovalModal}>
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Remarks Dialog */}
-      <Dialog
-        open={isRemarksModalOpen}
-        onClose={handleCloseRemarksModal}
-        maxWidth="sm"
-        fullWidth
-      >
+      <Dialog open={isRemarksModalOpen} onClose={handleCloseRemarksModal} maxWidth='sm' fullWidth>
         <DialogTitle>
           Add Remarks
           {selectedTestForRemarks && (
-            <Typography variant="subtitle1" color="text.secondary">
+            <Typography variant='subtitle1' color='text.secondary'>
               {selectedTestForRemarks.testName}
             </Typography>
           )}
@@ -1915,25 +2095,27 @@ const AuthorizeSample = () => {
               fullWidth
               multiline
               rows={4}
-              label="Remarks"
-              placeholder="Enter your remarks here..."
+              label='Remarks'
+              placeholder='Enter your remarks here...'
               value={remarks}
-              onChange={(e) => setRemarks(e.target.value)}
+              onChange={e => setRemarks(e.target.value)}
               sx={{ mb: 2 }}
             />
 
             {selectedTestForRemarks?.actionRemarks?.length > 0 && (
               <Box sx={{ mt: 3 }}>
-                <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                <Typography variant='subtitle2' sx={{ mb: 1 }}>
                   Previous Remarks
                 </Typography>
-                <Box sx={{ 
-                  maxHeight: '200px', 
-                  overflowY: 'auto',
-                  bgcolor: 'action.hover',
-                  borderRadius: 1,
-                  p: 2
-                }}>
+                <Box
+                  sx={{
+                    maxHeight: '200px',
+                    overflowY: 'auto',
+                    bgcolor: 'action.hover',
+                    borderRadius: 1,
+                    p: 2
+                  }}
+                >
                   {selectedTestForRemarks.actionRemarks.map((remark: any, index: number) => (
                     <Box
                       key={index}
@@ -1945,10 +2127,10 @@ const AuthorizeSample = () => {
                         '&:last-child': { mb: 0 }
                       }}
                     >
-                      <Typography variant="body2" sx={{ mb: 0.5 }}>
+                      <Typography variant='body2' sx={{ mb: 0.5 }}>
                         {remark.text}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant='caption' color='text.secondary'>
                         {new Date(remark.timestamp).toLocaleString()}
                       </Typography>
                     </Box>
@@ -1959,18 +2141,17 @@ const AuthorizeSample = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button 
-            onClick={handleCloseRemarksModal}
-            disabled={isSavingRemarks}
-          >
+          <Button onClick={handleCloseRemarksModal} disabled={isSavingRemarks}>
             Cancel
           </Button>
           <Button
             onClick={handleSaveRemarks}
-            color="primary"
-            variant="contained"
+            color='primary'
+            variant='contained'
             disabled={isSavingRemarks || !remarks.trim()}
-            startIcon={isSavingRemarks ? <i className="tabler-loader animate-spin" /> : <i className="tabler-device-floppy" />}
+            startIcon={
+              isSavingRemarks ? <i className='tabler-loader animate-spin' /> : <i className='tabler-device-floppy' />
+            }
           >
             {isSavingRemarks ? 'Saving...' : 'Save Remarks'}
           </Button>
@@ -1978,32 +2159,25 @@ const AuthorizeSample = () => {
       </Dialog>
 
       {/* Action Confirmation Dialog */}
-      <Dialog
-        open={isActionModalOpen}
-        onClose={handleCloseActionModal}
-        maxWidth="sm"
-        fullWidth
-      >
+      <Dialog open={isActionModalOpen} onClose={handleCloseActionModal} maxWidth='sm' fullWidth>
         <DialogTitle>
           Confirm Action
           {selectedAction && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
               <i className={selectedAction.icon} style={{ color: `var(--mui-palette-${selectedAction.color}-main)` }} />
-              <Typography variant="subtitle1">
-                {selectedAction.label}
-              </Typography>
+              <Typography variant='subtitle1'>{selectedAction.label}</Typography>
             </Box>
           )}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 2 }}>
             {selectedTestForAction && (
-              <Typography variant="body1" sx={{ mb: 2 }}>
+              <Typography variant='body1' sx={{ mb: 2 }}>
                 Test: {selectedTestForAction.testName}
               </Typography>
             )}
-            
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+
+            <Typography variant='body2' color='text.secondary' sx={{ mb: 3 }}>
               {selectedAction?.description}
             </Typography>
 
@@ -2011,30 +2185,29 @@ const AuthorizeSample = () => {
               fullWidth
               multiline
               rows={3}
-              label="Action Comment"
-              placeholder="Enter any additional comments or notes..."
+              label='Action Comment'
+              placeholder='Enter any additional comments or notes...'
               value={actionComment}
-              onChange={(e) => setActionComment(e.target.value)}
+              onChange={e => setActionComment(e.target.value)}
             />
 
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
+            <Typography variant='caption' color='text.secondary' sx={{ mt: 2, display: 'block' }}>
               This action will be recorded in the test history and may require additional steps to complete.
             </Typography>
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button 
-            onClick={handleCloseActionModal}
-            disabled={isProcessingAction}
-          >
+          <Button onClick={handleCloseActionModal} disabled={isProcessingAction}>
             Cancel
           </Button>
           <Button
             onClick={handleProcessAction}
             color={selectedAction?.color || 'primary'}
-            variant="contained"
+            variant='contained'
             disabled={isProcessingAction}
-            startIcon={isProcessingAction ? <i className="tabler-loader animate-spin" /> : <i className={selectedAction?.icon} />}
+            startIcon={
+              isProcessingAction ? <i className='tabler-loader animate-spin' /> : <i className={selectedAction?.icon} />
+            }
           >
             {isProcessingAction ? 'Processing...' : 'Confirm Action'}
           </Button>
@@ -2048,8 +2221,15 @@ const AuthorizeSample = () => {
         sampleId={selectedTestForBarcode?.id}
         barcodeId={selectedTestForBarcode?.barcodeId}
       />
+
+      {/* Add Test Authorization Details Dialog */}
+      <TestAuthorizationDetailsDialog
+        open={isDetailsDialogOpen}
+        onClose={() => setIsDetailsDialogOpen(false)}
+        sample={selectedSample}
+      />
     </Card>
   )
 }
 
-export default AuthorizeSample 
+export default AuthorizeSample

@@ -11,25 +11,7 @@ import { Close as CloseIcon } from '@mui/icons-material'
 
 // Component Imports
 import CustomTextField from '@core/components/mui/TextField'
-
-type QcCheckType = {
-  id: number
-  srNo: number
-  testName: string
-  instrumentName: string
-  level1: string
-  level2: string
-  level3: string
-  doneOn: string
-  doneBy: string
-  profile: string
-  result: string
-  date: string
-  sampleId: string
-  referenceId: string
-  genderName: string
-  parameter: string
-}
+import type { QcCheckType } from '@/types/qc-check'
 
 const resultOptions = [
   { value: '', label: 'All Results' },
@@ -38,13 +20,7 @@ const resultOptions = [
   { value: 'NA', label: 'NA' }
 ]
 
-const TableFilters = ({
-  setData,
-  qcData
-}: {
-  setData: (data: QcCheckType[]) => void
-  qcData?: QcCheckType[]
-}) => {
+const TableFilters = ({ setData, qcData }: { setData: (data: QcCheckType[]) => void; qcData?: QcCheckType[] }) => {
   // States
   const [instrumentName, setInstrumentName] = useState<string>('')
   const [fromDate, setFromDate] = useState<string>('')
@@ -52,17 +28,11 @@ const TableFilters = ({
   const [isExpanded, setIsExpanded] = useState(false)
   const [instrumentNames, setInstrumentNames] = useState<string[]>([])
   const [selectedLevel, setSelectedLevel] = useState<string>('')
-  const [selectedResult, setSelectedResult] = useState<string>('')
 
   // Dummy instrument names, replace with API call if needed
   useEffect(() => {
     // Replace this with your API call if needed
-    setInstrumentNames([
-      'Sysmex XN-1000',
-      'Cobas 6000',
-      'Abbott Architect',
-      'Mindray BC-2800'
-    ])
+    setInstrumentNames(['Sysmex XN-1000', 'Cobas 6000', 'Abbott Architect', 'Mindray BC-2800'])
   }, [])
 
   // Function to clear all filters
@@ -71,7 +41,6 @@ const TableFilters = ({
     setFromDate('')
     setToDate('')
     setSelectedLevel('')
-    setSelectedResult('')
   }, [])
 
   // Apply filters whenever filter values change
@@ -81,45 +50,38 @@ const TableFilters = ({
     const filteredData = qcData.filter(row => {
       // Instrument filter
       if (instrumentName && row.instrumentName !== instrumentName) return false
-      
+
       // Date range filter
       if (fromDate && row.date.slice(0, 10) < fromDate) return false
       if (toDate && row.date.slice(0, 10) > toDate) return false
-      
+
       // Level filter
       if (selectedLevel) {
         const levelValue = row[`level${selectedLevel}` as keyof QcCheckType]
         if (!levelValue) return false
       }
-      
-      // Result filter
-      if (selectedResult && row.result !== selectedResult) return false
-      
+
       return true
     })
 
     setData(filteredData)
-  }, [instrumentName, fromDate, toDate, selectedLevel, selectedResult, qcData, setData])
+  }, [instrumentName, fromDate, toDate, selectedLevel, qcData, setData])
 
   return (
     <CardContent>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Button
-          variant="text"
+          variant='text'
           onClick={() => setIsExpanded(!isExpanded)}
           startIcon={
-            <div className="flex items-center gap-1">
-              <i className="tabler-filter text-sm" />
+            <div className='flex items-center gap-1'>
+              <i className='tabler-filter text-sm' />
             </div>
           }
         >
           Filters
         </Button>
-        <Button 
-          variant="text" 
-          onClick={clearFilters}
-          startIcon={<CloseIcon />}
-        >
+        <Button variant='text' onClick={clearFilters} startIcon={<CloseIcon />}>
           Reset Filters
         </Button>
       </Box>
@@ -147,7 +109,7 @@ const TableFilters = ({
           </Grid>
           <Grid size={{ xs: 12, sm: 4 }}>
             <CustomTextField
-              type="date"
+              type='date'
               fullWidth
               id='from-date'
               label='From Date'
@@ -158,7 +120,7 @@ const TableFilters = ({
           </Grid>
           <Grid size={{ xs: 12, sm: 4 }}>
             <CustomTextField
-              type="date"
+              type='date'
               fullWidth
               id='to-date'
               label='To Date'
@@ -183,25 +145,6 @@ const TableFilters = ({
               <MenuItem value='1'>Level 1</MenuItem>
               <MenuItem value='2'>Level 2</MenuItem>
               <MenuItem value='3'>Level 3</MenuItem>
-            </CustomTextField>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 4 }}>
-            <CustomTextField
-              select
-              fullWidth
-              id='select-result'
-              label='QC Result'
-              value={selectedResult}
-              onChange={e => setSelectedResult(e.target.value)}
-              slotProps={{
-                select: { displayEmpty: true }
-              }}
-            >
-              {resultOptions.map(option => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
-                </MenuItem>
-              ))}
             </CustomTextField>
           </Grid>
         </Grid>

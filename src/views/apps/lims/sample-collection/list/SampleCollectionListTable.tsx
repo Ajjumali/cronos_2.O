@@ -31,11 +31,7 @@ import {
   Typography,
   Grid
 } from '@mui/material'
-import {
-  Add as AddIcon,
-  CheckCircle as CheckCircleIcon,
-  History as HistoryIcon
-} from '@mui/icons-material'
+import { Add as AddIcon, CheckCircle as CheckCircleIcon, History as HistoryIcon } from '@mui/icons-material'
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -81,7 +77,6 @@ import TablePaginationComponent from '@/components/TablePaginationComponent'
 import TableFilters from './TableFilters'
 import BarcodePrintDialog from '@/components/dialogs/barcode-print'
 
-
 // Style Imports
 
 declare module '@tanstack/table-core' {
@@ -109,8 +104,8 @@ const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
   const itemRank = rankItem(row.getValue(columnId), value)
 
   addMeta({ itemRank })
-  
-return itemRank.passed
+
+  return itemRank.passed
 }
 
 const collectionStatusObj: collectionStatusType = {
@@ -162,7 +157,6 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
   // Hooks
   const { lang: locale } = useParams()
 
-
   const handleMenuClose = () => {
     setAnchorEl(null)
     setSelectedRow(null)
@@ -190,7 +184,7 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
     console.log('handlePrintBarcode called with id:', id)
     const sample = data.find(item => item.id === id)
     console.log('Found sample:', sample)
-    
+
     if (!sample) {
       toast.error('Sample not found')
       return
@@ -210,7 +204,7 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
     console.log('handleBulkPrintBarcode called')
     const selectedIds = Object.keys(rowSelection).map(key => data[parseInt(key)].id)
     console.log('Selected IDs:', selectedIds)
-    
+
     if (selectedIds.length === 0) {
       toast.error('No samples selected')
       return
@@ -218,7 +212,7 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
 
     const selectedSamples = data.filter(item => selectedIds.includes(item.id))
     console.log('Selected samples:', selectedSamples)
-    
+
     if (selectedSamples.length === 0) {
       toast.error('Selected samples not found')
       return
@@ -399,64 +393,7 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
   const columns = useMemo<ColumnDef<SampleWithActionsType, any>[]>(
     () => [
       {
-        id: 'select',
-        header: ({ table }) => (
-          <Checkbox
-            {...{
-              checked: table.getIsAllRowsSelected(),
-              indeterminate: table.getIsSomeRowsSelected(),
-              onChange: table.getToggleAllRowsSelectedHandler()
-            }}
-          />
-        ),
-        cell: ({ row }) => (
-          <Checkbox
-            {...{
-              checked: row.getIsSelected(),
-              disabled: !row.getCanSelect(),
-              indeterminate: row.getIsSomeSelected(),
-              onChange: row.getToggleSelectedHandler()
-            }}
-          />
-        ),
-        enableHiding: false
-      },
-      columnHelper.accessor('employeeName', {
-        header: 'Employee Name',
-        cell: info => info.getValue()
-      }),
-      columnHelper.accessor('sampleId', {
-        header: 'Sample ID',
-        cell: info => info.getValue()
-      }),
-      columnHelper.accessor('employeeId', {
-        header: 'Employee ID',
-        cell: info => info.getValue()
-      }),
-      columnHelper.accessor('collectedBy', {
-        header: 'Collected By',
-        cell: info => info.getValue()
-      }),
-      columnHelper.accessor('collectedOn', {
-        header: 'Collected On',
-        cell: info => formatDate(info.getValue())
-      }),
-      columnHelper.accessor('collectionStatus', {
-        header: 'Status',
-        cell: info => {
-          const status = info.getValue()
-
-          
-return (
-            <Chip
-              label={collectionStatusObj[status]?.title}
-              color={collectionStatusObj[status]?.color}
-              size='small'
-            />
-          )
-        }
-      }),
-      columnHelper.accessor('actions', {
+        id: 'actions',
         header: 'Actions',
         cell: ({ row }) => (
           <div className='flex items-center gap-4'>
@@ -563,6 +500,59 @@ return (
           </div>
         ),
         enableSorting: false
+      },
+      {
+        id: 'select',
+        header: ({ table }) => (
+          <Checkbox
+            {...{
+              checked: table.getIsAllRowsSelected(),
+              indeterminate: table.getIsSomeRowsSelected(),
+              onChange: table.getToggleAllRowsSelectedHandler()
+            }}
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            {...{
+              checked: row.getIsSelected(),
+              disabled: !row.getCanSelect(),
+              indeterminate: row.getIsSomeSelected(),
+              onChange: row.getToggleSelectedHandler()
+            }}
+          />
+        ),
+        enableHiding: false
+      },
+      columnHelper.accessor('employeeName', {
+        header: 'Employee Name',
+        cell: info => info.getValue()
+      }),
+      columnHelper.accessor('sampleId', {
+        header: 'Sample ID',
+        cell: info => info.getValue()
+      }),
+      columnHelper.accessor('employeeId', {
+        header: 'Employee ID',
+        cell: info => info.getValue()
+      }),
+      columnHelper.accessor('collectedBy', {
+        header: 'Collected By',
+        cell: info => info.getValue()
+      }),
+      columnHelper.accessor('collectedOn', {
+        header: 'Collected On',
+        cell: info => formatDate(info.getValue())
+      }),
+      columnHelper.accessor('collectionStatus', {
+        header: 'Status',
+        cell: info => {
+          const status = info.getValue()
+
+          return (
+            <Chip label={collectionStatusObj[status]?.title} color={collectionStatusObj[status]?.color} size='small' />
+          )
+        }
       })
     ],
     []
@@ -596,31 +586,45 @@ return (
 
     try {
       const doc = new jsPDF()
-      
+
       // Add title
       doc.setFontSize(16)
       doc.text('Sample Collection List', 14, 15)
-      
+
       // Add date
       doc.setFontSize(10)
       doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22)
 
       // Prepare table data
-      const tableData = table.getFilteredRowModel().rows.map(row => [
-        row.original.employeeName,
-        row.original.sampleId,
-        row.original.employeeId,
-        row.original.collectedBy,
-        formatDate(row.original.collectedOn),
-        row.original.collectionStatus,
-        row.original.sampleType,
-        row.original.location,
-        row.original.laboratory
-      ])
+      const tableData = table
+        .getFilteredRowModel()
+        .rows.map(row => [
+          row.original.employeeName,
+          row.original.sampleId,
+          row.original.employeeId,
+          row.original.collectedBy,
+          formatDate(row.original.collectedOn),
+          row.original.collectionStatus,
+          row.original.sampleType,
+          row.original.location,
+          row.original.laboratory
+        ])
 
       // Add table
       autoTable(doc, {
-        head: [['Employee Name', 'Sample ID', 'Employee ID', 'Collected By', 'Collected On', 'Status', 'Sample Type', 'Location', 'Laboratory']],
+        head: [
+          [
+            'Employee Name',
+            'Sample ID',
+            'Employee ID',
+            'Collected By',
+            'Collected On',
+            'Status',
+            'Sample Type',
+            'Location',
+            'Laboratory'
+          ]
+        ],
         body: tableData,
         startY: 30,
         styles: { fontSize: 8 },
@@ -645,24 +649,33 @@ return (
     setIsExcelLoading(true)
 
     try {
-      const headers = ['Employee Name', 'Sample ID', 'Employee ID', 'Collected By', 'Collected On', 'Status', 'Sample Type', 'Location', 'Laboratory']
+      const headers = [
+        'Employee Name',
+        'Sample ID',
+        'Employee ID',
+        'Collected By',
+        'Collected On',
+        'Status',
+        'Sample Type',
+        'Location',
+        'Laboratory'
+      ]
 
-      const csvData = table.getFilteredRowModel().rows.map(row => [
-        row.original.employeeName,
-        row.original.sampleId,
-        row.original.employeeId,
-        row.original.collectedBy,
-        formatDate(row.original.collectedOn),
-        row.original.collectionStatus,
-        row.original.sampleType,
-        row.original.location,
-        row.original.laboratory
-      ])
+      const csvData = table
+        .getFilteredRowModel()
+        .rows.map(row => [
+          row.original.employeeName,
+          row.original.sampleId,
+          row.original.employeeId,
+          row.original.collectedBy,
+          formatDate(row.original.collectedOn),
+          row.original.collectionStatus,
+          row.original.sampleType,
+          row.original.location,
+          row.original.laboratory
+        ])
 
-      const csvContent = [
-        headers.join(','),
-        ...csvData.map(row => row.join(','))
-      ].join('\n')
+      const csvContent = [headers.join(','), ...csvData.map(row => row.join(','))].join('\n')
 
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
       const link = document.createElement('a')
@@ -686,8 +699,8 @@ return (
 
   return (
     <Card>
-      <CardHeader 
-        title='Sample Collection List'
+      <CardHeader
+        title='Sample Collection'
         action={
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
             <Button
@@ -715,11 +728,7 @@ return (
             <Button
               variant='outlined'
               startIcon={
-                isPdfLoading ? (
-                  <i className='tabler-loader animate-spin' />
-                ) : (
-                  <i className='tabler-file-text' />
-                )
+                isPdfLoading ? <i className='tabler-loader animate-spin' /> : <i className='tabler-file-text' />
               }
               onClick={handlePdfExport}
               disabled={isPdfLoading}
@@ -780,7 +789,7 @@ return (
         </table>
       </div>
       <TablePaginationComponent table={table} />
-      
+
       {/* Bulk Action Buttons */}
       <div className='flex items-center justify-center gap-4 p-4 border-t'>
         <Button
@@ -822,14 +831,9 @@ return (
       </div>
 
       {/* Confirmation Dialogs */}
-      <Dialog
-        open={showBulkOutsourceConfirm}
-        onClose={() => setShowBulkOutsourceConfirm(false)}
-      >
+      <Dialog open={showBulkOutsourceConfirm} onClose={() => setShowBulkOutsourceConfirm(false)}>
         <DialogTitle>Confirm Outsource</DialogTitle>
-        <DialogContent>
-          Are you sure you want to outsource the selected samples?
-        </DialogContent>
+        <DialogContent>Are you sure you want to outsource the selected samples?</DialogContent>
         <DialogActions>
           <Button onClick={() => setShowBulkOutsourceConfirm(false)}>Cancel</Button>
           <Button onClick={handleBulkOutsourceConfirm} color='warning' variant='contained'>
@@ -838,14 +842,9 @@ return (
         </DialogActions>
       </Dialog>
 
-      <Dialog
-        open={showBulkCollectConfirm}
-        onClose={() => setShowBulkCollectConfirm(false)}
-      >
+      <Dialog open={showBulkCollectConfirm} onClose={() => setShowBulkCollectConfirm(false)}>
         <DialogTitle>Confirm Collection</DialogTitle>
-        <DialogContent>
-          Are you sure you want to collect the selected samples?
-        </DialogContent>
+        <DialogContent>Are you sure you want to collect the selected samples?</DialogContent>
         <DialogActions>
           <Button onClick={() => setShowBulkCollectConfirm(false)}>Cancel</Button>
           <Button onClick={handleBulkCollectConfirm} color='success' variant='contained'>
@@ -854,14 +853,9 @@ return (
         </DialogActions>
       </Dialog>
 
-      <Dialog
-        open={showBulkPrintConfirm}
-        onClose={() => setShowBulkPrintConfirm(false)}
-      >
+      <Dialog open={showBulkPrintConfirm} onClose={() => setShowBulkPrintConfirm(false)}>
         <DialogTitle>Confirm Print</DialogTitle>
-        <DialogContent>
-          Are you sure you want to print barcodes for the selected samples?
-        </DialogContent>
+        <DialogContent>Are you sure you want to print barcodes for the selected samples?</DialogContent>
         <DialogActions>
           <Button onClick={() => setShowBulkPrintConfirm(false)}>Cancel</Button>
           <Button onClick={handleBulkPrintBarcodeConfirm} color='info' variant='contained'>
@@ -870,14 +864,9 @@ return (
         </DialogActions>
       </Dialog>
 
-      <Dialog
-        open={showBulkRejectConfirm}
-        onClose={() => setShowBulkRejectConfirm(false)}
-      >
+      <Dialog open={showBulkRejectConfirm} onClose={() => setShowBulkRejectConfirm(false)}>
         <DialogTitle>Confirm Rejection</DialogTitle>
-        <DialogContent>
-          Are you sure you want to reject the selected samples?
-        </DialogContent>
+        <DialogContent>Are you sure you want to reject the selected samples?</DialogContent>
         <DialogActions>
           <Button onClick={() => setShowBulkRejectConfirm(false)}>Cancel</Button>
           <Button onClick={handleBulkRejectConfirm} color='error' variant='contained'>
@@ -886,10 +875,7 @@ return (
         </DialogActions>
       </Dialog>
 
-      <Dialog
-        open={showVolumeInputDialog}
-        onClose={() => setShowVolumeInputDialog(false)}
-      >
+      <Dialog open={showVolumeInputDialog} onClose={() => setShowVolumeInputDialog(false)}>
         <DialogTitle>Add Sample Volume</DialogTitle>
         <DialogContent>
           <CustomTextField
@@ -897,7 +883,7 @@ return (
             label='Volume'
             type='number'
             value={volume}
-            onChange={(e) => {
+            onChange={e => {
               const value = e.target.value
 
               if (value === '' || (parseInt(value) >= 0 && parseInt(value) <= 9999)) {
@@ -906,14 +892,18 @@ return (
             }}
             inputProps={{ max: 9999, min: 0 }}
             error={volume !== '' && (parseInt(volume) < 0 || parseInt(volume) > 9999)}
-            helperText={volume !== '' && (parseInt(volume) < 0 || parseInt(volume) > 9999) ? 'Please enter a valid number between 0 and 9999' : ''}
+            helperText={
+              volume !== '' && (parseInt(volume) < 0 || parseInt(volume) > 9999)
+                ? 'Please enter a valid number between 0 and 9999'
+                : ''
+            }
           />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowVolumeInputDialog(false)}>Cancel</Button>
-          <Button 
-            onClick={handleVolumeSubmit} 
-            color='primary' 
+          <Button
+            onClick={handleVolumeSubmit}
+            color='primary'
             variant='contained'
             disabled={!volume || parseInt(volume) < 0 || parseInt(volume) > 9999}
           >
@@ -922,12 +912,7 @@ return (
         </DialogActions>
       </Dialog>
 
-      <Dialog
-        open={showAuditTrailDialog}
-        onClose={() => setShowAuditTrailDialog(false)}
-        maxWidth='md'
-        fullWidth
-      >
+      <Dialog open={showAuditTrailDialog} onClose={() => setShowAuditTrailDialog(false)} maxWidth='md' fullWidth>
         <DialogTitle>Audit Trail</DialogTitle>
         <DialogContent>
           <TableContainer component={Paper}>
@@ -959,7 +944,7 @@ return (
                 ))}
                 {auditTrailData.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} align="center">
+                    <TableCell colSpan={8} align='center'>
                       No audit trail data available
                     </TableCell>
                   </TableRow>
@@ -973,10 +958,7 @@ return (
         </DialogActions>
       </Dialog>
 
-      <Dialog
-        open={showBarcodeScanDialog}
-        onClose={() => setShowBarcodeScanDialog(false)}
-      >
+      <Dialog open={showBarcodeScanDialog} onClose={() => setShowBarcodeScanDialog(false)}>
         <DialogTitle>Scan Barcode</DialogTitle>
         <DialogContent>
           <Box sx={{ textAlign: 'center', py: 2 }}>
@@ -987,7 +969,7 @@ return (
                 fullWidth
                 label='Barcode'
                 value={barcodeInput}
-                onChange={(e) => setBarcodeInput(e.target.value)}
+                onChange={e => setBarcodeInput(e.target.value)}
                 autoFocus
               />
             )}
@@ -995,9 +977,9 @@ return (
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowBarcodeScanDialog(false)}>Cancel</Button>
-          <Button 
-            onClick={handleBarcodeSubmit} 
-            color='primary' 
+          <Button
+            onClick={handleBarcodeSubmit}
+            color='primary'
             variant='contained'
             disabled={!barcodeInput || isScanning}
           >
@@ -1006,14 +988,9 @@ return (
         </DialogActions>
       </Dialog>
 
-      <Dialog
-        open={showSampleDetails}
-        onClose={() => setShowSampleDetails(false)}
-        maxWidth="md"
-        fullWidth
-      >
+      <Dialog open={showSampleDetails} onClose={() => setShowSampleDetails(false)} maxWidth='md' fullWidth>
         <DialogTitle>
-          <Typography variant="h5" component="div">
+          <Typography variant='h5' component='div'>
             Sample Details
           </Typography>
         </DialogTitle>
@@ -1021,70 +998,70 @@ return (
           <Box sx={{ mt: 2 }}>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
+                <Typography variant='subtitle2' color='text.secondary'>
                   Sample ID
                 </Typography>
-                <Typography variant="body1">{selectedSampleForDetails?.sampleId || '-'}</Typography>
+                <Typography variant='body1'>{selectedSampleForDetails?.sampleId || '-'}</Typography>
               </Grid>
               <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
+                <Typography variant='subtitle2' color='text.secondary'>
                   Employee Name
                 </Typography>
-                <Typography variant="body1">{selectedSampleForDetails?.employeeName || '-'}</Typography>
+                <Typography variant='body1'>{selectedSampleForDetails?.employeeName || '-'}</Typography>
               </Grid>
               <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
+                <Typography variant='subtitle2' color='text.secondary'>
                   Employee ID
                 </Typography>
-                <Typography variant="body1">{selectedSampleForDetails?.employeeId || '-'}</Typography>
+                <Typography variant='body1'>{selectedSampleForDetails?.employeeId || '-'}</Typography>
               </Grid>
               <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
+                <Typography variant='subtitle2' color='text.secondary'>
                   Barcode ID
                 </Typography>
-                <Typography variant="body1">{selectedSampleForDetails?.barcodeId || '-'}</Typography>
+                <Typography variant='body1'>{selectedSampleForDetails?.barcodeId || '-'}</Typography>
               </Grid>
               <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
+                <Typography variant='subtitle2' color='text.secondary'>
                   Collected By
                 </Typography>
-                <Typography variant="body1">{selectedSampleForDetails?.collectedBy || '-'}</Typography>
+                <Typography variant='body1'>{selectedSampleForDetails?.collectedBy || '-'}</Typography>
               </Grid>
               <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
+                <Typography variant='subtitle2' color='text.secondary'>
                   Collected On
                 </Typography>
-                <Typography variant="body1">{formatDate(selectedSampleForDetails?.collectedOn) || '-'}</Typography>
+                <Typography variant='body1'>{formatDate(selectedSampleForDetails?.collectedOn) || '-'}</Typography>
               </Grid>
               <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
+                <Typography variant='subtitle2' color='text.secondary'>
                   Sample Type
                 </Typography>
-                <Typography variant="body1">{selectedSampleForDetails?.sampleType || '-'}</Typography>
+                <Typography variant='body1'>{selectedSampleForDetails?.sampleType || '-'}</Typography>
               </Grid>
               <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
+                <Typography variant='subtitle2' color='text.secondary'>
                   Collection Status
                 </Typography>
-                <Typography variant="body1">{selectedSampleForDetails?.collectionStatus || '-'}</Typography>
+                <Typography variant='body1'>{selectedSampleForDetails?.collectionStatus || '-'}</Typography>
               </Grid>
               <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
+                <Typography variant='subtitle2' color='text.secondary'>
                   Location
                 </Typography>
-                <Typography variant="body1">{selectedSampleForDetails?.location || '-'}</Typography>
+                <Typography variant='body1'>{selectedSampleForDetails?.location || '-'}</Typography>
               </Grid>
               <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
+                <Typography variant='subtitle2' color='text.secondary'>
                   Laboratory
                 </Typography>
-                <Typography variant="body1">{selectedSampleForDetails?.laboratory || '-'}</Typography>
+                <Typography variant='body1'>{selectedSampleForDetails?.laboratory || '-'}</Typography>
               </Grid>
               <Grid item xs={12}>
-                <Typography variant="subtitle2" color="text.secondary">
+                <Typography variant='subtitle2' color='text.secondary'>
                   Remarks
                 </Typography>
-                <Typography variant="body1">{selectedSampleForDetails?.remarks || '-'}</Typography>
+                <Typography variant='body1'>{selectedSampleForDetails?.remarks || '-'}</Typography>
               </Grid>
             </Grid>
           </Box>
@@ -1099,16 +1076,6 @@ return (
         setOpen={setShowBarcodeDialog}
         sampleId={selectedSample?.id || 0}
         barcodeId={selectedSample?.barcodeId}
-        samples={Object.keys(rowSelection).map(key => {
-          const sample = data[parseInt(key)]
-          return {
-            id: sample.id,
-            barcodeId: sample.barcodeId || '',
-            subjectId: sample.employeeId,
-            sampleType: sample.sampleType,
-            collectedOn: sample.collectedOn
-          }
-        })}
         sampleDetails={{
           subjectId: selectedSample?.employeeId,
           sampleType: selectedSample?.sampleType,
@@ -1117,14 +1084,9 @@ return (
       />
 
       {/* Add Remark Dialog */}
-      <Dialog
-        open={showRemarkDialog}
-        onClose={() => setShowRemarkDialog(false)}
-        maxWidth="sm"
-        fullWidth
-      >
+      <Dialog open={showRemarkDialog} onClose={() => setShowRemarkDialog(false)} maxWidth='sm' fullWidth>
         <DialogTitle>
-          <Typography variant="h5" component="div">
+          <Typography variant='h5' component='div'>
             Add Remark
           </Typography>
         </DialogTitle>
@@ -1134,21 +1096,16 @@ return (
               fullWidth
               multiline
               rows={4}
-              label="Remark"
+              label='Remark'
               value={remark}
-              onChange={(e) => setRemark(e.target.value)}
-              placeholder="Enter your remark here..."
+              onChange={e => setRemark(e.target.value)}
+              placeholder='Enter your remark here...'
             />
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowRemarkDialog(false)}>Cancel</Button>
-          <Button 
-            onClick={handleRemarkSubmit} 
-            color='primary' 
-            variant='contained'
-            disabled={!remark.trim()}
-          >
+          <Button onClick={handleRemarkSubmit} color='primary' variant='contained' disabled={!remark.trim()}>
             Save
           </Button>
         </DialogActions>

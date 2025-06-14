@@ -8,48 +8,46 @@ import Box from '@mui/material/Box'
 
 // Component Imports
 import QcCheckListTable from '@/views/apps/lims/qc-check/Qc-checkListTable'
+import type { QcCheckType } from '@/types/qc-check'
 
-// Dummy service and type (replace with real service/type as needed)
-type QcCheckType = {
-  id: number
-  date: string
-  sampleId: string
-  referenceId: string
-  genderName: string
-  parameter: string
-  result: string
-  level1: string
-  level2: string
-  level3: string
-}
-
+// Dummy service (replace with real service as needed)
 const dummyQcCheckService = {
   async getAllRequests(): Promise<QcCheckType[]> {
     // Replace with real API call
     return [
       {
         id: 1,
+        srNo: 1,
+        testName: 'CBC',
+        instrumentName: 'Sysmex XN-1000',
         date: '2025-07-01 11:45',
         sampleId: 'TR000101E',
         referenceId: 'PK-100-101',
         genderName: 'Male Mihir Bhavsar',
         parameter: 'CBC',
-        result: '',
         level1: 'Pass',
         level2: 'Pass',
-        level3: 'Pass'
+        level3: 'Pass',
+        doneOn: '2025-07-01',
+        doneBy: 'John Doe',
+        profile: 'Hematology'
       },
       {
         id: 2,
+        srNo: 2,
+        testName: 'HIV',
+        instrumentName: 'Cobas 6000',
         date: '2025-07-01 11:45',
         sampleId: 'TR000102C',
         referenceId: 'PK-100-102',
         genderName: 'Female XYZ',
         parameter: 'HIV',
-        result: '',
         level1: 'Pass',
         level2: 'Pass',
-        level3: 'Pass'
+        level3: 'Pass',
+        doneOn: '2025-07-01',
+        doneBy: 'Jane Smith',
+        profile: 'Serology'
       }
     ]
   }
@@ -86,10 +84,7 @@ const LimsQcCheckList = () => {
   return (
     <Grid container spacing={6}>
       <Grid size={12}>
-        <QcCheckListTable 
-          qcData={qcRequests}
-          onDataChange={fetchRequests}
-        />
+        <QcCheckListTable qcData={qcRequests} onDataChange={fetchRequests} />
       </Grid>
     </Grid>
   )

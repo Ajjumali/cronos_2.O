@@ -10,7 +10,15 @@ import MenuItem from '@mui/material/MenuItem'
 import TextField from '@mui/material/TextField'
 import Button from '@mui/material/Button'
 import classnames from 'classnames'
-import { createColumnHelper, flexRender, getCoreRowModel, useReactTable, getFilteredRowModel, getPaginationRowModel, getSortedRowModel } from '@tanstack/react-table'
+import {
+  createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel
+} from '@tanstack/react-table'
 import TablePaginationComponent from '@/components/TablePaginationComponent'
 import tableStyles from '@core/styles/table.module.css'
 import type { TextFieldProps } from '@mui/material/TextField'
@@ -66,9 +74,7 @@ const AutoApprovalListTable = ({ autoApprovalData = [], onDataChange, autoApprov
   }, [autoApprovalData])
 
   const handleStatusChange = (id: number, value: string) => {
-    const updated = data.map(row =>
-      row.id === id ? { ...row, status: value } : row
-    )
+    const updated = data.map(row => (row.id === id ? { ...row, status: value } : row))
     setData(updated)
     onDataChange?.()
   }
@@ -98,7 +104,16 @@ const AutoApprovalListTable = ({ autoApprovalData = [], onDataChange, autoApprov
   const handleExportCSV = () => {
     setIsExporting(true)
     try {
-      const headers = ['Test Name', 'Analyte Code', 'Instrument', 'Reference Range', 'Approval Condition', 'Effective Date', 'Version', 'Status']
+      const headers = [
+        'Test Name',
+        'Analyte Code',
+        'Instrument',
+        'Reference Range',
+        'Approval Condition',
+        'Effective Date',
+        'Version',
+        'Status'
+      ]
       const csvData = data.map(row => [
         row.testName || '-',
         row.analyteCode || '-',
@@ -110,10 +125,7 @@ const AutoApprovalListTable = ({ autoApprovalData = [], onDataChange, autoApprov
         row.status || '-'
       ])
 
-      const csvContent = [
-        headers.join(','),
-        ...csvData.map(row => row.join(','))
-      ].join('\n')
+      const csvContent = [headers.join(','), ...csvData.map(row => row.join(','))].join('\n')
 
       const timestamp = new Date().toISOString().split('T')[0]
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
@@ -134,11 +146,11 @@ const AutoApprovalListTable = ({ autoApprovalData = [], onDataChange, autoApprov
     setIsPdfLoading(true)
     try {
       const doc = new jsPDF()
-      
+
       // Add title
       doc.setFontSize(16)
       doc.text('Auto-Approval Configuration', 14, 15)
-      
+
       // Add date
       doc.setFontSize(10)
       doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22)
@@ -157,7 +169,18 @@ const AutoApprovalListTable = ({ autoApprovalData = [], onDataChange, autoApprov
 
       // Add table
       autoTable(doc, {
-        head: [['Test Name', 'Analyte Code', 'Instrument', 'Reference Range', 'Approval Condition', 'Effective Date', 'Version', 'Status']],
+        head: [
+          [
+            'Test Name',
+            'Analyte Code',
+            'Instrument',
+            'Reference Range',
+            'Approval Condition',
+            'Effective Date',
+            'Version',
+            'Status'
+          ]
+        ],
         body: tableData,
         startY: 30,
         styles: { fontSize: 8 },
@@ -180,6 +203,20 @@ const AutoApprovalListTable = ({ autoApprovalData = [], onDataChange, autoApprov
 
   const columns = useMemo(
     () => [
+      {
+        id: 'actions',
+        header: 'Actions',
+        cell: (info: { row: { original: AutoApprovalType } }) => (
+          <Button
+            variant='outlined'
+            size='small'
+            onClick={() => handleConfigClick(info.row.original.id)}
+            disabled={!autoApprovalEnabled}
+          >
+            Configure
+          </Button>
+        )
+      },
       columnHelper.accessor('testName', {
         header: 'Test Name',
         cell: (info: { getValue: () => string }) => info.getValue()
@@ -215,28 +252,14 @@ const AutoApprovalListTable = ({ autoApprovalData = [], onDataChange, autoApprov
             value={info.row.original.status}
             onChange={e => handleStatusChange(info.row.original.id, e.target.value)}
             displayEmpty
-            size="small"
+            size='small'
             disabled={!autoApprovalEnabled}
           >
-            <MenuItem value="active">Active</MenuItem>
-            <MenuItem value="inactive">Inactive</MenuItem>
+            <MenuItem value='active'>Active</MenuItem>
+            <MenuItem value='inactive'>Inactive</MenuItem>
           </Select>
         )
-      }),
-      {
-        id: 'actions',
-        header: 'Actions',
-        cell: (info: { row: { original: AutoApprovalType } }) => (
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => handleConfigClick(info.row.original.id)}
-            disabled={!autoApprovalEnabled}
-          >
-            Configure
-          </Button>
-        )
-      }
+      })
     ],
     [handleStatusChange, autoApprovalEnabled]
   )
@@ -276,17 +299,13 @@ const AutoApprovalListTable = ({ autoApprovalData = [], onDataChange, autoApprov
   return (
     <Card>
       <CardHeader
-        title="Auto-Approval Configuration"
+        title='Auto-Approval Configuration'
         action={
           <Box sx={{ display: 'flex', gap: 2 }}>
             <Button
               variant='outlined'
               startIcon={
-                isExporting ? (
-                  <i className='tabler-loader animate-spin' />
-                ) : (
-                  <i className='tabler-file-spreadsheet' />
-                )
+                isExporting ? <i className='tabler-loader animate-spin' /> : <i className='tabler-file-spreadsheet' />
               }
               onClick={handleExportCSV}
               disabled={isExporting || !autoApprovalEnabled}
@@ -296,11 +315,7 @@ const AutoApprovalListTable = ({ autoApprovalData = [], onDataChange, autoApprov
             <Button
               variant='outlined'
               startIcon={
-                isPdfLoading ? (
-                  <i className='tabler-loader animate-spin' />
-                ) : (
-                  <i className='tabler-file-text' />
-                )
+                isPdfLoading ? <i className='tabler-loader animate-spin' /> : <i className='tabler-file-text' />
               }
               onClick={handleExportPDF}
               disabled={isPdfLoading || !autoApprovalEnabled}
@@ -311,11 +326,8 @@ const AutoApprovalListTable = ({ autoApprovalData = [], onDataChange, autoApprov
         }
       />
       <Divider />
-      <TableFilters
-        globalFilter={globalFilter}
-        setGlobalFilter={setGlobalFilter}
-      />
-      <div className="overflow-x-auto">
+      <TableFilters globalFilter={globalFilter} setGlobalFilter={setGlobalFilter} />
+      <div className='overflow-x-auto'>
         <table className={tableStyles.table}>
           <thead>
             {table.getHeaderGroups().map(headerGroup => (
@@ -331,7 +343,7 @@ const AutoApprovalListTable = ({ autoApprovalData = [], onDataChange, autoApprov
           <tbody>
             {table.getFilteredRowModel().rows.length === 0 ? (
               <tr>
-                <td colSpan={table.getVisibleFlatColumns().length} className="text-center">
+                <td colSpan={table.getVisibleFlatColumns().length} className='text-center'>
                   No data available
                 </td>
               </tr>
@@ -358,12 +370,12 @@ const AutoApprovalListTable = ({ autoApprovalData = [], onDataChange, autoApprov
       />
 
       {/* Configuration Dialog */}
-      <Dialog open={isConfigDialogOpen} onClose={handleCloseConfig} maxWidth="md" fullWidth>
+      <Dialog open={isConfigDialogOpen} onClose={handleCloseConfig} maxWidth='md' fullWidth>
         <DialogTitle>Configure Auto-Approval Criteria</DialogTitle>
         <DialogContent>
           <Grid container spacing={3} sx={{ mt: 1 }}>
             <Grid item xs={12}>
-              <Typography variant="subtitle1" gutterBottom>
+              <Typography variant='subtitle1' gutterBottom>
                 Test Information
               </Typography>
               {selectedRowId && (
@@ -375,15 +387,13 @@ const AutoApprovalListTable = ({ autoApprovalData = [], onDataChange, autoApprov
               )}
             </Grid>
             <Grid item xs={12}>
-              <Typography variant="subtitle1" gutterBottom>
+              <Typography variant='subtitle1' gutterBottom>
                 Reference Range
               </Typography>
-              <Typography>
-                {selectedRowId && data.find(row => row.id === selectedRowId)?.referenceRange}
-              </Typography>
+              <Typography>{selectedRowId && data.find(row => row.id === selectedRowId)?.referenceRange}</Typography>
             </Grid>
             <Grid item xs={12}>
-              <Typography variant="subtitle1" gutterBottom>
+              <Typography variant='subtitle1' gutterBottom>
                 Effective Date
               </Typography>
               <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -398,7 +408,7 @@ const AutoApprovalListTable = ({ autoApprovalData = [], onDataChange, autoApprov
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseConfig}>Cancel</Button>
-          <Button onClick={handleSaveConfig} variant="contained" color="primary">
+          <Button onClick={handleSaveConfig} variant='contained' color='primary'>
             Save Configuration
           </Button>
         </DialogActions>
@@ -407,4 +417,4 @@ const AutoApprovalListTable = ({ autoApprovalData = [], onDataChange, autoApprov
   )
 }
 
-export default AutoApprovalListTable 
+export default AutoApprovalListTable

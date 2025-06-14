@@ -11,7 +11,15 @@ import TextField from '@mui/material/TextField'
 import Button from '@mui/material/Button'
 import Menu from '@mui/material/Menu'
 import classnames from 'classnames'
-import { createColumnHelper, flexRender, getCoreRowModel, useReactTable, getFilteredRowModel, getPaginationRowModel, getSortedRowModel } from '@tanstack/react-table'
+import {
+  createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel
+} from '@tanstack/react-table'
 import TablePaginationComponent from '@/components/TablePaginationComponent'
 import tableStyles from '@core/styles/table.module.css'
 import type { TextFieldProps } from '@mui/material/TextField'
@@ -33,6 +41,7 @@ import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
 import Typography from '@mui/material/Typography'
 import Box from '@mui/material/Box'
+import type { QcCheckType } from '@/types/qc-check'
 
 declare global {
   interface Window {
@@ -57,36 +66,10 @@ declare module '@tanstack/table-core' {
   }
 }
 
-type QcCheckType = {
-  id: number
-  srNo: number
-  testName: string
-  instrumentName: string
-  level1: string
-  level2: string
-  level3: string
-  doneOn: string
-  doneBy: string
-  profile: string
-  result: string
-  date: string
-  sampleId: string
-  referenceId: string
-  genderName: string
-  parameter: string
-}
-
 type Props = {
   qcData?: QcCheckType[]
   onDataChange?: () => void
 }
-
-const resultOptions = [
-  { value: '', label: 'Select' },
-  { value: 'Pass', label: 'Pass' },
-  { value: 'Fail', label: 'Fail' },
-  { value: 'NA', label: 'NA' }
-]
 
 const columnHelper = createColumnHelper<QcCheckType>()
 
@@ -119,8 +102,8 @@ const DebouncedInput = ({
       {...props}
       value={value}
       onChange={e => setValue(e.target.value)}
-      size="small"
-      label={props.label || "Search"}
+      size='small'
+      label={props.label || 'Search'}
     />
   )
 }
@@ -128,7 +111,7 @@ const DebouncedInput = ({
 const QcCheckListTable = ({ qcData = [], onDataChange }: Props) => {
   const [rowSelection, setRowSelection] = useState({})
   const [globalFilter, setGlobalFilter] = useState('')
-  const [filteredData, setFilteredData] = useState<QcCheckType[]>(qcData)
+  const [filteredData, setFilteredData] = useState<QcCheckType[]>([])
   const [exportAnchorEl, setExportAnchorEl] = useState<null | HTMLElement>(null)
   const [isPdfLoading, setIsPdfLoading] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
@@ -141,16 +124,6 @@ const QcCheckListTable = ({ qcData = [], onDataChange }: Props) => {
   useEffect(() => {
     setFilteredData(qcData)
   }, [qcData])
-
-  const handleResultChange = (id: number, value: string) => {
-    const updated = qcData.map(row =>
-      row.id === id ? { ...row, result: value } : row
-    )
-    setFilteredData(updated)
-    setTimeout(() => {
-      onDataChange?.()
-    }, 0)
-  }
 
   const handleExportClick = (event: React.MouseEvent<HTMLElement>) => {
     setExportAnchorEl(event.currentTarget)
@@ -172,22 +145,21 @@ const QcCheckListTable = ({ qcData = [], onDataChange }: Props) => {
       'Level 3': row.original.level3,
       'Done On': row.original.doneOn,
       'Done By': row.original.doneBy,
-      'Profile': row.original.profile,
-      'QC Result': row.original.result
+      Profile: row.original.profile
     }))
 
     // Convert to CSV
     const headers = Object.keys(dataToExport[0])
     const csvContent = [
       headers.join(','), // Header row
-      ...dataToExport.map(row => 
-        headers.map(header => {
-          const value = row[header as keyof typeof row]
-          // Handle values that might contain commas
-          return typeof value === 'string' && value.includes(',') 
-            ? `"${value}"` 
-            : value
-        }).join(',')
+      ...dataToExport.map(row =>
+        headers
+          .map(header => {
+            const value = row[header as keyof typeof row]
+            // Handle values that might contain commas
+            return typeof value === 'string' && value.includes(',') ? `"${value}"` : value
+          })
+          .join(',')
       )
     ].join('\n')
 
@@ -208,32 +180,35 @@ const QcCheckListTable = ({ qcData = [], onDataChange }: Props) => {
   const exportToPDF = () => {
     setIsPdfLoading(true)
     const doc = new jsPDF()
-    
+
     // Add title
     doc.setFontSize(16)
     doc.text('QC Check List', 14, 15)
-    
+
     // Add date
     doc.setFontSize(10)
     doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22)
 
     // Prepare table data
-    const tableData = table.getFilteredRowModel().rows.map(row => [
-      row.original.srNo,
-      row.original.testName,
-      row.original.instrumentName,
-      row.original.level1,
-      row.original.level2,
-      row.original.level3,
-      row.original.doneOn,
-      row.original.doneBy,
-      row.original.profile,
-      row.original.result
-    ])
+    const tableData = table
+      .getFilteredRowModel()
+      .rows.map(row => [
+        row.original.srNo,
+        row.original.testName,
+        row.original.instrumentName,
+        row.original.level1,
+        row.original.level2,
+        row.original.level3,
+        row.original.doneOn,
+        row.original.doneBy,
+        row.original.profile
+      ])
 
     // Add table
     autoTable(doc, {
-      head: [['Sr. No.', 'Test Name', 'Instrument Name', 'Level 1', 'Level 2', 'Level 3', 'Done On', 'Done By', 'Profile', 'QC Result']],
+      head: [
+        ['Sr. No.', 'Test Name', 'Instrument Name', 'Level 1', 'Level 2', 'Level 3', 'Done On', 'Done By', 'Profile']
+      ],
       body: tableData,
       startY: 30,
       styles: { fontSize: 8 },
@@ -302,26 +277,9 @@ const QcCheckListTable = ({ qcData = [], onDataChange }: Props) => {
       columnHelper.accessor('profile', {
         header: 'Profile',
         cell: info => info.getValue()
-      }),
-      columnHelper.accessor('result', {
-        header: 'QC Result',
-        cell: info => (
-          <Select
-            value={info.row.original.result}
-            onChange={e => handleResultChange(info.row.original.id, e.target.value)}
-            displayEmpty
-            size="small"
-          >
-            {resultOptions.map(opt => (
-              <MenuItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </MenuItem>
-            ))}
-          </Select>
-        )
       })
     ],
-    [handleResultChange]
+    []
   )
 
   const fuzzyFilter = (row: any, columnId: string, value: string) => {
@@ -366,24 +324,18 @@ const QcCheckListTable = ({ qcData = [], onDataChange }: Props) => {
   const handleBulkConfirm = async () => {
     setIsBulkOperationLoading(true)
     setBulkOperationProgress(0)
-    
+
     try {
       // Simulate bulk operation with progress
       const total = selectedSamplesForBulk.length
       for (let i = 0; i < total; i++) {
         // Update progress
         setBulkOperationProgress(Math.round(((i + 1) / total) * 100))
-        
+
         // Simulate API call delay
         await new Promise(resolve => setTimeout(resolve, 100))
-        
-        // Update the result for each selected item
-        const updated = filteredData.map(row =>
-          selectedSamplesForBulk.includes(row.id) ? { ...row, result: 'Pass' } : row
-        )
-        setFilteredData(updated)
       }
-      
+
       toast.success('Bulk operation completed successfully')
       onDataChange?.()
     } catch (error) {
@@ -398,29 +350,25 @@ const QcCheckListTable = ({ qcData = [], onDataChange }: Props) => {
   }
 
   const BulkOperationProgress = () => (
-    <div className="p-4">
-      <div className="flex items-center justify-between mb-2">
-        <Typography variant="body2">Processing...</Typography>
-        <Typography variant="body2">{bulkOperationProgress}%</Typography>
+    <div className='p-4'>
+      <div className='flex items-center justify-between mb-2'>
+        <Typography variant='body2'>Processing...</Typography>
+        <Typography variant='body2'>{bulkOperationProgress}%</Typography>
       </div>
-      <LinearProgress variant="determinate" value={bulkOperationProgress} />
+      <LinearProgress variant='determinate' value={bulkOperationProgress} />
     </div>
   )
 
   return (
     <Card>
-      <CardHeader 
+      <CardHeader
         title='QC Check List'
         action={
           <Box sx={{ display: 'flex', gap: 2 }}>
             <Button
               variant='outlined'
               startIcon={
-                isExporting ? (
-                  <i className='tabler-loader animate-spin' />
-                ) : (
-                  <i className='tabler-file-spreadsheet' />
-                )
+                isExporting ? <i className='tabler-loader animate-spin' /> : <i className='tabler-file-spreadsheet' />
               }
               onClick={exportToCSV}
               disabled={isExporting}
@@ -430,11 +378,7 @@ const QcCheckListTable = ({ qcData = [], onDataChange }: Props) => {
             <Button
               variant='outlined'
               startIcon={
-                isPdfLoading ? (
-                  <i className='tabler-loader animate-spin' />
-                ) : (
-                  <i className='tabler-file-text' />
-                )
+                isPdfLoading ? <i className='tabler-loader animate-spin' /> : <i className='tabler-file-text' />
               }
               onClick={exportToPDF}
               disabled={isPdfLoading}
@@ -454,7 +398,7 @@ const QcCheckListTable = ({ qcData = [], onDataChange }: Props) => {
         />
       </div>
       <TableFilters setData={setFilteredData} qcData={qcData} />
-      
+
       <div className='overflow-x-auto' style={{ maxHeight: '600px' }}>
         <table className={tableStyles.table}>
           <thead style={{ position: 'sticky', top: 0, backgroundColor: 'white', zIndex: 1 }}>
@@ -515,7 +459,7 @@ const QcCheckListTable = ({ qcData = [], onDataChange }: Props) => {
         <Dialog
           open={showBulkConfirm}
           onClose={() => !isBulkOperationLoading && setShowBulkConfirm(false)}
-          maxWidth="sm"
+          maxWidth='sm'
           fullWidth
         >
           <DialogTitle>Confirm Bulk Operation</DialogTitle>
@@ -526,17 +470,10 @@ const QcCheckListTable = ({ qcData = [], onDataChange }: Props) => {
             {isBulkOperationLoading && <BulkOperationProgress />}
           </DialogContent>
           <DialogActions>
-            <Button
-              onClick={() => setShowBulkConfirm(false)}
-              disabled={isBulkOperationLoading}
-            >
+            <Button onClick={() => setShowBulkConfirm(false)} disabled={isBulkOperationLoading}>
               Cancel
             </Button>
-            <Button
-              onClick={handleBulkConfirm}
-              color="primary"
-              disabled={isBulkOperationLoading}
-            >
+            <Button onClick={handleBulkConfirm} color='primary' disabled={isBulkOperationLoading}>
               Confirm
             </Button>
           </DialogActions>

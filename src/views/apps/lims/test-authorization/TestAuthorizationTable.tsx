@@ -57,18 +57,18 @@ import type { TestAuthorizationType } from '@/types/apps/limsTypes'
 import CustomAvatar from '@core/components/mui/Avatar'
 import CustomTextField from '@core/components/mui/TextField'
 import OptionMenu from '@core/components/option-menu'
-import TableFilters from './TableFilters'
 import RemarkDialog from '@/components/dialogs/test-result/remark-dialog'
 import BarcodePrintDialog from '@/components/dialogs/barcode-print'
 import TestAuthorizationDetailsDialog from '@/components/dialogs/test-authorization-details'
 import ConfirmDialog from '@/components/dialogs/ConfirmDialog/ConfirmDialog'
+import TablePaginationComponent from '@/components/TablePaginationComponent'
+import TableFilters from './TableFilters'
 
 // Util Imports
 import { getLocalizedUrl } from '@/utils/i18n'
 
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
-import TablePaginationComponent from '@/components/TablePaginationComponent'
 
 // API Imports
 import { testAuthorizationService } from '@/app/api/apps/lims/Test-authorization/route'
@@ -155,62 +155,6 @@ const TestAuthorizationTable = ({ testData }: { testData?: TestAuthorizationType
 
   const columns = useMemo<ColumnDef<TestAuthorizationWithActionsType, any>[]>(
     () => [
-      columnHelper.accessor('registrationDateTime', {
-        header: 'Registration Date',
-        cell: info => formatDate(info.getValue())
-      }),
-      columnHelper.accessor('sampleId', {
-        header: 'Sample ID',
-        cell: info => info.getValue()
-      }),
-      columnHelper.accessor('volunteerId', {
-        header: 'Volunteer ID',
-        cell: info => info.getValue()
-      }),
-      columnHelper.accessor('gender', {
-        header: 'Gender',
-        cell: info => info.getValue()
-      }),
-      columnHelper.accessor('name', {
-        header: 'Name',
-        cell: info => info.getValue()
-      }),
-      columnHelper.accessor('testPanelName', {
-        header: 'Test Panel',
-        cell: info => info.getValue()
-      }),
-      columnHelper.accessor('sampleType', {
-        header: 'Sample Type',
-        cell: info => (
-          <Typography
-            component="span"
-            sx={{ 
-              color: 'primary.main', 
-              cursor: 'pointer',
-              '&:hover': { textDecoration: 'underline' }
-            }}
-            onClick={() => openValidateSample(info.row.original)}
-          >
-            {info.getValue()}
-          </Typography>
-        )
-      }),
-      columnHelper.accessor('authorizationStatus', {
-        header: 'Status',
-        cell: info => {
-          const authStatus = info.getValue() as string
-          const statusInfo = testStatusObj[authStatus] || { title: authStatus, color: 'default' }
-
-          return (
-            <Chip
-              label={statusInfo.title}
-              color={statusInfo.color}
-              size="small"
-              sx={{ minWidth: '100px' }}
-            />
-          )
-        }
-      }),
       columnHelper.accessor('actions', {
         header: 'Actions',
         cell: info => {
@@ -259,6 +203,55 @@ const TestAuthorizationTable = ({ testData }: { testData?: TestAuthorizationType
               />
             </Box>
           )
+        }
+      }),
+      columnHelper.accessor('registrationDateTime', {
+        header: 'Registration Date',
+        cell: info => formatDate(info.getValue())
+      }),
+      columnHelper.accessor('sampleId', {
+        header: 'Sample ID',
+        cell: info => info.getValue()
+      }),
+      columnHelper.accessor('volunteerId', {
+        header: 'Volunteer ID',
+        cell: info => info.getValue()
+      }),
+      columnHelper.accessor('gender', {
+        header: 'Gender',
+        cell: info => info.getValue()
+      }),
+      columnHelper.accessor('name', {
+        header: 'Name',
+        cell: info => info.getValue()
+      }),
+      columnHelper.accessor('testPanelName', {
+        header: 'Test Panel',
+        cell: info => info.getValue()
+      }),
+      columnHelper.accessor('sampleType', {
+        header: 'Sample Type',
+        cell: info => (
+          <Typography
+            component='span'
+            sx={{
+              color: 'primary.main',
+              cursor: 'pointer',
+              '&:hover': { textDecoration: 'underline' }
+            }}
+            onClick={() => openValidateSample(info.row.original)}
+          >
+            {info.getValue()}
+          </Typography>
+        )
+      }),
+      columnHelper.accessor('authorizationStatus', {
+        header: 'Status',
+        cell: info => {
+          const authStatus = info.getValue() as string
+          const statusInfo = testStatusObj[authStatus] || { title: authStatus, color: 'default' }
+
+          return <Chip label={statusInfo.title} color={statusInfo.color} size='small' sx={{ minWidth: '100px' }} />
         }
       })
     ],
@@ -327,29 +320,29 @@ const TestAuthorizationTable = ({ testData }: { testData?: TestAuthorizationType
       const response = await fetch('/api/apps/lims/test-authorization?action=download', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ fileType: 'CSV' })
-      });
+      })
 
       if (!response.ok) {
-        throw new Error('Failed to download file');
+        throw new Error('Failed to download file')
       }
 
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Test_Authorizations_${new Date().toISOString().replace(/[:.]/g, '_')}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Test_Authorizations_${new Date().toISOString().replace(/[:.]/g, '_')}.csv`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
 
-      toast.success('CSV file downloaded successfully');
+      toast.success('CSV file downloaded successfully')
     } catch (error) {
       console.error('Export failed:', error)
-      toast.error('Failed to download CSV file');
+      toast.error('Failed to download CSV file')
     } finally {
       setIsExporting(false)
     }
@@ -358,15 +351,15 @@ const TestAuthorizationTable = ({ testData }: { testData?: TestAuthorizationType
   const handlePdfExport = async () => {
     setIsPdfLoading(true)
     try {
-      const doc = new jsPDF();
-      
+      const doc = new jsPDF()
+
       // Add title
-      doc.setFontSize(16);
-      doc.text('Test Authorizations List', 14, 15);
-      
+      doc.setFontSize(16)
+      doc.text('Test Authorizations List', 14, 15)
+
       // Add date
-      doc.setFontSize(10);
-      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
+      doc.setFontSize(10)
+      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22)
 
       // Prepare table data
       const tableData = data.map(test => [
@@ -380,25 +373,38 @@ const TestAuthorizationTable = ({ testData }: { testData?: TestAuthorizationType
         test.authorizationStatus || '-',
         test.authorizedBy || '-',
         test.authorizedOn ? formatDate(test.authorizedOn) : '-'
-      ]);
+      ])
 
       // Add table using autoTable
       autoTable(doc, {
-        head: [['Registration Date', 'Sample ID', 'Volunteer ID', 'Gender', 'Name', 'Test Panel', 'Sample Type', 'Status', 'Authorized By', 'Authorized On']],
+        head: [
+          [
+            'Registration Date',
+            'Sample ID',
+            'Volunteer ID',
+            'Gender',
+            'Name',
+            'Test Panel',
+            'Sample Type',
+            'Status',
+            'Authorized By',
+            'Authorized On'
+          ]
+        ],
         body: tableData,
         startY: 30,
         styles: { fontSize: 8 },
         headStyles: { fillColor: [41, 128, 185] },
         alternateRowStyles: { fillColor: [245, 245, 245] },
         margin: { top: 30 }
-      });
+      })
 
       // Save the PDF
-      doc.save(`test-authorizations-${new Date().toISOString().split('T')[0]}.pdf`);
-      toast.success('PDF file downloaded successfully');
+      doc.save(`test-authorizations-${new Date().toISOString().split('T')[0]}.pdf`)
+      toast.success('PDF file downloaded successfully')
     } catch (error) {
-      console.error('PDF export failed:', error);
-      toast.error('Failed to download PDF file');
+      console.error('PDF export failed:', error)
+      toast.error('Failed to download PDF file')
     } finally {
       setIsPdfLoading(false)
     }
@@ -407,25 +413,25 @@ const TestAuthorizationTable = ({ testData }: { testData?: TestAuthorizationType
   const openSampleDetails = (row: TestAuthorizationWithActionsType) => {
     // Example: navigate to a details page or open a modal
     // For navigation:
-    router.push(getLocalizedUrl(`/apps/lims/test-results/Test-Detail/${row.id}`, locale as Locale));
+    router.push(getLocalizedUrl(`/apps/lims/test-results/Test-Detail/${row.id}`, locale as Locale))
     // Or for modal: set some state to show details
-  };
+  }
 
   const printBarcode = (row: TestAuthorizationWithActionsType) => {
     // Example: Open a barcode print dialog or trigger print logic
     // setSelectedSample(row); setShowBarcodeDialog(true);
-    toast.info(`Print barcode for Sample ID: ${row.sampleId}`);
-  };
+    toast.info(`Print barcode for Sample ID: ${row.sampleId}`)
+  }
 
   const openRemarkDialog = (row: TestAuthorizationWithActionsType) => {
-    setSelectedTestId(row.id);
-    setRemarkDialogOpen(true);
-  };
+    setSelectedTestId(row.id)
+    setRemarkDialogOpen(true)
+  }
 
   const openOutsourceDialog = (row: TestAuthorizationWithActionsType) => {
     // Example: Open an outsource dialog or trigger outsource logic
-    toast.info(`Outsource sample with ID: ${row.sampleId}`);
-  };
+    toast.info(`Outsource sample with ID: ${row.sampleId}`)
+  }
 
   const openValidateSample = (row: TestAuthorizationWithActionsType) => {
     setIsNavigating(true)
@@ -454,30 +460,24 @@ const TestAuthorizationTable = ({ testData }: { testData?: TestAuthorizationType
       <Backdrop
         sx={{
           color: '#fff',
-          zIndex: (theme) => theme.zIndex.drawer + 1,
+          zIndex: theme => theme.zIndex.drawer + 1,
           display: 'flex',
           flexDirection: 'column',
           gap: 2
         }}
         open={isNavigating}
       >
-        <CircularProgress color="inherit" />
-        <Typography variant="body1">
-          Navigating to validate sample...
-        </Typography>
+        <CircularProgress color='inherit' />
+        <Typography variant='body1'>Navigating to validate sample...</Typography>
       </Backdrop>
-      <CardHeader 
-        title="Test Results" 
+      <CardHeader
+        title='Test Authorization'
         action={
           <Box sx={{ display: 'flex', gap: 2 }}>
             <Button
               variant='outlined'
               startIcon={
-                isExporting ? (
-                  <i className='tabler-loader animate-spin' />
-                ) : (
-                  <i className='tabler-file-spreadsheet' />
-                )
+                isExporting ? <i className='tabler-loader animate-spin' /> : <i className='tabler-file-spreadsheet' />
               }
               onClick={handleExport}
               disabled={isExporting}
@@ -487,11 +487,7 @@ const TestAuthorizationTable = ({ testData }: { testData?: TestAuthorizationType
             <Button
               variant='outlined'
               startIcon={
-                isPdfLoading ? (
-                  <i className='tabler-loader animate-spin' />
-                ) : (
-                  <i className='tabler-file-text' />
-                )
+                isPdfLoading ? <i className='tabler-loader animate-spin' /> : <i className='tabler-file-text' />
               }
               onClick={handlePdfExport}
               disabled={isPdfLoading}
@@ -515,9 +511,7 @@ const TestAuthorizationTable = ({ testData }: { testData?: TestAuthorizationType
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map(header => (
                     <th key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
+                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     </th>
                   ))}
                 </tr>
@@ -536,8 +530,7 @@ const TestAuthorizationTable = ({ testData }: { testData?: TestAuthorizationType
         )}
       </div>
       <TablePaginationComponent table={table} />
-      <div className='flex items-center justify-center gap-4 p-4 border-t'>
-      </div>
+      <div className='flex items-center justify-center gap-4 p-4 border-t'></div>
 
       <RemarkDialog
         open={remarkDialogOpen}
@@ -550,7 +543,11 @@ const TestAuthorizationTable = ({ testData }: { testData?: TestAuthorizationType
         open={showBarcodeDialog}
         setOpen={setShowBarcodeDialog}
         sampleId={(selectedTest as TestAuthorizationWithActionsType)?.sampleId || 0}
-        barcodeId={(selectedTest as TestAuthorizationWithActionsType)?.sampleId ? String((selectedTest as TestAuthorizationWithActionsType).sampleId) : undefined}
+        barcodeId={
+          (selectedTest as TestAuthorizationWithActionsType)?.sampleId
+            ? String((selectedTest as TestAuthorizationWithActionsType).sampleId)
+            : undefined
+        }
       />
       <TestAuthorizationDetailsDialog
         open={showSampleDetails}
@@ -559,11 +556,12 @@ const TestAuthorizationTable = ({ testData }: { testData?: TestAuthorizationType
       />
       <ConfirmDialog
         open={showRejectConfirm}
-        title="Confirm Rejection"
+        title='Confirm Rejection'
         description={
           <div className='flex flex-col gap-4'>
             <Typography>
-              Do you want to reject test for sample {(selectedTestForReject as TestAuthorizationWithActionsType)?.sampleId}?
+              Do you want to reject test for sample{' '}
+              {(selectedTestForReject as TestAuthorizationWithActionsType)?.sampleId}?
             </Typography>
             <CustomTextField
               fullWidth
@@ -571,15 +569,15 @@ const TestAuthorizationTable = ({ testData }: { testData?: TestAuthorizationType
               rows={3}
               label='Reason for Rejection'
               value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
+              onChange={e => setRejectReason(e.target.value)}
               required
               error={!rejectReason.trim()}
               helperText={!rejectReason.trim() ? 'Please provide a reason for rejection' : ''}
             />
           </div>
         }
-        okText="Yes"
-        cancelText="No"
+        okText='Yes'
+        cancelText='No'
         handleClose={() => {
           setShowRejectConfirm(false)
           setSelectedTestForReject(null)
@@ -591,4 +589,4 @@ const TestAuthorizationTable = ({ testData }: { testData?: TestAuthorizationType
   )
 }
 
-export default TestAuthorizationTable 
+export default TestAuthorizationTable

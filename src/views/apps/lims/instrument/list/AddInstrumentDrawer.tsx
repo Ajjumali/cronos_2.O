@@ -122,12 +122,27 @@ const AddInstrumentDrawer = (props: Props) => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await fetch('/api/apps/lims/Instrument-master/categories')
+        const response = await fetch('/api/apps/lims/Test-categories', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json'
+          },
+          credentials: 'same-origin'
+        })
+
         if (!response.ok) {
-          throw new Error('Failed to fetch categories')
+          const errorText = await response.text()
+          console.error('API Error Response:', errorText)
+          throw new Error(`Failed to fetch categories: ${response.status} ${response.statusText}`)
         }
+
         const data = await response.json()
-        setCategoryList(data.result)
+        if (data && data.result) {
+          setCategoryList(data.result)
+        } else {
+          throw new Error('Invalid response format')
+        }
       } catch (error) {
         console.error('Error fetching categories:', error)
         setError('Failed to load categories. Please try again later.')
@@ -182,11 +197,14 @@ const AddInstrumentDrawer = (props: Props) => {
           body: JSON.stringify({ ...instrumentPayload, reason })
         })
 
+        const responseData = await response.json()
+
         if (!response.ok) {
-          throw new Error('Failed to update instrument')
+          throw new Error(responseData.error || 'Failed to update instrument')
         }
 
-        toast.success('Record Updated successfully')
+        toast.success(responseData.message || 'Record Updated successfully')
+        onDataChange?.(responseData.data || instrumentPayload)
       } else {
         const response = await fetch('/api/apps/lims/Instrument-master', {
           method: 'POST',
@@ -196,16 +214,19 @@ const AddInstrumentDrawer = (props: Props) => {
           body: JSON.stringify(instrumentPayload)
         })
 
+        const responseData = await response.json()
+
         if (!response.ok) {
-          throw new Error('Failed to add instrument')
+          throw new Error(responseData.error || 'Failed to add instrument')
         }
 
-        toast.success('Record created successfully!')
+        toast.success(responseData.message || 'Record created successfully!')
+        onDataChange?.(responseData.data || instrumentPayload)
       }
-      onDataChange?.(instrumentPayload)
       handleClose()
-    } catch (error) {
-      setError('Failed to save instrument. Please try again.')
+    } catch (error: any) {
+      setError(error.message || 'Failed to save instrument. Please try again.')
+      toast.error(error.message || 'Failed to save instrument. Please try again.')
     } finally {
       setIsSubmitting(false)
     }

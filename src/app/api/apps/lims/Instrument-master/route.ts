@@ -8,18 +8,6 @@ interface APIResponse<T> {
   Status: string
 }
 
-interface LabTestCategoryDto {
-  id: number
-  name?: string
-  categoryName?: string
-  categoryOrder?: string
-  activeFlag?: string
-  timeZoneId?: number
-  parentId?: number
-  modifyBy?: string
-  modifyOn?: string
-}
-
 // GET /api/apps/lims/Instrument-master
 export async function GET(request: Request) {
   try {
@@ -33,35 +21,6 @@ export async function GET(request: Request) {
 
     const url = new URL(request.url)
     const path = url.pathname.split('/').pop()
-
-    // Handle categories endpoint
-    if (path === 'categories') {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/v1/testcategory`, {
-        headers: {
-          Authorization: `Bearer ${(session.user as any).accessToken}`
-        }
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch categories')
-      }
-
-      const data = (await response.json()) as APIResponse<LabTestCategoryDto[]>
-      if (data && data.result && Array.isArray(data.result)) {
-        const categories = data.result.map((category: LabTestCategoryDto) => ({
-          id: category.id,
-          categoryName: category.name || category.categoryName || '',
-          categoryOrder: category.categoryOrder || '',
-          activeFlag: category.activeFlag || 'Active',
-          timeZoneId: category.timeZoneId || 0,
-          parentId: category.parentId || 0,
-          modifyBy: category.modifyBy || '',
-          modifyOn: category.modifyOn || ''
-        }))
-        return NextResponse.json({ result: categories })
-      }
-      throw new Error('Invalid categories data format')
-    }
 
     // Handle download endpoint
     if (path === 'download') {
@@ -140,7 +99,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: data?.Message || 'Instrument created successfully'
+      message: data?.Message || 'Instrument created successfully',
+      data: data?.Result
     })
   } catch (error: any) {
     console.error('Error in POST /api/apps/lims/Instrument-master:', error)
@@ -176,12 +136,17 @@ export async function PUT(request: Request) {
       return NextResponse.redirect(new URL('/auth/login?signout=true', request.url))
     }
 
+    const data = await response.json()
+
     if (!response.ok) {
-      const errorData = await response.json().catch(() => null)
-      throw new Error(errorData?.message || 'Failed to update instrument')
+      throw new Error(data?.Message || 'Failed to update instrument')
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({
+      success: true,
+      message: data?.Message || 'Instrument updated successfully',
+      data: data?.Result
+    })
   } catch (error: any) {
     console.error('Error in PUT /api/apps/lims/Instrument-master:', error)
     return NextResponse.json({ error: error.message || 'Failed to update instrument' }, { status: 500 })

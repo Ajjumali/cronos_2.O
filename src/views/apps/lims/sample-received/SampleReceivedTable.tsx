@@ -70,7 +70,7 @@ import SampleDetailsDialog from '@/components/dialogs/sample-details-dialog'
 
 // Util Imports
 import { getLocalizedUrl } from '@/utils/i18n'
-import { formatDate  } from '@/utils/dateUtils'
+import { formatDate } from '@/utils/dateUtils'
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
 import TablePaginationComponent from '@/components/TablePaginationComponent'
@@ -93,13 +93,13 @@ export type SampleType = {
   sampleTypeId?: number
   sampleType?: string
   noOfPrint?: number
-  collectedBy?: number
-  collectedByName?: string
+  collectedBy?: string
+  //collectedByName?: string
   collectedOn?: string
-  sentBy?: number
-  sentByName?: string
+  sentBy?: string
+  //sentByName?: string
   sentOn?: string
-  receivedBy?: number
+  receivedBy?: string
   receivedOn?: string
   isFromExisting?: string
   modifyBy?: string
@@ -132,8 +132,8 @@ type SampleStatusType = {
   }
 }
 
-type StatusKey = 'null' | 1 | 2 | 3 | 4 | 5 | 6;
-type StatusMapType = Record<StatusKey, { label: string; color: 'warning' | 'success' | 'error' | 'info' | 'secondary' }>;
+type StatusKey = 'null' | 1 | 2 | 3 | 4 | 5 | 6
+type StatusMapType = Record<StatusKey, { label: string; color: 'warning' | 'success' | 'error' | 'info' | 'secondary' }>
 
 const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
   const itemRank = rankItem(row.getValue(columnId), value)
@@ -168,9 +168,8 @@ const DebouncedInput = ({
   return <CustomTextField {...props} value={value} onChange={e => setValue(e.target.value)} />
 }
 
-
 const statusMap: StatusMapType = {
-  'null': { label: 'Pending', color: 'warning' },
+  null: { label: 'Pending', color: 'warning' },
   1: { label: 'Received', color: 'success' },
   2: { label: 'Rejected', color: 'error' },
   3: { label: 'Pending', color: 'warning' },
@@ -180,26 +179,26 @@ const statusMap: StatusMapType = {
 }
 
 // Add color legend component
-const ColorLegend = () => (
-  <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-      <Box sx={{ width: 16, height: 16, bgcolor: 'success.main', borderRadius: 1 }} />
-      <Typography variant="body2">Received</Typography>
-    </Box>
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-      <Box sx={{ width: 16, height: 16, bgcolor: 'error.main', borderRadius: 1 }} />
-      <Typography variant="body2">Rejected</Typography>
-    </Box>
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-      <Box sx={{ width: 16, height: 16, bgcolor: 'warning.main', borderRadius: 1 }} />
-      <Typography variant="body2">Pending</Typography>
-    </Box>
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-      <Box sx={{ width: 16, height: 16, bgcolor: 'secondary.main', borderRadius: 1 }} />
-      <Typography variant="body2">Outsourced</Typography>
-    </Box>
-  </Box>
-)
+// const ColorLegend = () => (
+//   <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+//     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+//       <Box sx={{ width: 16, height: 16, bgcolor: 'success.main', borderRadius: 1 }} />
+//       <Typography variant='body2'>Received</Typography>
+//     </Box>
+//     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+//       <Box sx={{ width: 16, height: 16, bgcolor: 'error.main', borderRadius: 1 }} />
+//       <Typography variant='body2'>Rejected</Typography>
+//     </Box>
+//     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+//       <Box sx={{ width: 16, height: 16, bgcolor: 'warning.main', borderRadius: 1 }} />
+//       <Typography variant='body2'>Pending</Typography>
+//     </Box>
+//     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+//       <Box sx={{ width: 16, height: 16, bgcolor: 'secondary.main', borderRadius: 1 }} />
+//       <Typography variant='body2'>Outsourced</Typography>
+//     </Box>
+//   </Box>
+// )
 
 const columnHelper = createColumnHelper<SampleWithActionsType>()
 
@@ -280,7 +279,7 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
 
   const columns = useMemo<ColumnDef<SampleWithActionsType, any>[]>(
     () => [
-       columnHelper.accessor('actions', {
+      columnHelper.accessor('actions', {
         header: 'Actions',
         enableHiding: false,
         cell: ({ row }) => (
@@ -386,7 +385,9 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
       columnHelper.accessor('barcodeId', {
         header: 'Barcode ID',
         enableHiding: true,
-        cell: ({ row }: { row: { original: SampleWithActionsType } }) => <Typography>{row.original.barcodeId || '-'}</Typography>
+        cell: ({ row }: { row: { original: SampleWithActionsType } }) => (
+          <Typography>{row.original.barcodeId || '-'}</Typography>
+        )
       }),
       columnHelper.accessor('labName', {
         header: 'Lab Name',
@@ -397,16 +398,12 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
         header: 'Status',
         enableHiding: true,
         cell: ({ row }) => {
-          const statusId = row.original.statusId;
-          const statusInfo = (statusId === null ? statusMap.null : statusMap[statusId as keyof StatusMapType]) || { label: 'Unknown', color: 'default' as const };
-          return (
-            <Chip
-              label={statusInfo.label}
-              variant='tonal'
-              color={statusInfo.color}
-              size='small'
-            />
-          );
+          const statusId = row.original.statusId
+          const statusInfo = (statusId === null ? statusMap.null : statusMap[statusId as keyof StatusMapType]) || {
+            label: 'Unknown',
+            color: 'default' as const
+          }
+          return <Chip label={statusInfo.label} variant='tonal' color={statusInfo.color} size='small' />
         }
       }),
       columnHelper.accessor('sampleType', {
@@ -414,20 +411,20 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
         enableHiding: true,
         cell: ({ row }) => <Typography>{row.original.sampleType || '-'}</Typography>
       }),
-      columnHelper.accessor('collectedByName', {
+      columnHelper.accessor('collectedBy', {
         header: 'Collected By',
         enableHiding: true,
-        cell: ({ row }) => <Typography>{row.original.collectedByName || '-'}</Typography>
+        cell: ({ row }) => <Typography>{row.original.collectedBy || '-'}</Typography>
       }),
       columnHelper.accessor('collectedOn', {
         header: 'Collected On',
         enableHiding: true,
         cell: ({ row }) => <Typography>{formatDate(row.original.collectedOn)}</Typography>
       }),
-      columnHelper.accessor('sentByName', {
+      columnHelper.accessor('sentBy', {
         header: 'Sent By',
         enableHiding: true,
-        cell: ({ row }) => <Typography>{row.original.sentByName || '-'}</Typography>
+        cell: ({ row }) => <Typography>{row.original.sentBy || '-'}</Typography>
       }),
       columnHelper.accessor('sentOn', {
         header: 'Sent On',
@@ -443,9 +440,7 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
         header: 'Received On',
         enableHiding: true,
         cell: ({ row }) => <Typography>{formatDate(row.original.receivedOn)}</Typography>
-      }),
-      
-      
+      })
     ],
     []
   )
@@ -480,24 +475,24 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
       const response = await fetch('/api/apps/lims/Sample-received?action=status', {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ ids: [id], statusId: 1 })
-      });
-      
+      })
+
       if (!response.ok) {
-        throw new Error('Failed to receive sample');
+        throw new Error('Failed to receive sample')
       }
-      
-      toast.success('Sample received successfully');
+
+      toast.success('Sample received successfully')
       // Refresh the data
-      const dataResponse = await fetch('/api/apps/lims/Sample-received');
-      const data = await dataResponse.json();
-      setData(data);
-      setFilteredData(data);
+      const dataResponse = await fetch('/api/apps/lims/Sample-received')
+      const data = await dataResponse.json()
+      setData(data)
+      setFilteredData(data)
     } catch (error) {
-      console.error('Error receiving sample:', error);
-      toast.error('Failed to receive sample');
+      console.error('Error receiving sample:', error)
+      toast.error('Failed to receive sample')
     }
   }
 
@@ -520,19 +515,19 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
       const response = await fetch('/api/apps/lims/Sample-received?action=status', {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ 
-          ids: [selectedSampleForReject.id], 
-          statusId: 2, 
-          reason: rejectReason 
+        body: JSON.stringify({
+          ids: [selectedSampleForReject.id],
+          statusId: 2,
+          reason: rejectReason
         })
-      });
-      
+      })
+
       if (!response.ok) {
-        throw new Error('Failed to reject sample');
+        throw new Error('Failed to reject sample')
       }
-      
+
       toast.success('Sample rejected successfully')
       const dataResponse = await fetch('/api/apps/lims/Sample-received')
       const data = await dataResponse.json()
@@ -604,23 +599,23 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
     try {
       setIsBulkOperationLoading(true)
       setBulkOperationProgress(0)
-      
+
       const totalSamples = selectedSamplesForOutsource.length
       let processedSamples = 0
-      
+
       await Promise.all(
-        selectedSamplesForOutsource.map(async (id) => {
+        selectedSamplesForOutsource.map(async id => {
           try {
             const response = await fetch('/api/apps/lims/Sample-received?action=status', {
               method: 'PUT',
               headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json'
               },
               body: JSON.stringify({ ids: [id], statusId: 6 })
-            });
+            })
 
             if (!response.ok) {
-              throw new Error('Failed to outsource sample');
+              throw new Error('Failed to outsource sample')
             }
 
             processedSamples++
@@ -630,7 +625,7 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
           }
         })
       )
-      
+
       toast.success('Samples outsourced successfully')
       const response = await fetch('/api/apps/lims/Sample-received')
       const newData = await response.json()
@@ -669,29 +664,29 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
       const response = await fetch('/api/apps/lims/Sample-received?action=download', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ fileType: 'CSV' })
-      });
+      })
 
       if (!response.ok) {
-        throw new Error('Failed to download file');
+        throw new Error('Failed to download file')
       }
 
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Sample_Received_${new Date().toISOString().replace(/[:.]/g, '_')}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Sample_Received_${new Date().toISOString().replace(/[:.]/g, '_')}.csv`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
 
-      toast.success('CSV file downloaded successfully');
+      toast.success('CSV file downloaded successfully')
     } catch (error) {
       console.error('Export failed:', error)
-      toast.error('Failed to download CSV file');
+      toast.error('Failed to download CSV file')
     } finally {
       setIsExporting(false)
     }
@@ -700,15 +695,15 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
   const handlePdfExport = async () => {
     setIsPdfLoading(true)
     try {
-      const doc = new jsPDF();
-      
+      const doc = new jsPDF()
+
       // Add title
-      doc.setFontSize(16);
-      doc.text('Sample Received List', 14, 15);
-      
+      doc.setFontSize(16)
+      doc.text('Sample Received List', 14, 15)
+
       // Add date
-      doc.setFontSize(10);
-      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
+      doc.setFontSize(10)
+      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22)
 
       // Prepare table data
       const tableData = data.map(sample => [
@@ -717,9 +712,9 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
         sample.labName || '-',
         sample.statusId ? statusMap[sample.statusId as keyof StatusMapType].label : 'Pending',
         sample.sampleType || '-',
-        sample.collectedByName || '-',
+        sample.collectedBy || '-',
         formatDate(sample.collectedOn),
-        sample.sentByName || '-',
+        sample.sentBy || '-',
         formatDate(sample.sentOn),
         sample.receivedByName || '-',
         sample.receivedOn ? formatDate(sample.receivedOn) : '-',
@@ -728,25 +723,39 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
         sample.labName || '-',
         sample.studyProtocol || '-',
         sample.VolunteerName || '-'
-      ]);
+      ])
 
       // Add table using autoTable
       autoTable(doc, {
-        head: [['Volunteer ID', 'Barcode ID', 'Lab Name', 'Status', 'Sample Type', 'Collected By', 'Collected On', 'Sent By', 'Sent On', 'Received By', 'Received On']],
+        head: [
+          [
+            'Volunteer ID',
+            'Barcode ID',
+            'Lab Name',
+            'Status',
+            'Sample Type',
+            'Collected By',
+            'Collected On',
+            'Sent By',
+            'Sent On',
+            'Received By',
+            'Received On'
+          ]
+        ],
         body: tableData,
         startY: 30,
         styles: { fontSize: 8 },
         headStyles: { fillColor: [41, 128, 185] },
         alternateRowStyles: { fillColor: [245, 245, 245] },
         margin: { top: 30 }
-      });
+      })
 
       // Save the PDF
-      doc.save(`sample-received-${new Date().toISOString().split('T')[0]}.pdf`);
-      toast.success('PDF file downloaded successfully');
+      doc.save(`sample-received-${new Date().toISOString().split('T')[0]}.pdf`)
+      toast.success('PDF file downloaded successfully')
     } catch (error) {
-      console.error('PDF export failed:', error);
-      toast.error('Failed to download PDF file');
+      console.error('PDF export failed:', error)
+      toast.error('Failed to download PDF file')
     } finally {
       setIsPdfLoading(false)
     }
@@ -833,7 +842,7 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
   // Add filter apply handler
   const handleApplyFilters = () => {
     let filtered = [...data]
-    
+
     if (filters.projectNo) {
       filtered = filtered.filter(item => item.projectNo?.includes(filters.projectNo))
     }
@@ -885,37 +894,37 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
       await fetch('/api/apps/lims/Sample-received?action=status', {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ ids: [selectedSampleForReceive.id], statusId: 1 })
-      });
-      toast.success('Sample received successfully');
-      
+      })
+      toast.success('Sample received successfully')
+
       // Refresh the data with proper error handling
-      const response = await fetch('/api/apps/lims/Sample-received');
+      const response = await fetch('/api/apps/lims/Sample-received')
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
-      const contentType = response.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new TypeError("Oops, we haven't got JSON!");
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new TypeError("Oops, we haven't got JSON!")
       }
-      const data = await response.json();
+      const data = await response.json()
       if (!data || !Array.isArray(data)) {
-        throw new Error("Invalid data format received");
+        throw new Error('Invalid data format received')
       }
-      
-      setData(data);
-      setFilteredData(data);
-      onDataChange?.(); // Call the onDataChange callback
+
+      setData(data)
+      setFilteredData(data)
+      onDataChange?.() // Call the onDataChange callback
       // Scroll to the top of the table
-      const tableContainer = document.querySelector('.overflow-x-auto');
+      const tableContainer = document.querySelector('.overflow-x-auto')
       if (tableContainer) {
-        tableContainer.scrollTo({ top: 0, behavior: 'smooth' });
+        tableContainer.scrollTo({ top: 0, behavior: 'smooth' })
       }
     } catch (error) {
-      console.error('Error receiving sample:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to receive sample');
+      console.error('Error receiving sample:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to receive sample')
     } finally {
       setShowReceiveConfirm(false)
       setSelectedSampleForReceive(null)
@@ -935,23 +944,23 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
     try {
       setIsBulkOperationLoading(true)
       setBulkOperationProgress(0)
-      
+
       const totalSamples = selectedSamplesForReceive.length
       let processedSamples = 0
-      
+
       await Promise.all(
-        selectedSamplesForReceive.map(async (id) => {
+        selectedSamplesForReceive.map(async id => {
           try {
             const response = await fetch('/api/apps/lims/Sample-received?action=status', {
               method: 'PUT',
               headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json'
               },
               body: JSON.stringify({ ids: [id], statusId: 1 })
-            });
+            })
 
             if (!response.ok) {
-              throw new Error('Failed to receive sample');
+              throw new Error('Failed to receive sample')
             }
 
             processedSamples++
@@ -961,7 +970,7 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
           }
         })
       )
-      
+
       toast.success('Selected samples received successfully')
       const response = await fetch('/api/apps/lims/Sample-received')
       const newData = await response.json()
@@ -996,27 +1005,27 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
     try {
       setIsBulkOperationLoading(true)
       setBulkOperationProgress(0)
-      
+
       const totalSamples = selectedSamplesForReject.length
       let processedSamples = 0
-      
+
       await Promise.all(
-        selectedSamplesForReject.map(async (id) => {
+        selectedSamplesForReject.map(async id => {
           try {
             const response = await fetch('/api/apps/lims/Sample-received?action=status', {
               method: 'PUT',
               headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json'
               },
-              body: JSON.stringify({ 
-                ids: [id], 
-                statusId: 2, 
-                reason: bulkRejectReason 
+              body: JSON.stringify({
+                ids: [id],
+                statusId: 2,
+                reason: bulkRejectReason
               })
-            });
+            })
 
             if (!response.ok) {
-              throw new Error('Failed to reject sample');
+              throw new Error('Failed to reject sample')
             }
 
             processedSamples++
@@ -1026,7 +1035,7 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
           }
         })
       )
-      
+
       toast.success('Selected samples rejected successfully')
       const response = await fetch('/api/apps/lims/Sample-received')
       const newData = await response.json()
@@ -1056,23 +1065,23 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
     try {
       setIsBulkOperationLoading(true)
       setBulkOperationProgress(0)
-      
+
       const totalSamples = selectedSamplesForCentrifuge.length
       let processedSamples = 0
-      
+
       await Promise.all(
-        selectedSamplesForCentrifuge.map(async (id) => {
+        selectedSamplesForCentrifuge.map(async id => {
           try {
             const response = await fetch('/api/apps/lims/Sample-received?action=centrifuge', {
               method: 'PUT',
               headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json'
               },
               body: JSON.stringify({ ids: [id] })
-            });
+            })
 
             if (!response.ok) {
-              throw new Error('Failed to centrifuge sample');
+              throw new Error('Failed to centrifuge sample')
             }
 
             processedSamples++
@@ -1082,7 +1091,7 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
           }
         })
       )
-      
+
       toast.success('Selected samples sent for centrifugation successfully')
       const response = await fetch('/api/apps/lims/Sample-received')
       const newData = await response.json()
@@ -1134,32 +1143,27 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
           const response = await fetch('/api/apps/lims/Sample-received/audit-trail', {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json',
+              'Content-Type': 'application/json'
             },
             body: JSON.stringify({ sampleId })
-          });
-          const data = await response.json();
-          setAuditTrail(data.result || []);
+          })
+          const data = await response.json()
+          setAuditTrail(data.result || [])
         } catch (error) {
-          console.error('Error fetching audit trail:', error);
-          toast.error('Failed to fetch audit trail');
+          console.error('Error fetching audit trail:', error)
+          toast.error('Failed to fetch audit trail')
         } finally {
-          setLoading(false);
+          setLoading(false)
         }
-      };
+      }
 
       if (open && sampleId) {
-        fetchAuditTrail();
+        fetchAuditTrail()
       }
-    }, [open, sampleId]);
+    }, [open, sampleId])
 
     return (
-      <Dialog
-        open={open}
-        onClose={() => setOpen(false)}
-        maxWidth='md'
-        fullWidth
-      >
+      <Dialog open={open} onClose={() => setOpen(false)} maxWidth='md' fullWidth>
         <DialogTitle>Audit Trail</DialogTitle>
         <DialogContent>
           {loading ? (
@@ -1217,8 +1221,8 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
   // Add progress indicator component
   const BulkOperationProgress = () => (
     <Box sx={{ width: '100%', mt: 2 }}>
-      <LinearProgress variant="determinate" value={bulkOperationProgress} />
-      <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 1 }}>
+      <LinearProgress variant='determinate' value={bulkOperationProgress} />
+      <Typography variant='body2' color='text.secondary' align='center' sx={{ mt: 1 }}>
         Processing {Math.round(bulkOperationProgress)}% complete
       </Typography>
     </Box>
@@ -1226,18 +1230,14 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
 
   return (
     <Card>
-      <CardHeader 
-        title="Sample Receive" 
+      <CardHeader
+        title='Sample Receive'
         action={
           <Box sx={{ display: 'flex', gap: 2 }}>
             <Button
               variant='outlined'
               startIcon={
-                isExporting ? (
-                  <i className='tabler-loader animate-spin' />
-                ) : (
-                  <i className='tabler-file-spreadsheet' />
-                )
+                isExporting ? <i className='tabler-loader animate-spin' /> : <i className='tabler-file-spreadsheet' />
               }
               onClick={handleExport}
               disabled={isExporting}
@@ -1247,11 +1247,7 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
             <Button
               variant='outlined'
               startIcon={
-                isPdfLoading ? (
-                  <i className='tabler-loader animate-spin' />
-                ) : (
-                  <i className='tabler-file-text' />
-                )
+                isPdfLoading ? <i className='tabler-loader animate-spin' /> : <i className='tabler-file-text' />
               }
               onClick={handlePdfExport}
               disabled={isPdfLoading}
@@ -1262,7 +1258,7 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
         }
       />
       <Divider />
-      
+
       <div className='flex flex-wrap justify-between gap-4 p-6'>
         {/* Barcode Scanner Button */}
         <div className='flex items-center gap-2'>
@@ -1287,14 +1283,14 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
           />
           <div className='flex items-center gap-2'>
             <IconButton
-              size="small"
-              onClick={(e) => setColumnMenuAnchor(e.currentTarget)}
-              title="Toggle columns"
+              size='small'
+              onClick={e => setColumnMenuAnchor(e.currentTarget)}
+              title='Toggle columns'
               sx={{
                 backgroundColor: 'primary.main',
                 color: 'white',
                 '&:hover': {
-                  backgroundColor: 'primary.dark',
+                  backgroundColor: 'primary.dark'
                 },
                 marginRight: 1
               }}
@@ -1308,25 +1304,21 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
               PaperProps={{
                 style: {
                   maxHeight: 300,
-                  width: 250,
-                },
+                  width: 250
+                }
               }}
             >
               <Box sx={{ p: 1 }}>
-                <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                <Typography variant='subtitle2' sx={{ mb: 1 }}>
                   Toggle Columns
                 </Typography>
-                {table.getAllColumns()
+                {table
+                  .getAllColumns()
                   .filter(column => column.getCanHide())
                   .map(column => (
-                    <MenuItem key={column.id} onClick={(e) => e.stopPropagation()}>
-                      <Checkbox
-                        checked={column.getIsVisible()}
-                        onChange={column.getToggleVisibilityHandler()}
-                      />
-                      <Typography variant="body2">
-                        {column.columnDef.header as string}
-                      </Typography>
+                    <MenuItem key={column.id} onClick={e => e.stopPropagation()}>
+                      <Checkbox checked={column.getIsVisible()} onChange={column.getToggleVisibilityHandler()} />
+                      <Typography variant='body2'>{column.columnDef.header as string}</Typography>
                     </MenuItem>
                   ))}
               </Box>
@@ -1334,7 +1326,7 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
           </div>
         </div>
       </div>
-      
+
       <TableFilters setData={setFilteredData} sampleData={data} />
       <div className='overflow-x-auto'>
         {isLoading ? (
@@ -1380,8 +1372,8 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
                   .getRowModel()
                   .rows.slice(0, table.getState().pagination.pageSize)
                   .map(row => (
-                    <tr 
-                      key={row.id} 
+                    <tr
+                      key={row.id}
                       id={`sample-row-${row.original.id}`}
                       className={classnames({ selected: row.getIsSelected() })}
                       style={getRowStyle(row)}
@@ -1483,17 +1475,15 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
       />
       <ConfirmDialog
         open={showOutsourceConfirm}
-        title="Confirm Outsource"
+        title='Confirm Outsource'
         description={
           <div className='flex flex-col gap-4'>
-            <Typography>
-              Do you want to outsource {selectedSamplesForOutsource.length} samples?
-            </Typography>
+            <Typography>Do you want to outsource {selectedSamplesForOutsource.length} samples?</Typography>
             {isBulkOperationLoading && <BulkOperationProgress />}
           </div>
         }
-        okText="Yes"
-        cancelText="No"
+        okText='Yes'
+        cancelText='No'
         handleClose={() => {
           setShowOutsourceConfirm(false)
           setSelectedSamplesForOutsource([])
@@ -1503,10 +1493,10 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
       />
       <ConfirmDialog
         open={showReceiveConfirm}
-        title="Confirm Receive"
+        title='Confirm Receive'
         description={`Do you want to mark sample ${selectedSampleForReceive?.barcodeId} as received?`}
-        okText="Yes"
-        cancelText="No"
+        okText='Yes'
+        cancelText='No'
         handleClose={() => {
           setShowReceiveConfirm(false)
           setSelectedSampleForReceive(null)
@@ -1515,27 +1505,25 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
       />
       <ConfirmDialog
         open={showRejectConfirm}
-        title="Confirm Rejection"
+        title='Confirm Rejection'
         description={
           <div className='flex flex-col gap-4'>
-            <Typography>
-              Do you want to reject sample {selectedSampleForReject?.barcodeId}?
-            </Typography>
+            <Typography>Do you want to reject sample {selectedSampleForReject?.barcodeId}?</Typography>
             <CustomTextField
               fullWidth
               multiline
               rows={3}
               label='Reason for Rejection'
               value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
+              onChange={e => setRejectReason(e.target.value)}
               required
               error={!rejectReason.trim()}
               helperText={!rejectReason.trim() ? 'Please provide a reason for rejection' : ''}
             />
           </div>
         }
-        okText="Yes"
-        cancelText="No"
+        okText='Yes'
+        cancelText='No'
         handleClose={() => {
           setShowRejectConfirm(false)
           setSelectedSampleForReject(null)
@@ -1545,17 +1533,15 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
       />
       <ConfirmDialog
         open={showBulkReceiveConfirm}
-        title="Confirm Bulk Receive"
+        title='Confirm Bulk Receive'
         description={
           <div className='flex flex-col gap-4'>
-            <Typography>
-              Do you want to mark {selectedSamplesForReceive.length} samples as received?
-            </Typography>
+            <Typography>Do you want to mark {selectedSamplesForReceive.length} samples as received?</Typography>
             {isBulkOperationLoading && <BulkOperationProgress />}
           </div>
         }
-        okText="Yes"
-        cancelText="No"
+        okText='Yes'
+        cancelText='No'
         handleClose={() => {
           setShowBulkReceiveConfirm(false)
           setSelectedSamplesForReceive([])
@@ -1565,19 +1551,17 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
       />
       <ConfirmDialog
         open={showBulkRejectConfirm}
-        title="Confirm Bulk Reject"
+        title='Confirm Bulk Reject'
         description={
           <div className='flex flex-col gap-4'>
-            <Typography>
-              Do you want to reject {selectedSamplesForReject.length} samples?
-            </Typography>
+            <Typography>Do you want to reject {selectedSamplesForReject.length} samples?</Typography>
             <CustomTextField
               fullWidth
               multiline
               rows={3}
               label='Reason for Rejection'
               value={bulkRejectReason}
-              onChange={(e) => setBulkRejectReason(e.target.value)}
+              onChange={e => setBulkRejectReason(e.target.value)}
               required
               error={!bulkRejectReason.trim()}
               helperText={!bulkRejectReason.trim() ? 'Please provide a reason for rejection' : ''}
@@ -1586,8 +1570,8 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
             {isBulkOperationLoading && <BulkOperationProgress />}
           </div>
         }
-        okText="Yes"
-        cancelText="No"
+        okText='Yes'
+        cancelText='No'
         handleClose={() => {
           setShowBulkRejectConfirm(false)
           setSelectedSamplesForReject([])
@@ -1598,7 +1582,7 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
       />
       <ConfirmDialog
         open={showBulkCentrifugeConfirm}
-        title="Confirm Centrifugation"
+        title='Confirm Centrifugation'
         description={
           <div className='flex flex-col gap-4'>
             <Typography>
@@ -1607,8 +1591,8 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
             {isBulkOperationLoading && <BulkOperationProgress />}
           </div>
         }
-        okText="Yes"
-        cancelText="No"
+        okText='Yes'
+        cancelText='No'
         handleClose={() => {
           setShowBulkCentrifugeConfirm(false)
           setSelectedSamplesForCentrifuge([])
@@ -1616,21 +1600,10 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
         handleConfirm={handleBulkCentrifugeConfirm}
         disabled={isBulkOperationLoading}
       />
-      <SampleDetailsDialog
-        open={showSampleDetails}
-        setOpen={setShowSampleDetails}
-        sample={selectedSampleForDetails}
-      />
-      <AuditTrailDialog
-        open={showAuditTrail}
-        setOpen={setShowAuditTrail}
-        sampleId={selectedSampleForAudit || 0}
-      />
+      <SampleDetailsDialog open={showSampleDetails} setOpen={setShowSampleDetails} sample={selectedSampleForDetails} />
+      <AuditTrailDialog open={showAuditTrail} setOpen={setShowAuditTrail} sampleId={selectedSampleForAudit || 0} />
       {/* Add Barcode Scan Dialog */}
-      <Dialog
-        open={showBarcodeScanDialog}
-        onClose={() => setShowBarcodeScanDialog(false)}
-      >
+      <Dialog open={showBarcodeScanDialog} onClose={() => setShowBarcodeScanDialog(false)}>
         <DialogTitle>Scan Barcode</DialogTitle>
         <DialogContent>
           <Box sx={{ textAlign: 'center', py: 2 }}>
@@ -1641,7 +1614,7 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
                 fullWidth
                 label='Barcode'
                 value={barcodeInput}
-                onChange={(e) => setBarcodeInput(e.target.value)}
+                onChange={e => setBarcodeInput(e.target.value)}
                 autoFocus
               />
             )}
@@ -1649,9 +1622,9 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowBarcodeScanDialog(false)}>Cancel</Button>
-          <Button 
-            onClick={handleBarcodeSubmit} 
-            color='primary' 
+          <Button
+            onClick={handleBarcodeSubmit}
+            color='primary'
             variant='contained'
             disabled={!barcodeInput || isScanning}
           >

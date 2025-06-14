@@ -22,19 +22,19 @@ const ColorLegend = () => (
   <Box sx={{ display: 'flex', gap: 2 }}>
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
       <Box sx={{ width: 16, height: 16, bgcolor: 'success.main', borderRadius: 1 }} />
-      <Typography variant="body2">Received</Typography>
+      <Typography variant='body2'>Received</Typography>
     </Box>
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
       <Box sx={{ width: 16, height: 16, bgcolor: 'error.main', borderRadius: 1 }} />
-      <Typography variant="body2">Rejected</Typography>
+      <Typography variant='body2'>Rejected</Typography>
     </Box>
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
       <Box sx={{ width: 16, height: 16, bgcolor: 'warning.main', borderRadius: 1 }} />
-      <Typography variant="body2">Outsourced</Typography>
+      <Typography variant='body2'>Pending</Typography>
     </Box>
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
       <Box sx={{ width: 16, height: 16, bgcolor: 'secondary.main', borderRadius: 1 }} />
-      <Typography variant="body2">Outsourced</Typography>
+      <Typography variant='body2'>Outsourced</Typography>
     </Box>
   </Box>
 )
@@ -262,11 +262,11 @@ const TableFilters = ({
     <CardContent>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Button
-          variant="text"
+          variant='text'
           onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
           startIcon={
-            <div className="flex items-center gap-1">
-              <i className="tabler-filter text-sm" />
+            <div className='flex items-center gap-1'>
+              <i className='tabler-filter text-sm' />
             </div>
           }
         >
@@ -274,16 +274,12 @@ const TableFilters = ({
         </Button>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
           <ColorLegend />
-          <Button 
-            variant="text" 
-            onClick={clearFilters}
-            startIcon={<i className="tabler-refresh text-sm" />}
-          >
+          <Button variant='text' onClick={clearFilters} startIcon={<i className='tabler-refresh text-sm' />}>
             Reset Filters
           </Button>
         </Box>
       </Box>
-      
+
       <Collapse in={isFiltersExpanded}>
         <Grid container spacing={6}>
           <Grid size={{ xs: 12, sm: 4 }}>
@@ -291,15 +287,10 @@ const TableFilters = ({
               fullWidth
               id='project-no'
               options={projects}
-              getOptionLabel={(option) => option.studyProtocolNumber + ' - ' + option.studyTitle}
+              getOptionLabel={option => option.studyProtocolNumber + ' - ' + option.studyTitle}
               value={projects.find(project => project.id === projectNo) || null}
               onChange={(_, newValue) => setProjectNo(newValue?.id || 0)}
-              renderInput={(params) => (
-                <CustomTextField
-                  {...params}
-                  placeholder="Search Project"
-                />
-              )}
+              renderInput={params => <CustomTextField {...params} placeholder='Search Project' />}
               isOptionEqualToValue={(option, value) => option.studyProtocolNumber === value.studyProtocolNumber}
               renderOption={(props, option) => (
                 <li {...props} key={option.id}>
@@ -308,25 +299,20 @@ const TableFilters = ({
               )}
             />
           </Grid>
-          
+
           <Grid size={{ xs: 12, sm: 4 }}>
             <Autocomplete
               fullWidth
               id='study'
               options={studySites}
-              getOptionLabel={(option) => `${option.siteProtocolNumber} - ${option.siteGroupName}`}
+              getOptionLabel={option => `${option.siteProtocolNumber} - ${option.siteGroupName}`}
               value={studySites.find(site => site.siteNumber === study) || null}
               onChange={(_, newValue) => setStudy(newValue?.siteNumber || '')}
-              renderInput={(params) => (
-                <CustomTextField
-                  {...params}
-                  placeholder="Search Study Site"
-                />
-              )}
+              renderInput={params => <CustomTextField {...params} placeholder='Search Study Site' />}
               isOptionEqualToValue={(option, value) => option.siteNumber === value.siteNumber}
               renderOption={(props, option) => (
                 <li {...props} key={option.id}>
-                    {option.siteProtocolNumber} - {option.siteGroupName}
+                  {option.siteProtocolNumber} - {option.siteGroupName}
                 </li>
               )}
               disabled={!projectNo}
@@ -360,7 +346,7 @@ const TableFilters = ({
               }}
             >
               <MenuItem value=''>Select Sample Type</MenuItem>
-              {sampleTypes.map((type) => (
+              {sampleTypes.map(type => (
                 <MenuItem key={type.sampleId} value={type.sampleType}>
                   {type.sampleType}
                 </MenuItem>
@@ -379,7 +365,7 @@ const TableFilters = ({
               }}
             >
               <MenuItem value=''>Select Location</MenuItem>
-              {locations.map((loc) => (
+              {locations.map(loc => (
                 <MenuItem key={loc.id} value={loc.name}>
                   {loc.name}
                 </MenuItem>
@@ -391,15 +377,10 @@ const TableFilters = ({
               fullWidth
               id='subject-id'
               options={subjects}
-              getOptionLabel={(option) => option.vSubjectId + ' - ' + option.vFirstName}
+              getOptionLabel={option => option.vSubjectId + ' - ' + option.vFirstName}
               value={subjects.find(subject => subject.vSubjectId === subjectId) || null}
               onChange={(_, newValue) => setSubjectId(newValue?.vSubjectId || '')}
-              renderInput={(params) => (
-                <CustomTextField
-                  {...params}
-                  placeholder="Search Subject ID"
-                />
-              )}
+              renderInput={params => <CustomTextField {...params} placeholder='Search Subject ID' />}
               isOptionEqualToValue={(option, value) => option.vSubjectId === value.vSubjectId}
               renderOption={(props, option) => (
                 <li {...props} key={option.nSubjectMstid}>
@@ -420,7 +401,7 @@ const TableFilters = ({
               }}
             >
               <MenuItem value=''>Select Lab</MenuItem>
-              {labs.map((lab) => (
+              {labs.map(lab => (
                 <MenuItem key={lab.id} value={lab.labName}>
                   {lab.labName}
                 </MenuItem>

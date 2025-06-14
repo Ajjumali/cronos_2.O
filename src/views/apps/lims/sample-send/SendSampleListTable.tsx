@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react'
 import {
   Table,
   TableBody,
@@ -19,49 +19,45 @@ import {
   DialogActions,
   Button,
   Box,
-  Typography,
-  Avatar,
-} from '@mui/material';
-import { Delete, Edit, Info, MoreVert } from '@mui/icons-material';
-import { toast } from 'react-toastify';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+  Typography
+} from '@mui/material'
+import { Delete, Edit, Info, MoreVert } from '@mui/icons-material'
+import { toast } from 'react-toastify'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
+// eslint-disable-next-line import/no-unresolved
+import OptionMenu from '@core/components/option-menu'
 
 interface Sample {
-  id: string;
-  volunteerId: string;
-  volunteerName: string;
-  age: number;
-  screeningDate: string;
-  screeningFacility: string;
-  barcodeId: string;
-  sampleType: string;
-  collectedBy: string;
-  collectedOn: string;
-  sentBy: string;
-  sentOn: string;
-  status: 'pending' | 'sent' | 'received';
-  avatar?: string;
+  id: string
+  volunteerId: string
+  volunteerName: string
+  age: number
+  screeningDate: string
+  screeningFacility: string
+  barcodeId: string
+  sampleType: string
+  collectedBy: string
+  collectedOn: string
+  sentBy: string
+  sentOn: string
+  status: 'pending' | 'sent' | 'received'
+  avatar?: string
 }
 
 interface Props {
-  onSendSamples: (samples: Sample[]) => void;
-  onSelectSamples: (samples: Sample[]) => void;
-  searchText: string;
-  lab: string;
+  onSendSamples: (samples: Sample[]) => void
+  onSelectSamples: (samples: Sample[]) => void
+  searchText: string
+  lab: string
 }
 
-export default function SendSampleListTable({ 
-  onSendSamples, 
-  onSelectSamples,
-  searchText,
-  lab 
-}: Props) {
-  const [samples, setSamples] = useState<Sample[]>([]);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [openSendDialog, setOpenSendDialog] = useState(false);
+export default function SendSampleListTable({ onSendSamples, onSelectSamples, searchText, lab }: Props) {
+  const [samples, setSamples] = useState<Sample[]>([])
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
+  const [openSendDialog, setOpenSendDialog] = useState(false)
 
   // Dummy data - Replace with actual API call
   useEffect(() => {
@@ -306,76 +302,77 @@ export default function SendSampleListTable({
         status: 'received',
         avatar: '/images/avatars/15.png'
       }
-    ];
-    setSamples(dummySamples);
-  }, []);
+    ]
+    setSamples(dummySamples)
+  }, [])
 
   const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
-      const newSelecteds = filteredSamples.map((n) => n.id);
-      setSelectedIds(newSelecteds);
-      onSelectSamples(filteredSamples);
-      return;
+      const newSelecteds = filteredSamples.map(n => n.id)
+      setSelectedIds(newSelecteds)
+      onSelectSamples(filteredSamples)
+      return
     }
-    setSelectedIds([]);
-    onSelectSamples([]);
-  };
+    setSelectedIds([])
+    onSelectSamples([])
+  }
 
   const handleSelect = (sample: Sample) => (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedIndex = selectedIds.indexOf(sample.id);
-    let newSelected: string[] = [];
+    const selectedIndex = selectedIds.indexOf(sample.id)
+    let newSelected: string[] = []
 
     if (selectedIndex === -1) {
-      newSelected = [...selectedIds, sample.id];
-      onSelectSamples([...samples.filter(s => newSelected.includes(s.id))]);
+      newSelected = [...selectedIds, sample.id]
+      onSelectSamples([...samples.filter(s => newSelected.includes(s.id))])
     } else {
-      newSelected = selectedIds.filter((id) => id !== sample.id);
-      onSelectSamples(samples.filter(s => newSelected.includes(s.id)));
+      newSelected = selectedIds.filter(id => id !== sample.id)
+      onSelectSamples(samples.filter(s => newSelected.includes(s.id)))
     }
 
-    setSelectedIds(newSelected);
-  };
+    setSelectedIds(newSelected)
+  }
 
   const handleChangePage = (event: unknown, newPage: number) => {
-    setPage(newPage);
-  };
+    setPage(newPage)
+  }
 
   const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
+    setRowsPerPage(parseInt(event.target.value, 10))
+    setPage(0)
+  }
 
-  const filteredSamples = samples.filter((sample) => {
-    const matchesSearch = 
+  const filteredSamples = samples.filter(sample => {
+    const matchesSearch =
       sample.volunteerId.toLowerCase().includes(searchText.toLowerCase()) ||
       sample.volunteerName.toLowerCase().includes(searchText.toLowerCase()) ||
-      sample.barcodeId.toLowerCase().includes(searchText.toLowerCase());
-    
-    const matchesLab = !lab || sample.screeningFacility === lab;
+      sample.barcodeId.toLowerCase().includes(searchText.toLowerCase())
 
-    return matchesSearch && matchesLab;
-  });
+    const matchesLab = !lab || sample.screeningFacility === lab
+
+    return matchesSearch && matchesLab
+  })
 
   const getStatusChip = (status: string) => {
     switch (status) {
       case 'sent':
-        return <Chip label="Sent" color="success" size="small" />;
+        return <Chip label='Sent' color='success' size='small' />
       case 'received':
-        return <Chip label="Received" color="primary" size="small" />;
+        return <Chip label='Received' color='info' size='small' />
       default:
-        return <Chip label="Pending" color="warning" size="small" />;
+        return <Chip label='Pending' color='warning' size='small' />
     }
-  };
+  }
 
-  const emptyRows = rowsPerPage - Math.min(rowsPerPage, filteredSamples.length - page * rowsPerPage);
+  const emptyRows = rowsPerPage - Math.min(rowsPerPage, filteredSamples.length - page * rowsPerPage)
 
   return (
-    <div className="space-y-4">
+    <div className='space-y-4'>
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell padding="checkbox">
+              <TableCell>Actions</TableCell>
+              <TableCell padding='checkbox'>
                 <Checkbox
                   indeterminate={selectedIds.length > 0 && selectedIds.length < filteredSamples.length}
                   checked={filteredSamples.length > 0 && selectedIds.length === filteredSamples.length}
@@ -389,53 +386,62 @@ export default function SendSampleListTable({
               <TableCell>Screening Facility</TableCell>
               <TableCell>Barcode ID</TableCell>
               <TableCell>Status</TableCell>
-              <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredSamples
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((sample) => (
-                <TableRow
-                  key={sample.id}
-                  hover
-                  selected={selectedIds.includes(sample.id)}
-                >
-                  <TableCell padding="checkbox">
-                    <Checkbox
-                      checked={selectedIds.includes(sample.id)}
-                      onChange={handleSelect(sample)}
-                    />
-                  </TableCell>
-                  <TableCell>{sample.volunteerId}</TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Avatar 
-                        src={sample.avatar} 
-                        alt={sample.volunteerName}
-                        sx={{ width: 30, height: 30, mr: 2 }}
-                      />
-                      {sample.volunteerName}
-                    </Box>
-                  </TableCell>
-                  <TableCell>{sample.age}</TableCell>
-                  <TableCell>{sample.screeningDate}</TableCell>
-                  <TableCell>{sample.screeningFacility}</TableCell>
-                  <TableCell>{sample.barcodeId}</TableCell>
-                  <TableCell>{getStatusChip(sample.status)}</TableCell>
-                  <TableCell>
-                    <IconButton size="small">
-                      <Info fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small">
-                      <Edit fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small">
-                      <Delete fontSize="small" />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
+            {filteredSamples.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map(sample => (
+              <TableRow key={sample.id} hover selected={selectedIds.includes(sample.id)}>
+                <TableCell>
+                  <OptionMenu
+                    iconButtonProps={{ size: 'small' }}
+                    iconClassName='text-textSecondary'
+                    options={[
+                      {
+                        text: 'View Details',
+                        icon: 'tabler-eye',
+                        menuItemProps: {
+                          onClick: () => {
+                            // TODO: Implement view details logic
+                            toast.info('View details clicked')
+                          }
+                        }
+                      },
+                      {
+                        text: 'Edit Sample',
+                        icon: 'tabler-edit',
+                        menuItemProps: {
+                          onClick: () => {
+                            // TODO: Implement edit logic
+                            toast.info('Edit clicked')
+                          }
+                        }
+                      },
+                      {
+                        text: 'Delete Sample',
+                        icon: 'tabler-trash',
+                        menuItemProps: {
+                          onClick: () => {
+                            // TODO: Implement delete logic
+                            toast.info('Delete clicked')
+                          },
+                          className: 'text-error'
+                        }
+                      }
+                    ]}
+                  />
+                </TableCell>
+                <TableCell padding='checkbox'>
+                  <Checkbox checked={selectedIds.includes(sample.id)} onChange={handleSelect(sample)} />
+                </TableCell>
+                <TableCell>{sample.volunteerId}</TableCell>
+                <TableCell>{sample.volunteerName}</TableCell>
+                <TableCell>{sample.age}</TableCell>
+                <TableCell>{sample.screeningDate}</TableCell>
+                <TableCell>{sample.screeningFacility}</TableCell>
+                <TableCell>{sample.barcodeId}</TableCell>
+                <TableCell>{getStatusChip(sample.status)}</TableCell>
+              </TableRow>
+            ))}
             {emptyRows > 0 && (
               <TableRow style={{ height: 53 * emptyRows }}>
                 <TableCell colSpan={9} />
@@ -447,7 +453,7 @@ export default function SendSampleListTable({
 
       <TablePagination
         rowsPerPageOptions={[5, 10, 25]}
-        component="div"
+        component='div'
         count={filteredSamples.length}
         rowsPerPage={rowsPerPage}
         page={page}
@@ -462,21 +468,21 @@ export default function SendSampleListTable({
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenSendDialog(false)}>Cancel</Button>
-          <Button 
+          <Button
             onClick={() => {
-              const selected = samples.filter(s => selectedIds.includes(s.id));
-              onSendSamples(selected);
-              setSelectedIds([]);
-              setOpenSendDialog(false);
-              toast.success('Samples sent successfully');
-            }} 
-            variant="contained"
-            color="primary"
+              const selected = samples.filter(s => selectedIds.includes(s.id))
+              onSendSamples(selected)
+              setSelectedIds([])
+              setOpenSendDialog(false)
+              toast.success('Samples sent successfully')
+            }}
+            variant='contained'
+            color='primary'
           >
             Send
           </Button>
         </DialogActions>
       </Dialog>
     </div>
-  );
+  )
 }
