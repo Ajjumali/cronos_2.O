@@ -231,19 +231,7 @@ const TestAuthorizationTable = ({ testData }: { testData?: TestAuthorizationType
       }),
       columnHelper.accessor('sampleType', {
         header: 'Sample Type',
-        cell: info => (
-          <Typography
-            component='span'
-            sx={{
-              color: 'primary.main',
-              cursor: 'pointer',
-              '&:hover': { textDecoration: 'underline' }
-            }}
-            onClick={() => openValidateSample(info.row.original)}
-          >
-            {info.getValue()}
-          </Typography>
-        )
+        cell: info => <Typography component='span'>{info.getValue()}</Typography>
       }),
       columnHelper.accessor('authorizationStatus', {
         header: 'Status',
@@ -519,7 +507,15 @@ const TestAuthorizationTable = ({ testData }: { testData?: TestAuthorizationType
             </thead>
             <tbody>
               {table.getRowModel().rows.map(row => (
-                <tr key={row.id}>
+                <tr
+                  key={row.id}
+                  onClick={() => openValidateSample(row.original)}
+                  style={{
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s ease'
+                  }}
+                  className='hover:bg-gray-50'
+                >
                   {row.getVisibleCells().map(cell => (
                     <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
                   ))}

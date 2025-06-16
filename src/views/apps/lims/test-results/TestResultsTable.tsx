@@ -205,43 +205,31 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
       },
       columnHelper.accessor('registrationDate', {
         header: 'Registration Date',
-        cell: info => formatDate(info.getValue())
+        cell: info => <Typography component='span'>{formatDate(info.getValue())}</Typography>
       }),
       columnHelper.accessor('sampleTypeId', {
         header: 'Sample ID',
-        cell: info => info.getValue() || '-'
+        cell: info => <Typography component='span'>{info.getValue() || '-'}</Typography>
       }),
       columnHelper.accessor('subjectId', {
         header: 'Volunteer ID',
-        cell: info => info.getValue()
+        cell: info => <Typography component='span'>{info.getValue()}</Typography>
       }),
       columnHelper.accessor('gender', {
         header: 'Gender',
-        cell: info => info.getValue()
+        cell: info => <Typography component='span'>{info.getValue()}</Typography>
       }),
       columnHelper.accessor('VolunteerName', {
         header: 'VolunteerName',
-        cell: info => info.getValue()
+        cell: info => <Typography component='span'>{info.getValue()}</Typography>
       }),
       columnHelper.accessor('testPanelName', {
         header: 'Test Panel',
-        cell: info => info.getValue() || '-'
+        cell: info => <Typography component='span'>{info.getValue() || '-'}</Typography>
       }),
       columnHelper.accessor('sampleType', {
         header: 'Sample Type',
-        cell: info => (
-          <Typography
-            component='span'
-            sx={{
-              color: 'primary.main',
-              cursor: 'pointer',
-              '&:hover': { textDecoration: 'underline' }
-            }}
-            onClick={() => openValidateSample(info.row.original)}
-          >
-            {info.getValue() || '-'}
-          </Typography>
-        )
+        cell: info => <Typography component='span'>{info.getValue() || '-'}</Typography>
       }),
       columnHelper.accessor('StatusID', {
         header: 'Status',
@@ -553,7 +541,12 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
             </thead>
             <tbody>
               {table.getRowModel().rows.map(row => (
-                <tr key={row.id}>
+                <tr
+                  key={row.id}
+                  onClick={() => openValidateSample(row.original)}
+                  style={{ cursor: 'pointer' }}
+                  className='hover:bg-gray-50'
+                >
                   {row.getVisibleCells().map(cell => (
                     <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
                   ))}
