@@ -1265,8 +1265,19 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
           <Button
             variant='outlined'
             startIcon={<i className='tabler-scan' />}
-            onClick={() => setShowBarcodeScanDialog(true)}
-            sx={{ color: 'lime.main', borderColor: 'lime.main' }}
+            onClick={() => {
+              console.log('Barcode scan button clicked') // Debug log
+              setShowBarcodeScanDialog(true)
+              setBarcodeInput('') // Reset input when opening
+            }}
+            sx={{
+              color: 'lime.main',
+              borderColor: 'lime.main',
+              '&:hover': {
+                borderColor: 'lime.dark',
+                backgroundColor: 'lime.light'
+              }
+            }}
             className='max-sm:is-full is-auto'
           >
             Scan Barcode
@@ -1603,32 +1614,68 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
       <SampleDetailsDialog open={showSampleDetails} setOpen={setShowSampleDetails} sample={selectedSampleForDetails} />
       <AuditTrailDialog open={showAuditTrail} setOpen={setShowAuditTrail} sampleId={selectedSampleForAudit || 0} />
       {/* Add Barcode Scan Dialog */}
-      <Dialog open={showBarcodeScanDialog} onClose={() => setShowBarcodeScanDialog(false)}>
-        <DialogTitle>Scan Barcode</DialogTitle>
+      <Dialog
+        open={showBarcodeScanDialog}
+        onClose={() => {
+          console.log('Dialog close clicked') // Debug log
+          setShowBarcodeScanDialog(false)
+          setBarcodeInput('')
+        }}
+        maxWidth='sm'
+        fullWidth
+        PaperProps={{
+          sx: {
+            minWidth: '400px'
+          }
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <i className='tabler-scan text-xl' />
+          Scan Barcode
+        </DialogTitle>
         <DialogContent>
           <Box sx={{ textAlign: 'center', py: 2 }}>
             {isScanning ? (
-              <CircularProgress />
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                <CircularProgress />
+                <Typography>Scanning...</Typography>
+              </Box>
             ) : (
               <CustomTextField
                 fullWidth
-                label='Barcode'
+                label='Enter Barcode'
                 value={barcodeInput}
                 onChange={e => setBarcodeInput(e.target.value)}
                 autoFocus
+                onKeyPress={e => {
+                  if (e.key === 'Enter') {
+                    handleBarcodeSubmit()
+                  }
+                }}
+                sx={{ mb: 2 }}
               />
             )}
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowBarcodeScanDialog(false)}>Cancel</Button>
+          <Button
+            onClick={() => {
+              console.log('Cancel button clicked') // Debug log
+              setShowBarcodeScanDialog(false)
+              setBarcodeInput('')
+            }}
+            color='secondary'
+          >
+            Cancel
+          </Button>
           <Button
             onClick={handleBarcodeSubmit}
             color='primary'
             variant='contained'
             disabled={!barcodeInput || isScanning}
+            startIcon={isScanning ? <CircularProgress size={20} /> : <i className='tabler-scan' />}
           >
-            Submit
+            {isScanning ? 'Scanning...' : 'Submit'}
           </Button>
         </DialogActions>
       </Dialog>

@@ -32,12 +32,18 @@ import {
   DialogActions,
   TextField,
   Backdrop,
-  CircularProgress,
+  CircularProgress
 } from '@mui/material'
 import { DatePicker } from '@mui/x-date-pickers'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
-import { Print as PrintIcon, Comment as CommentIcon, Description as DescriptionIcon, CheckCircle as CheckCircleIcon, Cancel as CancelIcon } from '@mui/icons-material'
+import {
+  Print as PrintIcon,
+  Comment as CommentIcon,
+  Description as DescriptionIcon,
+  CheckCircle as CheckCircleIcon,
+  Cancel as CancelIcon
+} from '@mui/icons-material'
 import { toast } from 'react-toastify'
 
 // Third-party Imports
@@ -109,8 +115,8 @@ type RequisitionStatusType = {
 
 const requisitionStatusObj: RequisitionStatusType = {
   'Pending Approval': { title: 'Pending Approval', color: 'warning' },
-  'Approved': { title: 'Approved', color: 'success' },
-  'Cancelled': { title: 'Cancelled', color: 'error' }
+  Approved: { title: 'Approved', color: 'success' },
+  Cancelled: { title: 'Cancelled', color: 'error' }
 }
 
 // Column Definitions
@@ -183,7 +189,7 @@ const dummyRequisitions: RequisitionType[] = [
     fastingSince: '2024-03-20 12:00:00',
     fastingHours: 4
   }
-];
+]
 
 const SampleRequisitionListTable = ({ requisitionData = dummyRequisitions, onDataChange }: Props) => {
   // States
@@ -201,14 +207,13 @@ const SampleRequisitionListTable = ({ requisitionData = dummyRequisitions, onDat
     department: '',
     status: '',
     test: '',
-    panel: '',
+    panel: ''
   })
   const [showAuditTrail, setShowAuditTrail] = useState(false)
   const [selectedRequisitionForAudit, setSelectedRequisitionForAudit] = useState<RequisitionType | null>(null)
   const router = useRouter()
   const { lang: locale } = useParams()
 
-  
   const [isNavigating, setIsNavigating] = useState(false)
 
   const columns = useMemo<ColumnDef<RequisitionWithActionsType, any>[]>(
@@ -318,7 +323,7 @@ const SampleRequisitionListTable = ({ requisitionData = dummyRequisitions, onDat
             size='small'
           />
         )
-      }),
+      })
     ],
     []
   )
@@ -335,7 +340,7 @@ const SampleRequisitionListTable = ({ requisitionData = dummyRequisitions, onDat
     columns,
     filterFns: { fuzzy: fuzzyFilter },
     state: { rowSelection, globalFilter },
-    initialState: { 
+    initialState: {
       pagination: { pageSize: 10 },
       sorting: [
         {
@@ -480,23 +485,21 @@ const SampleRequisitionListTable = ({ requisitionData = dummyRequisitions, onDat
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Card>
-      <Backdrop
-        sx={{
-          color: '#fff',
-          zIndex: (theme) => theme.zIndex.drawer + 1,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 2
-        }}
-        open={isNavigating}
-      >
-        <CircularProgress color="inherit" />
-        <Typography variant="body1">
-            Navigating to Requisition Form...
-          </Typography>
-      </Backdrop>
-        <CardHeader 
-          title='Sample Requisitions'
+        <Backdrop
+          sx={{
+            color: '#fff',
+            zIndex: theme => theme.zIndex.drawer + 1,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2
+          }}
+          open={isNavigating}
+        >
+          <CircularProgress color='inherit' />
+          <Typography variant='body1'>Navigating to Requisition Form...</Typography>
+        </Backdrop>
+        <CardHeader
+          title='Sample Requisition'
           action={
             <div className='flex items-center gap-4'>
               <Button
@@ -511,7 +514,6 @@ const SampleRequisitionListTable = ({ requisitionData = dummyRequisitions, onDat
           }
         />
         <Divider />
-        
 
         <div className='flex flex-wrap justify-between gap-4 p-6'>
           <CustomTextField
@@ -593,23 +595,16 @@ const SampleRequisitionListTable = ({ requisitionData = dummyRequisitions, onDat
           </DialogTitle>
           <DialogContent>
             {dialogType === 'remarks' && (
-              <TextField
-                fullWidth
-                multiline
-                rows={4}
-                name="remarks"
-                label="Remarks"
-                margin="normal"
-              />
+              <TextField fullWidth multiline rows={4} name='remarks' label='Remarks' margin='normal' />
             )}
             {dialogType === 'cancel' && (
               <TextField
                 fullWidth
                 multiline
                 rows={4}
-                name="reason"
-                label="Cancellation Reason"
-                margin="normal"
+                name='reason'
+                label='Cancellation Reason'
+                margin='normal'
                 required
               />
             )}
@@ -617,15 +612,15 @@ const SampleRequisitionListTable = ({ requisitionData = dummyRequisitions, onDat
               <Typography>Barcode will be printed for Sample ID: {selectedRequisition?.sampleId}</Typography>
             )}
             {dialogType === 'trf' && (
-              <Typography>TRF will be generated for Reference Number: {selectedRequisition?.referenceNumber}</Typography>
+              <Typography>
+                TRF will be generated for Reference Number: {selectedRequisition?.referenceNumber}
+              </Typography>
             )}
-            {dialogType === 'approve' && (
-              <Typography>Are you sure you want to approve this requisition?</Typography>
-            )}
+            {dialogType === 'approve' && <Typography>Are you sure you want to approve this requisition?</Typography>}
           </DialogContent>
           <DialogActions>
             <Button onClick={handleCloseDialog}>Cancel</Button>
-            <Button onClick={handleConfirmAction} variant="contained" color="primary">
+            <Button onClick={handleConfirmAction} variant='contained' color='primary'>
               Confirm
             </Button>
           </DialogActions>
