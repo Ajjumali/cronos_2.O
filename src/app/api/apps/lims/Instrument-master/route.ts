@@ -82,14 +82,19 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/v1/instrument`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${(session.user as any).accessToken}`
-      },
-      body: JSON.stringify(body)
-    })
+    const { reason, ...instrumentData } = body
+
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/v1/instrument?reason=${encodeURIComponent(reason || '')}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${(session.user as any).accessToken}`
+        },
+        body: JSON.stringify(instrumentData)
+      }
+    )
 
     const data = await response.json()
 
@@ -122,15 +127,19 @@ export async function PUT(request: Request) {
     const url = new URL(request.url)
     const id = parseInt(url.pathname.split('/').pop() || '0')
     const body = await request.json()
+    const { reason, ...instrumentData } = body
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/v1/instrument/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${(session.user as any).accessToken}`
-      },
-      body: JSON.stringify(body)
-    })
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/v1/instrument/${id}?reason=${encodeURIComponent(reason || '')}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${(session.user as any).accessToken}`
+        },
+        body: JSON.stringify(instrumentData)
+      }
+    )
 
     if (response.status === 404) {
       return NextResponse.redirect(new URL('/auth/login?signout=true', request.url))

@@ -63,24 +63,6 @@ export async function GET(request: Request) {
         return NextResponse.json(data.result)
       }
 
-      case 'sampletypes': {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/v1/sampletype`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-        if (!response.ok) throw new Error('Failed to fetch sample types')
-        const data = (await response.json()) as APIResponse<SampleType[]>
-        return NextResponse.json(data.result)
-      }
-
-      case 'tests': {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/v1/test`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-        if (!response.ok) throw new Error('Failed to fetch tests')
-        const data = (await response.json()) as APIResponse<TestType[]>
-        return NextResponse.json(data.result)
-      }
-
       default: {
         // Default endpoint - get all analyte codes
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/v1/analytecode/all`, {

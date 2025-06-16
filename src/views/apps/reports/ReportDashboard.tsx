@@ -211,13 +211,16 @@ const ActivityIcon: React.FC<{ type: Activity['type'] }> = ({ type }) => {
 }
 
 const ActivityList: React.FC<{ activities: Activity[] }> = ({ activities }) => {
-  const groupedActivities = activities.reduce((acc, activity) => {
-    if (!acc[activity.type]) {
-      acc[activity.type] = []
-    }
-    acc[activity.type].push(activity)
-    return acc
-  }, {} as Record<Activity['type'], Activity[]>)
+  const groupedActivities = activities.reduce(
+    (acc, activity) => {
+      if (!acc[activity.type]) {
+        acc[activity.type] = []
+      }
+      acc[activity.type].push(activity)
+      return acc
+    },
+    {} as Record<Activity['type'], Activity[]>
+  )
 
   return (
     <List>
@@ -226,25 +229,24 @@ const ActivityList: React.FC<{ activities: Activity[] }> = ({ activities }) => {
           <ListItem>
             <ListItemText
               primary={
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                <Typography variant='subtitle1' sx={{ fontWeight: 'bold' }}>
                   {type}
-                  <Badge
-                    badgeContent={typeActivities.length}
-                    color="primary"
-                    sx={{ ml: 1 }}
-                  />
+                  <Badge badgeContent={typeActivities.length} color='primary' sx={{ ml: 1 }} />
                 </Typography>
               }
             />
           </ListItem>
-          {typeActivities.map((activity) => (
+          {typeActivities.map(activity => (
             <ListItem
               key={activity.id}
               sx={{
                 pl: 4,
-                backgroundColor: activity.status === 'Pending' ? 'rgba(255, 152, 0, 0.08)' :
-                                activity.status === 'In Progress' ? 'rgba(33, 150, 243, 0.08)' :
-                                'inherit'
+                backgroundColor:
+                  activity.status === 'Pending'
+                    ? 'rgba(255, 152, 0, 0.08)'
+                    : activity.status === 'In Progress'
+                      ? 'rgba(33, 150, 243, 0.08)'
+                      : 'inherit'
               }}
             >
               <ListItemIcon>
@@ -254,7 +256,7 @@ const ActivityList: React.FC<{ activities: Activity[] }> = ({ activities }) => {
                 primary={activity.description}
                 secondary={
                   <>
-                    <Typography component="span" variant="body2" color="text.primary">
+                    <Typography component='span' variant='body2' color='text.primary'>
                       {new Date(activity.timestamp).toLocaleString()}
                     </Typography>
                     {activity.assignedTo && ` • Assigned to: ${activity.assignedTo}`}
@@ -276,22 +278,20 @@ const TestCounts: React.FC<{ counts: LabReport['testCounts'] }> = ({ counts }) =
     <Grid item xs={3}>
       <Card>
         <CardContent>
-          <Typography variant="h6" color="text.secondary">
+          <Typography variant='h6' color='text.secondary'>
             Total Tests
           </Typography>
-          <Typography variant="h4">
-            {counts.total}
-          </Typography>
+          <Typography variant='h4'>{counts.total}</Typography>
         </CardContent>
       </Card>
     </Grid>
     <Grid item xs={3}>
       <Card>
         <CardContent>
-          <Typography variant="h6" color="warning.main">
+          <Typography variant='h6' color='warning.main'>
             Pending
           </Typography>
-          <Typography variant="h4" color="warning.main">
+          <Typography variant='h4' color='warning.main'>
             {counts.pending}
           </Typography>
         </CardContent>
@@ -300,10 +300,10 @@ const TestCounts: React.FC<{ counts: LabReport['testCounts'] }> = ({ counts }) =
     <Grid item xs={3}>
       <Card>
         <CardContent>
-          <Typography variant="h6" color="success.main">
+          <Typography variant='h6' color='success.main'>
             Completed
           </Typography>
-          <Typography variant="h4" color="success.main">
+          <Typography variant='h4' color='success.main'>
             {counts.completed}
           </Typography>
         </CardContent>
@@ -312,10 +312,10 @@ const TestCounts: React.FC<{ counts: LabReport['testCounts'] }> = ({ counts }) =
     <Grid item xs={3}>
       <Card>
         <CardContent>
-          <Typography variant="h6" color="error.main">
+          <Typography variant='h6' color='error.main'>
             Failed
           </Typography>
-          <Typography variant="h4" color="error.main">
+          <Typography variant='h4' color='error.main'>
             {counts.failed}
           </Typography>
         </CardContent>
@@ -350,28 +350,26 @@ const SampleAnalyticsGrid: React.FC<{ analytics: SampleAnalytics }> = ({ analyti
 
   return (
     <Card sx={{ mb: 4 }}>
-      <CardHeader title="Sample Analytics" />
+      <CardHeader title='Sample Analytics' />
       <CardContent>
         <Grid container spacing={2} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
             <Card>
               <CardContent>
-                <Typography variant="h6" color="text.secondary">
+                <Typography variant='h6' color='text.secondary'>
                   Total Samples
                 </Typography>
-                <Typography variant="h4">
-                  {analytics.totalSamples}
-                </Typography>
+                <Typography variant='h4'>{analytics.totalSamples}</Typography>
               </CardContent>
             </Card>
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <Card>
               <CardContent>
-                <Typography variant="h6" color="text.secondary">
+                <Typography variant='h6' color='text.secondary'>
                   Success Rate
                 </Typography>
-                <Typography variant="h4" color="success.main">
+                <Typography variant='h4' color='success.main'>
                   {analytics.successRate}%
                 </Typography>
               </CardContent>
@@ -380,22 +378,20 @@ const SampleAnalyticsGrid: React.FC<{ analytics: SampleAnalytics }> = ({ analyti
           <Grid item xs={12} sm={6} md={3}>
             <Card>
               <CardContent>
-                <Typography variant="h6" color="text.secondary">
+                <Typography variant='h6' color='text.secondary'>
                   Avg. Processing Time
                 </Typography>
-                <Typography variant="h4">
-                  {analytics.averageProcessingTime}h
-                </Typography>
+                <Typography variant='h4'>{analytics.averageProcessingTime}h</Typography>
               </CardContent>
             </Card>
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <Card>
               <CardContent>
-                <Typography variant="h6" color="text.secondary">
+                <Typography variant='h6' color='text.secondary'>
                   Active Tests
                 </Typography>
-                <Typography variant="h4" color="primary.main">
+                <Typography variant='h4' color='primary.main'>
                   {Object.values(analytics.byStatus).reduce((a, b) => a + b, 0)}
                 </Typography>
               </CardContent>
@@ -409,10 +405,10 @@ const SampleAnalyticsGrid: React.FC<{ analytics: SampleAnalytics }> = ({ analyti
               <InputLabel>Sample Type</InputLabel>
               <Select
                 value={filters.sampleType}
-                label="Sample Type"
-                onChange={(e) => handleFilterChange('sampleType', e.target.value)}
+                label='Sample Type'
+                onChange={e => handleFilterChange('sampleType', e.target.value)}
               >
-                <MenuItem value="">All</MenuItem>
+                <MenuItem value=''>All</MenuItem>
                 {Object.keys(analytics.bySampleType).map(type => (
                   <MenuItem key={type} value={type}>
                     {type} ({analytics.bySampleType[type]})
@@ -426,10 +422,10 @@ const SampleAnalyticsGrid: React.FC<{ analytics: SampleAnalytics }> = ({ analyti
               <InputLabel>Status</InputLabel>
               <Select
                 value={filters.status}
-                label="Status"
-                onChange={(e) => handleFilterChange('status', e.target.value)}
+                label='Status'
+                onChange={e => handleFilterChange('status', e.target.value)}
               >
-                <MenuItem value="">All</MenuItem>
+                <MenuItem value=''>All</MenuItem>
                 {Object.keys(analytics.byStatus).map(status => (
                   <MenuItem key={status} value={status}>
                     {status} ({analytics.byStatus[status]})
@@ -443,10 +439,10 @@ const SampleAnalyticsGrid: React.FC<{ analytics: SampleAnalytics }> = ({ analyti
               <InputLabel>Location</InputLabel>
               <Select
                 value={filters.location}
-                label="Location"
-                onChange={(e) => handleFilterChange('location', e.target.value)}
+                label='Location'
+                onChange={e => handleFilterChange('location', e.target.value)}
               >
-                <MenuItem value="">All</MenuItem>
+                <MenuItem value=''>All</MenuItem>
                 {Object.keys(analytics.byLocation).map(location => (
                   <MenuItem key={location} value={location}>
                     {location} ({analytics.byLocation[location]})
@@ -458,12 +454,12 @@ const SampleAnalyticsGrid: React.FC<{ analytics: SampleAnalytics }> = ({ analyti
           <Grid item xs={12} sm={6} md={3}>
             <TextField
               fullWidth
-              label="Search"
+              label='Search'
               value={filters.searchQuery}
-              onChange={(e) => handleFilterChange('searchQuery', e.target.value)}
+              onChange={e => handleFilterChange('searchQuery', e.target.value)}
               InputProps={{
                 startAdornment: (
-                  <InputAdornment position="start">
+                  <InputAdornment position='start'>
                     <i className='tabler-search' />
                   </InputAdornment>
                 )
@@ -529,31 +525,27 @@ const SampleAnalyticsGrid: React.FC<{ analytics: SampleAnalytics }> = ({ analyti
                   <TableCell>{type}</TableCell>
                   <TableCell>
                     <Chip
-                      label={Object.keys(analytics.byStatus).find(status => 
-                        analytics.byStatus[status] > 0
-                      ) || 'N/A'}
-                      color={getStatusColor(Object.keys(analytics.byStatus).find(status => 
-                        analytics.byStatus[status] > 0
-                      ) as LabReport['testingStatus'])}
-                      size="small"
+                      label={Object.keys(analytics.byStatus).find(status => analytics.byStatus[status] > 0) || 'N/A'}
+                      color={getStatusColor(
+                        Object.keys(analytics.byStatus).find(
+                          status => analytics.byStatus[status] > 0
+                        ) as LabReport['testingStatus']
+                      )}
+                      size='small'
                     />
                   </TableCell>
                   <TableCell>
-                    {Object.keys(analytics.byLocation).find(location => 
-                      analytics.byLocation[location] > 0
-                    ) || 'N/A'}
+                    {Object.keys(analytics.byLocation).find(location => analytics.byLocation[location] > 0) || 'N/A'}
                   </TableCell>
                   <TableCell>{count}</TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <LinearProgress
-                        variant="determinate"
+                        variant='determinate'
                         value={analytics.successRate}
                         sx={{ width: '100%', mr: 1 }}
                       />
-                      <Typography variant="body2">
-                        {analytics.successRate}%
-                      </Typography>
+                      <Typography variant='body2'>{analytics.successRate}%</Typography>
                     </Box>
                   </TableCell>
                 </TableRow>
@@ -589,7 +581,8 @@ const OutsourcedSamplesGrid: React.FC<{ samples: OutsourcedSample[] }> = ({ samp
 
   const filteredSamples = samples.filter(sample => {
     const matchesStatus = !statusFilter || sample.status === statusFilter
-    const matchesSearch = !searchQuery || 
+    const matchesSearch =
+      !searchQuery ||
       sample.sampleId.toLowerCase().includes(searchQuery.toLowerCase()) ||
       sample.referenceId.toLowerCase().includes(searchQuery.toLowerCase()) ||
       sample.outsourcedTo.toLowerCase().includes(searchQuery.toLowerCase())
@@ -598,34 +591,30 @@ const OutsourcedSamplesGrid: React.FC<{ samples: OutsourcedSample[] }> = ({ samp
 
   return (
     <Card sx={{ mb: 4 }}>
-      <CardHeader 
-        title="Outsourced Samples Tracking"
+      <CardHeader
+        title='Outsourced Samples Tracking'
         action={
           <Box sx={{ display: 'flex', gap: 2 }}>
-            <FormControl size="small" sx={{ minWidth: 150 }}>
+            <FormControl size='small' sx={{ minWidth: 150 }}>
               <InputLabel>Status</InputLabel>
-              <Select
-                value={statusFilter}
-                label="Status"
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <MenuItem value="">All Statuses</MenuItem>
-                <MenuItem value="Pending">Pending</MenuItem>
-                <MenuItem value="In Transit">In Transit</MenuItem>
-                <MenuItem value="In Progress">In Progress</MenuItem>
-                <MenuItem value="Completed">Completed</MenuItem>
-                <MenuItem value="Returned">Returned</MenuItem>
-                <MenuItem value="Failed">Failed</MenuItem>
+              <Select value={statusFilter} label='Status' onChange={e => setStatusFilter(e.target.value)}>
+                <MenuItem value=''>All Statuses</MenuItem>
+                <MenuItem value='Pending'>Pending</MenuItem>
+                <MenuItem value='In Transit'>In Transit</MenuItem>
+                <MenuItem value='In Progress'>In Progress</MenuItem>
+                <MenuItem value='Completed'>Completed</MenuItem>
+                <MenuItem value='Returned'>Returned</MenuItem>
+                <MenuItem value='Failed'>Failed</MenuItem>
               </Select>
             </FormControl>
             <TextField
-              size="small"
-              placeholder="Search samples..."
+              size='small'
+              placeholder='Search samples...'
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={e => setSearchQuery(e.target.value)}
               InputProps={{
                 startAdornment: (
-                  <InputAdornment position="start">
+                  <InputAdornment position='start'>
                     <i className='tabler-search' />
                   </InputAdornment>
                 )
@@ -651,55 +640,55 @@ const OutsourcedSamplesGrid: React.FC<{ samples: OutsourcedSample[] }> = ({ samp
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredSamples.map((sample) => (
-                <TableRow 
+              {filteredSamples.map(sample => (
+                <TableRow
                   key={sample.id}
                   sx={{
-                    backgroundColor: sample.status === 'Failed' ? 'rgba(211, 47, 47, 0.08)' :
-                                   sample.status === 'In Transit' ? 'rgba(255, 152, 0, 0.08)' :
-                                   'inherit'
+                    backgroundColor:
+                      sample.status === 'Failed'
+                        ? 'rgba(211, 47, 47, 0.08)'
+                        : sample.status === 'In Transit'
+                          ? 'rgba(255, 152, 0, 0.08)'
+                          : 'inherit'
                   }}
                 >
                   <TableCell>{sample.sampleId}</TableCell>
                   <TableCell>{sample.referenceId}</TableCell>
                   <TableCell>{sample.outsourcedTo}</TableCell>
                   <TableCell>
-                    <Chip
-                      label={sample.status}
-                      color={getStatusColor(sample.status)}
-                      size="small"
-                    />
+                    <Chip label={sample.status} color={getStatusColor(sample.status)} size='small' />
                   </TableCell>
                   <TableCell>{new Date(sample.sentDate).toLocaleDateString()}</TableCell>
                   <TableCell>{new Date(sample.expectedReturnDate).toLocaleDateString()}</TableCell>
                   <TableCell>
-                    {sample.actualReturnDate 
-                      ? new Date(sample.actualReturnDate).toLocaleDateString()
-                      : '-'
-                    }
+                    {sample.actualReturnDate ? new Date(sample.actualReturnDate).toLocaleDateString() : '-'}
                   </TableCell>
                   <TableCell>
                     {sample.trackingNumber ? (
-                      <Tooltip title="Click to track">
+                      <Tooltip title='Click to track'>
                         <Link
                           href={`https://tracking.example.com/${sample.trackingNumber}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                          target='_blank'
+                          rel='noopener noreferrer'
                           sx={{ textDecoration: 'none' }}
                         >
                           {sample.trackingNumber}
                         </Link>
                       </Tooltip>
-                    ) : '-'}
+                    ) : (
+                      '-'
+                    )}
                   </TableCell>
                   <TableCell>
                     {sample.notes ? (
                       <Tooltip title={sample.notes}>
-                        <Typography variant="body2" noWrap sx={{ maxWidth: 150 }}>
+                        <Typography variant='body2' noWrap sx={{ maxWidth: 150 }}>
                           {sample.notes}
                         </Typography>
                       </Tooltip>
-                    ) : '-'}
+                    ) : (
+                      '-'
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
@@ -729,63 +718,29 @@ const ChronologyDialog: React.FC<{
   }
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth='sm' fullWidth>
       <DialogTitle>Set Report Chronology</DialogTitle>
       <DialogContent>
         <Box sx={{ mt: 2 }}>
-          <FormLabel component="legend">Sort By</FormLabel>
-          <RadioGroup
-            value={settings.type}
-            onChange={(e) => handleChange('type', e.target.value)}
-          >
-            <FormControlLabel
-              value="date"
-              control={<Radio />}
-              label="Registration Date"
-            />
-            <FormControlLabel
-              value="testType"
-              control={<Radio />}
-              label="Test Type"
-            />
-            <FormControlLabel
-              value="status"
-              control={<Radio />}
-              label="Status"
-            />
-            <FormControlLabel
-              value="sampleId"
-              control={<Radio />}
-              label="Sample ID"
-            />
+          <FormLabel component='legend'>Sort By</FormLabel>
+          <RadioGroup value={settings.type} onChange={e => handleChange('type', e.target.value)}>
+            <FormControlLabel value='date' control={<Radio />} label='Registration Date' />
+            <FormControlLabel value='testType' control={<Radio />} label='Test Type' />
+            <FormControlLabel value='status' control={<Radio />} label='Status' />
+            <FormControlLabel value='sampleId' control={<Radio />} label='Sample ID' />
           </RadioGroup>
         </Box>
         <Box sx={{ mt: 3 }}>
-          <FormLabel component="legend">Order</FormLabel>
-          <RadioGroup
-            value={settings.order}
-            onChange={(e) => handleChange('order', e.target.value)}
-          >
-            <FormControlLabel
-              value="asc"
-              control={<Radio />}
-              label="Ascending"
-            />
-            <FormControlLabel
-              value="desc"
-              control={<Radio />}
-              label="Descending"
-            />
+          <FormLabel component='legend'>Order</FormLabel>
+          <RadioGroup value={settings.order} onChange={e => handleChange('order', e.target.value)}>
+            <FormControlLabel value='asc' control={<Radio />} label='Ascending' />
+            <FormControlLabel value='desc' control={<Radio />} label='Descending' />
           </RadioGroup>
         </Box>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
-        <Button
-          variant="contained"
-          onClick={() => onPrint(settings)}
-          startIcon={<i className='tabler-printer' />}
-        >
+        <Button variant='contained' onClick={() => onPrint(settings)} startIcon={<i className='tabler-printer' />}>
           Print Reports
         </Button>
       </DialogActions>
@@ -804,16 +759,16 @@ const ReportDashboard: React.FC = () => {
   const [sampleAnalytics, setSampleAnalytics] = useState<SampleAnalytics>({
     totalSamples: 150,
     bySampleType: {
-      'Blood': 45,
-      'Urine': 35,
-      'Tissue': 25,
-      'Other': 45
+      Blood: 45,
+      Urine: 35,
+      Tissue: 25,
+      Other: 45
     },
     byStatus: {
-      'Pending': 30,
+      Pending: 30,
       'In Progress': 45,
-      'Completed': 60,
-      'Failed': 15
+      Completed: 60,
+      Failed: 15
     },
     byLocation: {
       'Lab A': 50,
@@ -821,10 +776,10 @@ const ReportDashboard: React.FC = () => {
       'Lab C': 60
     },
     byTestCategory: {
-      'Hematology': 40,
-      'Biochemistry': 35,
-      'Microbiology': 25,
-      'Other': 50
+      Hematology: 40,
+      Biochemistry: 35,
+      Microbiology: 25,
+      Other: 50
     },
     averageProcessingTime: 24,
     successRate: 85
@@ -867,12 +822,12 @@ const ReportDashboard: React.FC = () => {
   const [isChronologyDialogOpen, setIsChronologyDialogOpen] = useState(false)
 
   const router = useRouter()
+  const targetPath = '/apps/reports'
+  const enTargetPath = '/en/apps/reports'
 
   useEffect(() => {
     const currentPath = window.location.pathname
-    const targetPath = '/apps/reports'
-    const enTargetPath = '/en/apps/reports'
-    
+
     // Only redirect if we're not already on one of the target paths
     if (currentPath !== targetPath && currentPath !== enTargetPath) {
       router.push(targetPath)
@@ -1054,7 +1009,9 @@ const ReportDashboard: React.FC = () => {
               </table>
             </div>
 
-            ${report.highLowFlags.length > 0 ? `
+            ${
+              report.highLowFlags.length > 0
+                ? `
               <div class="section">
                 <div class="section-title">Test Results</div>
                 <table>
@@ -1063,18 +1020,26 @@ const ReportDashboard: React.FC = () => {
                     <th>Value</th>
                     <th>Flag</th>
                   </tr>
-                  ${report.highLowFlags.map(flag => `
+                  ${report.highLowFlags
+                    .map(
+                      flag => `
                     <tr>
                       <td>${flag.testName}</td>
                       <td>${flag.value}</td>
                       <td>${flag.flag}</td>
                     </tr>
-                  `).join('')}
+                  `
+                    )
+                    .join('')}
                 </table>
               </div>
-            ` : ''}
+            `
+                : ''
+            }
 
-            ${report.criticalResults.length > 0 ? `
+            ${
+              report.criticalResults.length > 0
+                ? `
               <div class="section">
                 <div class="section-title">Critical Results</div>
                 <table>
@@ -1082,15 +1047,21 @@ const ReportDashboard: React.FC = () => {
                     <th>Test Name</th>
                     <th>Reason</th>
                   </tr>
-                  ${report.criticalResults.map(result => `
+                  ${report.criticalResults
+                    .map(
+                      result => `
                     <tr>
                       <td>${result.testName}</td>
                       <td>${result.reason}</td>
                     </tr>
-                  `).join('')}
+                  `
+                    )
+                    .join('')}
                 </table>
               </div>
-            ` : ''}
+            `
+                : ''
+            }
 
             <div class="section">
               <div class="section-title">Validation Details</div>
@@ -1118,11 +1089,11 @@ const ReportDashboard: React.FC = () => {
   const handleDownloadReport = async (report: LabReport) => {
     try {
       const doc = new jsPDF() as jsPDFWithAutoTable
-      
+
       // Add title
       doc.setFontSize(16)
       doc.text('Laboratory Report', 14, 15)
-      
+
       // Add report details
       doc.setFontSize(10)
       doc.text(`Sample ID: ${report.sampleId}`, 14, 25)
@@ -1147,11 +1118,7 @@ const ReportDashboard: React.FC = () => {
 
       // Add test results if available
       if (report.highLowFlags.length > 0) {
-        const testResults = report.highLowFlags.map(flag => [
-          flag.testName,
-          flag.value,
-          flag.flag
-        ])
+        const testResults = report.highLowFlags.map(flag => [flag.testName, flag.value, flag.flag])
 
         autoTable(doc, {
           head: [['Test Name', 'Value', 'Flag']],
@@ -1215,14 +1182,14 @@ const ReportDashboard: React.FC = () => {
         'Registration Date & Time': new Date(report.registrationDateTime).toLocaleString(),
         'Sample ID': report.sampleId,
         'Reference ID': report.referenceId,
-        'Name': report.name,
-        'Gender': report.gender,
+        Name: report.name,
+        Gender: report.gender,
         'Test/Panel Name': report.testPanelName,
         'Project Number': report.projectNumber,
-        'Study': report.study,
+        Study: report.study,
         'Testing Status': report.testingStatus,
-        'Location': report.location,
-        'Lab': report.lab,
+        Location: report.location,
+        Lab: report.lab,
         'Sample Type': report.sampleInformation.sampleType,
         'Collection Date & Time': new Date(report.sampleInformation.collectionDateTime).toLocaleString(),
         'Collected By': report.sampleInformation.collectedBy,
@@ -1236,14 +1203,10 @@ const ReportDashboard: React.FC = () => {
         'Validated On': new Date(report.sampleInformation.validatedOn).toLocaleString(),
         'Approved By': report.sampleInformation.approvedBy,
         'Approved On': new Date(report.sampleInformation.approvedOn).toLocaleString(),
-        'Remarks': report.remarks,
+        Remarks: report.remarks,
         'Outsourced Sample Tracking': report.outsourcedSampleTracking,
-        'High/Low Flags': report.highLowFlags.map(flag => 
-          `${flag.testName}: ${flag.value} (${flag.flag})`
-        ).join('; '),
-        'Critical Results': report.criticalResults.map(result => 
-          `${result.testName}: ${result.reason}`
-        ).join('; '),
+        'High/Low Flags': report.highLowFlags.map(flag => `${flag.testName}: ${flag.value} (${flag.flag})`).join('; '),
+        'Critical Results': report.criticalResults.map(result => `${result.testName}: ${result.reason}`).join('; '),
         'Print Count': report.printCount
       }))
 
@@ -1251,12 +1214,12 @@ const ReportDashboard: React.FC = () => {
       const csvContent = [
         headers.join(','),
         ...dataToExport.map(row =>
-          headers.map(header => {
-            const value = row[header as keyof typeof row]
-            return typeof value === 'string' && value.includes(',')
-              ? `"${value}"`
-              : value
-          }).join(',')
+          headers
+            .map(header => {
+              const value = row[header as keyof typeof row]
+              return typeof value === 'string' && value.includes(',') ? `"${value}"` : value
+            })
+            .join(',')
         )
       ].join('\n')
 
@@ -1282,11 +1245,11 @@ const ReportDashboard: React.FC = () => {
     setIsPdfLoading(true)
     try {
       const doc = new jsPDF() as jsPDFWithAutoTable
-      
+
       // Add title
       doc.setFontSize(16)
       doc.text('Lab Reports', 14, 15)
-      
+
       // Add date
       doc.setFontSize(10)
       doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22)
@@ -1304,7 +1267,9 @@ const ReportDashboard: React.FC = () => {
 
       // Add main table
       autoTable(doc, {
-        head: [['Registration Date & Time', 'Sample ID', 'Reference ID', 'Name', 'Test/Panel', 'Status', 'Print Count']],
+        head: [
+          ['Registration Date & Time', 'Sample ID', 'Reference ID', 'Name', 'Test/Panel', 'Status', 'Print Count']
+        ],
         body: tableData,
         startY: 30,
         styles: { fontSize: 8 },
@@ -1315,7 +1280,7 @@ const ReportDashboard: React.FC = () => {
 
       // Add detailed information for each report
       let yPosition = doc.lastAutoTable.finalY + 10
-      
+
       reports.forEach((report, index) => {
         if (yPosition > 250) {
           doc.addPage()
@@ -1354,11 +1319,7 @@ const ReportDashboard: React.FC = () => {
           doc.text('High/Low Flags:', 14, yPosition)
           yPosition += 7
 
-          const flagData = report.highLowFlags.map(flag => [
-            flag.testName,
-            flag.value,
-            flag.flag
-          ])
+          const flagData = report.highLowFlags.map(flag => [flag.testName, flag.value, flag.flag])
 
           autoTable(doc, {
             head: [['Test Name', 'Value', 'Flag']],
@@ -1378,10 +1339,7 @@ const ReportDashboard: React.FC = () => {
           doc.text('Critical Results:', 14, yPosition)
           yPosition += 7
 
-          const criticalData = report.criticalResults.map(result => [
-            result.testName,
-            result.reason
-          ])
+          const criticalData = report.criticalResults.map(result => [result.testName, result.reason])
 
           autoTable(doc, {
             head: [['Test Name', 'Reason']],
@@ -1419,33 +1377,37 @@ const ReportDashboard: React.FC = () => {
     if (!report.progress) return null
 
     const percentage = getProgressPercentage(report.progress)
-    
+
     return (
       <Box sx={{ width: '100%', mt: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
           <Box sx={{ flexGrow: 1 }}>
-            <LinearProgress 
-              variant="determinate" 
-              value={percentage} 
+            <LinearProgress
+              variant='determinate'
+              value={percentage}
               color={percentage === 100 ? 'success' : 'primary'}
             />
           </Box>
           <Box sx={{ minWidth: 35, ml: 1 }}>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant='body2' color='text.secondary'>
               {`${percentage}%`}
             </Typography>
           </Box>
         </Box>
         {report.progress.pendingTasks.length > 0 && (
-          <Tooltip title={
-            <Box>
-              <Typography variant="subtitle2">Pending Tasks:</Typography>
-              {report.progress.pendingTasks.map((task, index) => (
-                <Typography key={index} variant="body2">• {task}</Typography>
-              ))}
-            </Box>
-          }>
-            <Typography variant="caption" color="text.secondary">
+          <Tooltip
+            title={
+              <Box>
+                <Typography variant='subtitle2'>Pending Tasks:</Typography>
+                {report.progress.pendingTasks.map((task, index) => (
+                  <Typography key={index} variant='body2'>
+                    • {task}
+                  </Typography>
+                ))}
+              </Box>
+            }
+          >
+            <Typography variant='caption' color='text.secondary'>
               {report.progress.pendingTasks.length} tasks pending
             </Typography>
           </Tooltip>
@@ -1483,11 +1445,11 @@ const ReportDashboard: React.FC = () => {
     try {
       const sortedReports = sortReportsByChronology(reports, settings)
       const doc = new jsPDF() as jsPDFWithAutoTable
-      
+
       // Add title
       doc.setFontSize(16)
       doc.text('Lab Reports', 14, 15)
-      
+
       // Add chronology info
       doc.setFontSize(10)
       doc.text(`Sorted by: ${settings.type} (${settings.order})`, 14, 22)
@@ -1573,41 +1535,31 @@ const ReportDashboard: React.FC = () => {
           <div className='flex items-center gap-4'>
             <Button
               color='primary'
-              variant='tonal'
+              variant='outlined'
               onClick={() => setIsChronologyDialogOpen(true)}
               startIcon={<i className='tabler-sort-ascending' />}
             >
               Set Chronology
             </Button>
             <Button
-              color='error'
-              variant='tonal'
-              onClick={handleExportPDF}
-              disabled={isPdfLoading}
+              variant='outlined'
               startIcon={
-                isPdfLoading ? (
-                  <i className='tabler-loader animate-spin' />
-                ) : (
-                  <i className='tabler-file-text' />
-                )
+                isExporting ? <i className='tabler-loader animate-spin' /> : <i className='tabler-file-spreadsheet' />
               }
-            >
-              {isPdfLoading ? 'Generating...' : 'PDF'}
-            </Button>
-            <Button
-              color='success'
-              variant='tonal'
               onClick={handleExportCSV}
               disabled={isExporting}
-              startIcon={
-                isExporting ? (
-                  <i className='tabler-loader animate-spin' />
-                ) : (
-                  <i className='tabler-upload' />
-                )
-              }
             >
-              {isExporting ? 'Exporting...' : 'CSV'}
+              {isExporting ? 'Exporting...' : 'Excel'}
+            </Button>
+            <Button
+              variant='outlined'
+              startIcon={
+                isPdfLoading ? <i className='tabler-loader animate-spin' /> : <i className='tabler-file-text' />
+              }
+              onClick={handleExportPDF}
+              disabled={isPdfLoading}
+            >
+              {isPdfLoading ? 'Exporting...' : 'PDF'}
             </Button>
           </div>
         }
@@ -1617,7 +1569,7 @@ const ReportDashboard: React.FC = () => {
         {selectedReport && (
           <>
             <TestCounts counts={selectedReport.testCounts} />
-            <Typography variant="h6" sx={{ mb: 2 }}>
+            <Typography variant='h6' sx={{ mb: 2 }}>
               Activities
             </Typography>
             <ActivityList activities={selectedReport.activities} />
@@ -1638,13 +1590,16 @@ const ReportDashboard: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {reports.map((report) => (
-                <TableRow 
+              {reports.map(report => (
+                <TableRow
                   key={report.id}
                   sx={{
-                    backgroundColor: report.testingStatus === 'Pending' ? 'rgba(255, 152, 0, 0.08)' : 
-                                   report.testingStatus === 'Partially Completed' ? 'rgba(33, 150, 243, 0.08)' : 
-                                   'inherit'
+                    backgroundColor:
+                      report.testingStatus === 'Pending'
+                        ? 'rgba(255, 152, 0, 0.08)'
+                        : report.testingStatus === 'Partially Completed'
+                          ? 'rgba(33, 150, 243, 0.08)'
+                          : 'inherit'
                   }}
                 >
                   <TableCell>{new Date(report.registrationDateTime).toLocaleString()}</TableCell>
@@ -1653,36 +1608,18 @@ const ReportDashboard: React.FC = () => {
                   <TableCell>{report.name}</TableCell>
                   <TableCell>{report.testPanelName}</TableCell>
                   <TableCell>
-                    <Chip 
-                      label={report.testingStatus} 
-                      color={getStatusColor(report.testingStatus)}
-                      size="small"
-                    />
+                    <Chip label={report.testingStatus} color={getStatusColor(report.testingStatus)} size='small' />
                   </TableCell>
-                  <TableCell>
-                    {renderProgressIndicator(report)}
-                  </TableCell>
+                  <TableCell>{renderProgressIndicator(report)}</TableCell>
                   <TableCell>
                     <div className='flex items-center gap-2'>
-                      <IconButton
-                        size='small'
-                        onClick={() => handlePrintBarcode(report)}
-                        title='Print Barcode'
-                      >
+                      <IconButton size='small' onClick={() => handlePrintBarcode(report)} title='Print Barcode'>
                         <i className='tabler-barcode' />
                       </IconButton>
-                      <IconButton
-                        size='small'
-                        onClick={() => handlePrintReport(report)}
-                        title='Print Report'
-                      >
+                      <IconButton size='small' onClick={() => handlePrintReport(report)} title='Print Report'>
                         <i className='tabler-printer' />
                       </IconButton>
-                      <IconButton
-                        size='small'
-                        onClick={() => handleDownloadReport(report)}
-                        title='Download Report'
-                      >
+                      <IconButton size='small' onClick={() => handleDownloadReport(report)} title='Download Report'>
                         <i className='tabler-download' />
                       </IconButton>
                     </div>
@@ -1695,15 +1632,8 @@ const ReportDashboard: React.FC = () => {
       </CardContent>
 
       {/* View Report Dialog */}
-      <Dialog
-        open={isViewDialogOpen}
-        onClose={() => setIsViewDialogOpen(false)}
-        maxWidth='lg'
-        fullWidth
-      >
-        <DialogTitle>
-          {selectedReport?.name}
-        </DialogTitle>
+      <Dialog open={isViewDialogOpen} onClose={() => setIsViewDialogOpen(false)} maxWidth='lg' fullWidth>
+        <DialogTitle>{selectedReport?.name}</DialogTitle>
         <DialogContent>
           <iframe
             src={selectedReport?.fileUrl}
@@ -1732,7 +1662,7 @@ const ReportDashboard: React.FC = () => {
           <TextField
             type='file'
             fullWidth
-            onChange={(e) => {
+            onChange={e => {
               const file = (e.target as HTMLInputElement).files?.[0]
               if (file) {
                 setUploadFile(file)
@@ -1752,11 +1682,7 @@ const ReportDashboard: React.FC = () => {
           >
             Cancel
           </Button>
-          <Button
-            color='primary'
-            onClick={handleUploadReport}
-            disabled={!uploadFile}
-          >
+          <Button color='primary' onClick={handleUploadReport} disabled={!uploadFile}>
             Upload
           </Button>
         </DialogActions>
@@ -1772,4 +1698,4 @@ const ReportDashboard: React.FC = () => {
   )
 }
 
-export default ReportDashboard 
+export default ReportDashboard

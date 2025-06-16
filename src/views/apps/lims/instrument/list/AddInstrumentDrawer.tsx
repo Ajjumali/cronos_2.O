@@ -155,14 +155,9 @@ const AddInstrumentDrawer = (props: Props) => {
   }, [open])
 
   const onSubmit = async (formData: FormValidateType) => {
-    if (selectedInstrument) {
-      // For updates, show reason dialog first
-      setPendingFormData(formData)
-      setIsReasonDialogOpen(true)
-    } else {
-      // For new instruments, proceed with submission
-      await submitForm(formData)
-    }
+    // Show reason dialog for both add and edit operations
+    setPendingFormData(formData)
+    setIsReasonDialogOpen(true)
   }
 
   const submitForm = async (formData: FormValidateType, reason?: string) => {
@@ -211,7 +206,7 @@ const AddInstrumentDrawer = (props: Props) => {
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(instrumentPayload)
+          body: JSON.stringify({ ...instrumentPayload, reason })
         })
 
         const responseData = await response.json()

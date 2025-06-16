@@ -10,7 +10,17 @@ import MenuItem from '@mui/material/MenuItem'
 import TextField from '@mui/material/TextField'
 import Button from '@mui/material/Button'
 import classnames from 'classnames'
-import { createColumnHelper, flexRender, getCoreRowModel, useReactTable, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, ColumnDef, Table } from '@tanstack/react-table'
+import {
+  createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  ColumnDef,
+  Table
+} from '@tanstack/react-table'
 import TablePaginationComponent from '@/components/TablePaginationComponent'
 import tableStyles from '@core/styles/table.module.css'
 import type { TextFieldProps } from '@mui/material/TextField'
@@ -91,8 +101,8 @@ type OutsourceWithActionsType = OutsourceType & {
   actions?: string
 }
 
-type StatusKey = 'null' | 1 | 2 | 3 | 4 | 5 | 6;
-type StatusMapType = Record<StatusKey, { label: string; color: 'warning' | 'success' | 'error' | 'info' | 'secondary' }>;
+type StatusKey = 'null' | 1 | 2 | 3 | 4 | 5 | 6
+type StatusMapType = Record<StatusKey, { label: string; color: 'warning' | 'success' | 'error' | 'info' | 'secondary' }>
 
 type Props = {
   outsourceData?: OutsourceType[]
@@ -108,7 +118,7 @@ const statusOptions = [
 ]
 
 const statusMap: StatusMapType = {
-  'null': { label: 'Pending', color: 'warning' },
+  null: { label: 'Pending', color: 'warning' },
   1: { label: 'Received', color: 'success' },
   2: { label: 'Rejected', color: 'error' },
   3: { label: 'Pending', color: 'warning' },
@@ -149,8 +159,8 @@ const DebouncedInput = ({
       {...props}
       value={value}
       onChange={e => setValue(e.target.value)}
-      size="small"
-      label={props.label || "Search"}
+      size='small'
+      label={props.label || 'Search'}
     />
   )
 }
@@ -188,12 +198,12 @@ const OutsourceListTable = ({ outsourceData = [], onDataChange }: Props) => {
     const fetchLaboratories = async () => {
       try {
         const response = await fetch('/api/apps/lims/lab-master')
-        
+
         // Check if response is ok (status in the range 200-299)
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`)
         }
-        
+
         // Check content type to ensure we're getting JSON
         const contentType = response.headers.get('content-type')
         if (!contentType || !contentType.includes('application/json')) {
@@ -222,14 +232,16 @@ const OutsourceListTable = ({ outsourceData = [], onDataChange }: Props) => {
         const response = await fetch('/api/apps/lims/analytecode-master/all')
         const result = await response.json()
         if (result.status === 'success') {
-          setTests(result.result.map((test: any) => ({
-            id: test.analyteId,
-            testName: test.testName,
-            analyteCode: test.analyteCode,
-            instrumentName: test.instrumentName,
-            sampleType: test.sampletype,
-            isActive: test.isActive
-          })))
+          setTests(
+            result.result.map((test: any) => ({
+              id: test.analyteId,
+              testName: test.testName,
+              analyteCode: test.analyteCode,
+              instrumentName: test.instrumentName,
+              sampleType: test.sampletype,
+              isActive: test.isActive
+            }))
+          )
         }
       } catch (error) {
         console.error('Error fetching tests:', error)
@@ -241,26 +253,20 @@ const OutsourceListTable = ({ outsourceData = [], onDataChange }: Props) => {
   }, [])
 
   const handleStatusChange = (id: number, value: string) => {
-    const updated = data.map(row =>
-      row.id === id ? { ...row, status: value } : row
-    )
+    const updated = data.map(row => (row.id === id ? { ...row, status: value } : row))
     setData(updated)
     onDataChange?.()
   }
 
   const handleLaboratoryChange = (id: number, laboratoryId: number) => {
     const selectedLab = laboratories.find(lab => lab.id === laboratoryId)
-    const updated = data.map(row =>
-      row.id === id ? { ...row, laboratoryId, laboratory: selectedLab } : row
-    )
+    const updated = data.map(row => (row.id === id ? { ...row, laboratoryId, laboratory: selectedLab } : row))
     setData(updated)
     onDataChange?.()
   }
 
   const handleTestSelection = (id: number, selectedTests: TestType[]) => {
-    const updated = data.map(row =>
-      row.id === id ? { ...row, selectedTests } : row
-    )
+    const updated = data.map(row => (row.id === id ? { ...row, selectedTests } : row))
     setData(updated)
     onDataChange?.()
     setIsTestDialogOpen(false)
@@ -410,7 +416,7 @@ const OutsourceListTable = ({ outsourceData = [], onDataChange }: Props) => {
         id: 'actions',
         header: 'Actions',
         cell: ({ row }) => (
-          <div className="flex items-center gap-2">
+          <div className='flex items-center gap-2'>
             <OptionMenu
               iconButtonProps={{ size: 'medium' }}
               iconClassName='text-textSecondary'
@@ -479,11 +485,7 @@ const OutsourceListTable = ({ outsourceData = [], onDataChange }: Props) => {
       }),
       columnHelper.accessor('sampleId', {
         header: 'Sample ID',
-        cell: info => (
-          <span style={{ color: "#388e3c", fontWeight: 600, cursor: "pointer" }}>
-            {info.getValue()}
-          </span>
-        )
+        cell: info => <span style={{ color: '#388e3c', fontWeight: 600, cursor: 'pointer' }}>{info.getValue()}</span>
       }),
       columnHelper.accessor('referenceId', {
         header: 'Reference ID',
@@ -504,9 +506,9 @@ const OutsourceListTable = ({ outsourceData = [], onDataChange }: Props) => {
             value={info.row.original.laboratoryId || ''}
             onChange={e => handleLaboratoryChange(info.row.original.id, Number(e.target.value))}
             displayEmpty
-            size="small"
+            size='small'
           >
-            <MenuItem value="">
+            <MenuItem value=''>
               <em>Select Laboratory</em>
             </MenuItem>
             {laboratories.map(lab => (
@@ -521,11 +523,7 @@ const OutsourceListTable = ({ outsourceData = [], onDataChange }: Props) => {
         header: 'Tests',
         cell: info => (
           <div>
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={() => openTestDialog(info.row.original.id)}
-            >
+            <Button variant='outlined' size='small' onClick={() => openTestDialog(info.row.original.id)}>
               {info.row.original.selectedTests?.length || 0} Tests
             </Button>
           </div>
@@ -538,7 +536,7 @@ const OutsourceListTable = ({ outsourceData = [], onDataChange }: Props) => {
             value={info.row.original.status}
             onChange={e => handleStatusChange(info.row.original.id, e.target.value)}
             displayEmpty
-            size="small"
+            size='small'
           >
             {statusOptions.map(opt => (
               <MenuItem key={opt.value} value={opt.value}>
@@ -551,16 +549,14 @@ const OutsourceListTable = ({ outsourceData = [], onDataChange }: Props) => {
       columnHelper.accessor('shipmentStatus', {
         header: 'Shipment Status',
         cell: info => (
-          <div className="flex items-center gap-2">
+          <div className='flex items-center gap-2'>
             <span>{info.getValue() || 'Not Shipped'}</span>
             {info.getValue() === 'Shipped' && (
-              <span className="text-xs text-gray-500">
-                ({info.row.original.shipmentTrackingId})
-              </span>
+              <span className='text-xs text-gray-500'>({info.row.original.shipmentTrackingId})</span>
             )}
           </div>
         )
-      }),
+      })
     ],
     [data, laboratories, tests]
   )
@@ -596,29 +592,29 @@ const OutsourceListTable = ({ outsourceData = [], onDataChange }: Props) => {
       const response = await fetch('/api/apps/lims/outsource?action=download', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ fileType: 'CSV' })
-      });
+        body: JSON.stringify({ fileType: 'EXCEL' })
+      })
 
       if (!response.ok) {
-        throw new Error('Failed to download file');
+        throw new Error('Failed to download file')
       }
 
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Outsource_List_${new Date().toISOString().replace(/[:.]/g, '_')}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Outsource_List_${new Date().toISOString().replace(/[:.]/g, '_')}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
 
-      toast.success('CSV file downloaded successfully');
+      toast.success('Excel file downloaded successfully')
     } catch (error) {
       console.error('Export failed:', error)
-      toast.error('Failed to download CSV file');
+      toast.error('Failed to download Excel file')
     } finally {
       setIsExporting(false)
     }
@@ -627,15 +623,15 @@ const OutsourceListTable = ({ outsourceData = [], onDataChange }: Props) => {
   const handlePdfExport = async () => {
     setIsPdfLoading(true)
     try {
-      const doc = new jsPDF();
-      
+      const doc = new jsPDF()
+
       // Add title
-      doc.setFontSize(16);
-      doc.text('Outsource List', 14, 15);
-      
+      doc.setFontSize(16)
+      doc.text('Outsource List', 14, 15)
+
       // Add date
-      doc.setFontSize(10);
-      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
+      doc.setFontSize(10)
+      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22)
 
       // Prepare table data
       const tableData = data.map(item => [
@@ -650,25 +646,39 @@ const OutsourceListTable = ({ outsourceData = [], onDataChange }: Props) => {
         item.shipmentTrackingId || '-',
         item.shipmentDate || '-',
         item.processedDate || '-'
-      ]);
+      ])
 
       // Add table using autoTable
       autoTable(doc, {
-        head: [['Date', 'Sample ID', 'Reference ID', 'Gender', 'Parameter', 'Status', 'Laboratory', 'Shipment Status', 'Tracking ID', 'Shipment Date', 'Processed Date']],
+        head: [
+          [
+            'Date',
+            'Sample ID',
+            'Reference ID',
+            'Gender',
+            'Parameter',
+            'Status',
+            'Laboratory',
+            'Shipment Status',
+            'Tracking ID',
+            'Shipment Date',
+            'Processed Date'
+          ]
+        ],
         body: tableData,
         startY: 30,
         styles: { fontSize: 8 },
         headStyles: { fillColor: [41, 128, 185] },
         alternateRowStyles: { fillColor: [245, 245, 245] },
         margin: { top: 30 }
-      });
+      })
 
       // Save the PDF
-      doc.save(`outsource-list-${new Date().toISOString().split('T')[0]}.pdf`);
-      toast.success('PDF file downloaded successfully');
+      doc.save(`outsource-list-${new Date().toISOString().split('T')[0]}.pdf`)
+      toast.success('PDF file downloaded successfully')
     } catch (error) {
-      console.error('PDF export failed:', error);
-      toast.error('Failed to download PDF file');
+      console.error('PDF export failed:', error)
+      toast.error('Failed to download PDF file')
     } finally {
       setIsPdfLoading(false)
     }
@@ -686,23 +696,23 @@ const OutsourceListTable = ({ outsourceData = [], onDataChange }: Props) => {
     try {
       setIsBulkOperationLoading(true)
       setBulkOperationProgress(0)
-      
+
       const totalSamples = selectedSamplesForOutsource.length
       let processedSamples = 0
-      
+
       await Promise.all(
-        selectedSamplesForOutsource.map(async (id) => {
+        selectedSamplesForOutsource.map(async id => {
           try {
             const response = await fetch('/api/apps/lims/outsource?action=status', {
               method: 'PUT',
               headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json'
               },
               body: JSON.stringify({ ids: [id], statusId: 6 })
-            });
+            })
 
             if (!response.ok) {
-              throw new Error('Failed to outsource sample');
+              throw new Error('Failed to outsource sample')
             }
 
             processedSamples++
@@ -712,7 +722,7 @@ const OutsourceListTable = ({ outsourceData = [], onDataChange }: Props) => {
           }
         })
       )
-      
+
       toast.success('Samples outsourced successfully')
       const response = await fetch('/api/apps/lims/outsource')
       const newData = await response.json()
@@ -732,8 +742,8 @@ const OutsourceListTable = ({ outsourceData = [], onDataChange }: Props) => {
   // Add progress indicator component
   const BulkOperationProgress = () => (
     <Box sx={{ width: '100%', mt: 2 }}>
-      <LinearProgress variant="determinate" value={bulkOperationProgress} />
-      <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 1 }}>
+      <LinearProgress variant='determinate' value={bulkOperationProgress} />
+      <Typography variant='body2' color='text.secondary' align='center' sx={{ mt: 1 }}>
         Processing {Math.round(bulkOperationProgress)}% complete
       </Typography>
     </Box>
@@ -741,18 +751,14 @@ const OutsourceListTable = ({ outsourceData = [], onDataChange }: Props) => {
 
   return (
     <Card>
-      <CardHeader 
-        title="Outsource List" 
+      <CardHeader
+        title='Outsource List'
         action={
           <Box sx={{ display: 'flex', gap: 2 }}>
             <Button
               variant='outlined'
               startIcon={
-                isExporting ? (
-                  <i className='tabler-loader animate-spin' />
-                ) : (
-                  <i className='tabler-file-spreadsheet' />
-                )
+                isExporting ? <i className='tabler-loader animate-spin' /> : <i className='tabler-file-spreadsheet' />
               }
               onClick={handleExport}
               disabled={isExporting}
@@ -762,11 +768,7 @@ const OutsourceListTable = ({ outsourceData = [], onDataChange }: Props) => {
             <Button
               variant='outlined'
               startIcon={
-                isPdfLoading ? (
-                  <i className='tabler-loader animate-spin' />
-                ) : (
-                  <i className='tabler-file-text' />
-                )
+                isPdfLoading ? <i className='tabler-loader animate-spin' /> : <i className='tabler-file-text' />
               }
               onClick={handlePdfExport}
               disabled={isPdfLoading}
@@ -778,7 +780,7 @@ const OutsourceListTable = ({ outsourceData = [], onDataChange }: Props) => {
       />
       <Divider />
       <div className='flex flex-wrap justify-between gap-4 p-6'>
-        <div className="flex items-center gap-4">
+        <div className='flex items-center gap-4'>
           <DebouncedInput
             value={globalFilter ?? ''}
             onChange={value => setGlobalFilter(String(value))}
@@ -786,17 +788,12 @@ const OutsourceListTable = ({ outsourceData = [], onDataChange }: Props) => {
             className='max-sm:is-full'
           />
           {Object.keys(rowSelection).length > 0 && (
-            <div className="text-sm text-gray-600">
-              {Object.keys(rowSelection).length} row(s) selected
-            </div>
+            <div className='text-sm text-gray-600'>{Object.keys(rowSelection).length} row(s) selected</div>
           )}
         </div>
       </div>
-      <TableFilters
-        setData={setData}
-        testData={outsourceData}
-      />
-            
+      <TableFilters setData={setData} testData={outsourceData} />
+
       <div className='overflow-x-auto'>
         <table className={tableStyles.table}>
           <thead>
@@ -838,10 +835,7 @@ const OutsourceListTable = ({ outsourceData = [], onDataChange }: Props) => {
                 .getRowModel()
                 .rows.slice(0, table.getState().pagination.pageSize)
                 .map(row => (
-                  <tr 
-                    key={row.id} 
-                    className={classnames({ selected: row.getIsSelected() })}
-                  >
+                  <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
                     {row.getVisibleCells().map(cell => (
                       <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
                     ))}
@@ -885,7 +879,7 @@ const OutsourceListTable = ({ outsourceData = [], onDataChange }: Props) => {
           disabled={Object.keys(rowSelection).length === 0}
           onClick={handleExport}
         >
-          Download Outsource Sample
+          Download Excel
         </Button>
       </div>
 
@@ -899,7 +893,7 @@ const OutsourceListTable = ({ outsourceData = [], onDataChange }: Props) => {
           }}
           tests={tests}
           selectedTests={data.find(row => row.id === selectedRowId)?.selectedTests || []}
-          onSave={(selectedTests) => handleTestSelection(selectedRowId, selectedTests)}
+          onSave={selectedTests => handleTestSelection(selectedRowId, selectedTests)}
         />
       )}
 
@@ -921,12 +915,12 @@ const OutsourceListTable = ({ outsourceData = [], onDataChange }: Props) => {
         <DialogContent>
           <TextField
             autoFocus
-            margin="dense"
-            label="Tracking ID"
-            type="text"
+            margin='dense'
+            label='Tracking ID'
+            type='text'
             fullWidth
-            variant="outlined"
-            onChange={(e) => handleShipmentConfirm(e.target.value)}
+            variant='outlined'
+            onChange={e => handleShipmentConfirm(e.target.value)}
           />
         </DialogContent>
         <DialogActions>
@@ -951,9 +945,7 @@ const OutsourceListTable = ({ outsourceData = [], onDataChange }: Props) => {
       >
         <DialogTitle>Mark as Processed</DialogTitle>
         <DialogContent>
-          <Typography>
-            Are you sure you want to mark this sample as processed?
-          </Typography>
+          <Typography>Are you sure you want to mark this sample as processed?</Typography>
         </DialogContent>
         <DialogActions>
           <Button
@@ -964,10 +956,7 @@ const OutsourceListTable = ({ outsourceData = [], onDataChange }: Props) => {
           >
             Cancel
           </Button>
-          <Button
-            color="primary"
-            onClick={handleProcessingConfirm}
-          >
+          <Button color='primary' onClick={handleProcessingConfirm}>
             Confirm
           </Button>
         </DialogActions>
@@ -975,17 +964,15 @@ const OutsourceListTable = ({ outsourceData = [], onDataChange }: Props) => {
 
       <ConfirmDialog
         open={showOutsourceConfirm}
-        title="Confirm Outsource"
+        title='Confirm Outsource'
         description={
           <div className='flex flex-col gap-4'>
-            <Typography>
-              Do you want to outsource {selectedSamplesForOutsource.length} samples?
-            </Typography>
+            <Typography>Do you want to outsource {selectedSamplesForOutsource.length} samples?</Typography>
             {isBulkOperationLoading && <BulkOperationProgress />}
           </div>
         }
-        okText="Yes"
-        cancelText="No"
+        okText='Yes'
+        cancelText='No'
         handleClose={() => {
           setShowOutsourceConfirm(false)
           setSelectedSamplesForOutsource([])
@@ -1001,7 +988,7 @@ const OutsourceListTable = ({ outsourceData = [], onDataChange }: Props) => {
           setShowDetailsDialog(false)
           setSelectedOutsourceDetails(null)
         }}
-        maxWidth="md"
+        maxWidth='md'
         fullWidth
       >
         <DialogTitle>Outsource Details</DialogTitle>
@@ -1010,65 +997,60 @@ const OutsourceListTable = ({ outsourceData = [], onDataChange }: Props) => {
             <Box sx={{ mt: 2 }}>
               <Grid container spacing={2}>
                 <Grid item xs={6}>
-                  <Typography variant="subtitle2">Sample ID</Typography>
+                  <Typography variant='subtitle2'>Sample ID</Typography>
                   <Typography>{selectedOutsourceDetails.sampleId}</Typography>
                 </Grid>
                 <Grid item xs={6}>
-                  <Typography variant="subtitle2">Reference ID</Typography>
+                  <Typography variant='subtitle2'>Reference ID</Typography>
                   <Typography>{selectedOutsourceDetails.referenceId}</Typography>
                 </Grid>
                 <Grid item xs={6}>
-                  <Typography variant="subtitle2">Date</Typography>
+                  <Typography variant='subtitle2'>Date</Typography>
                   <Typography>{formatDate(selectedOutsourceDetails.date)}</Typography>
                 </Grid>
                 <Grid item xs={6}>
-                  <Typography variant="subtitle2">Gender</Typography>
+                  <Typography variant='subtitle2'>Gender</Typography>
                   <Typography>{selectedOutsourceDetails.genderName}</Typography>
                 </Grid>
                 <Grid item xs={6}>
-                  <Typography variant="subtitle2">Parameter</Typography>
+                  <Typography variant='subtitle2'>Parameter</Typography>
                   <Typography>{selectedOutsourceDetails.parameter}</Typography>
                 </Grid>
                 <Grid item xs={6}>
-                  <Typography variant="subtitle2">Status</Typography>
+                  <Typography variant='subtitle2'>Status</Typography>
                   <Typography>{selectedOutsourceDetails.status}</Typography>
                 </Grid>
                 <Grid item xs={6}>
-                  <Typography variant="subtitle2">Laboratory</Typography>
+                  <Typography variant='subtitle2'>Laboratory</Typography>
                   <Typography>{selectedOutsourceDetails.laboratory?.labName || '-'}</Typography>
                 </Grid>
                 <Grid item xs={6}>
-                  <Typography variant="subtitle2">Shipment Status</Typography>
+                  <Typography variant='subtitle2'>Shipment Status</Typography>
                   <Typography>{selectedOutsourceDetails.shipmentStatus || 'Not Shipped'}</Typography>
                 </Grid>
                 {selectedOutsourceDetails.shipmentTrackingId && (
                   <Grid item xs={6}>
-                    <Typography variant="subtitle2">Tracking ID</Typography>
+                    <Typography variant='subtitle2'>Tracking ID</Typography>
                     <Typography>{selectedOutsourceDetails.shipmentTrackingId}</Typography>
                   </Grid>
                 )}
                 {selectedOutsourceDetails.shipmentDate && (
                   <Grid item xs={6}>
-                    <Typography variant="subtitle2">Shipment Date</Typography>
+                    <Typography variant='subtitle2'>Shipment Date</Typography>
                     <Typography>{formatDate(selectedOutsourceDetails.shipmentDate)}</Typography>
                   </Grid>
                 )}
                 {selectedOutsourceDetails.processedDate && (
                   <Grid item xs={6}>
-                    <Typography variant="subtitle2">Processed Date</Typography>
+                    <Typography variant='subtitle2'>Processed Date</Typography>
                     <Typography>{formatDate(selectedOutsourceDetails.processedDate)}</Typography>
                   </Grid>
                 )}
                 <Grid item xs={12}>
-                  <Typography variant="subtitle2">Selected Tests</Typography>
+                  <Typography variant='subtitle2'>Selected Tests</Typography>
                   <Box sx={{ mt: 1 }}>
                     {selectedOutsourceDetails.selectedTests?.map((test, index) => (
-                      <Chip
-                        key={test.id}
-                        label={test.testName}
-                        size="small"
-                        sx={{ mr: 1, mb: 1 }}
-                      />
+                      <Chip key={test.id} label={test.testName} size='small' sx={{ mr: 1, mb: 1 }} />
                     ))}
                   </Box>
                 </Grid>
@@ -1077,10 +1059,12 @@ const OutsourceListTable = ({ outsourceData = [], onDataChange }: Props) => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => {
-            setShowDetailsDialog(false)
-            setSelectedOutsourceDetails(null)
-          }}>
+          <Button
+            onClick={() => {
+              setShowDetailsDialog(false)
+              setSelectedOutsourceDetails(null)
+            }}
+          >
             Close
           </Button>
         </DialogActions>

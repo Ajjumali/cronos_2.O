@@ -383,20 +383,52 @@ const AnalyteCodeListTable = ({ analyteCodeData = [], onDataChange }: Props) => 
   const handlePdfExport = async () => {
     setIsPdfLoading(true)
     try {
-      const response = await fetch('/api/apps/lims/Analytecode-master/download?fileType=download&type=PDF')
-      if (!response.ok) {
-        throw new Error('Failed to download PDF file')
-      }
+      const doc = new jsPDF()
 
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = 'AnalyteCode_List.pdf'
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
+      // Add title
+      doc.setFontSize(16)
+      doc.text('Analyte Code List', 14, 15)
+
+      // Add date
+      doc.setFontSize(10)
+      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22)
+
+      // Prepare table data
+      const tableData = data.map(analyteCode => [
+        analyteCode.analyteName || '-',
+        analyteCode.analyteCode || '-',
+        analyteCode.instrumentName || '-',
+        analyteCode.sampletype || '-',
+        analyteCode.testName || '-',
+        analyteCode.isActive ? 'Active' : 'Inactive',
+        analyteCode.updatedBy || '-',
+        analyteCode.updatedOn ? formatDate(analyteCode.updatedOn) : '-'
+      ])
+
+      // Add table using autoTable
+      autoTable(doc, {
+        head: [
+          [
+            'Analyte Name',
+            'Analyte Code',
+            'Instrument',
+            'Sample Type',
+            'Test',
+            'Status',
+            'Performed By',
+            'Performed On'
+          ]
+        ],
+        body: tableData,
+        startY: 30,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [41, 128, 185] },
+        alternateRowStyles: { fillColor: [245, 245, 245] },
+        margin: { top: 30 }
+      })
+
+      // Save the PDF
+      doc.save(`analyte-code-${new Date().toISOString().split('T')[0]}.pdf`)
       toast.success('PDF file downloaded successfully')
     } catch (error) {
       console.error('PDF export failed:', error)

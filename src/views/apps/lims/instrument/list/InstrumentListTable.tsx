@@ -352,19 +352,52 @@ const InstrumentListTable = ({ instrumentData = [], onDataChange }: Props) => {
   const handlePdfExport = async () => {
     setIsPdfLoading(true)
     try {
-      const response = await fetch('/api/apps/lims/Instrument-master/download?fileType=PDF')
-      if (!response.ok) {
-        throw new Error('Failed to download PDF file')
-      }
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `Instrument_${new Date().toISOString().replace(/[:.]/g, '_')}.pdf`
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
+      const doc = new jsPDF()
+
+      // Add title
+      doc.setFontSize(16)
+      doc.text('Instrument List', 14, 15)
+
+      // Add date
+      doc.setFontSize(10)
+      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22)
+
+      // Prepare table data
+      const tableData = data.map(instrument => [
+        instrument.instrumentName || '-',
+        instrument.categoryName || '-',
+        instrument.port || '-',
+        instrument.ipAddress || '-',
+        instrument.instrumentSerialNumber || '-',
+        instrument.isActive ? 'Active' : 'Inactive',
+        instrument.updatedBy || '-',
+        formatDate(instrument.updatedOn)
+      ])
+
+      // Add table using autoTable
+      autoTable(doc, {
+        head: [
+          [
+            'Instrument Name',
+            'Category',
+            'Port',
+            'IP Address',
+            'Serial Number',
+            'Status',
+            'Performed By',
+            'Performed On'
+          ]
+        ],
+        body: tableData,
+        startY: 30,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [41, 128, 185] },
+        alternateRowStyles: { fillColor: [245, 245, 245] },
+        margin: { top: 30 }
+      })
+
+      // Save the PDF
+      doc.save(`instrument-list-${new Date().toISOString().split('T')[0]}.pdf`)
       toast.success('PDF file downloaded successfully')
     } catch (error) {
       console.error('PDF export failed:', error)

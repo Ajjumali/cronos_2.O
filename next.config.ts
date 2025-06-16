@@ -33,11 +33,11 @@ const nextConfig: NextConfig = {
   basePath: process.env.BASEPATH,
   eslint: {
     // Disable ESLint during production builds
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: true
   },
   typescript: {
     // Disable TypeScript type checking during production builds
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: true
   },
   async headers() {
     return [
@@ -47,22 +47,22 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Access-Control-Allow-Origin',
-            value: 'https://cronos-sand.vercel.app',
+            value: 'https://cronos-sand.vercel.app'
           },
           {
             key: 'Access-Control-Allow-Methods',
-            value: 'GET, POST, PUT, DELETE, OPTIONS',
+            value: 'GET, POST, PUT, DELETE, OPTIONS'
           },
           {
             key: 'Access-Control-Allow-Headers',
-            value: 'X-Requested-With, Content-Type, Authorization',
+            value: 'X-Requested-With, Content-Type, Authorization'
           },
           {
             key: 'Access-Control-Allow-Credentials',
-            value: 'true',
-          },
-        ],
-      },
+            value: 'true'
+          }
+        ]
+      }
     ]
   },
   //below think added by me
@@ -70,13 +70,13 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/',
-        destination: '/en/dashboards/crm',
+        destination: '/en/apps/reports',
         permanent: true,
         locale: false
       },
       {
         source: '/:lang(en|fr|ar)',
-        destination: '/:lang/dashboards/crm',
+        destination: '/:lang/apps/reports',
         permanent: true,
         locale: false
       },
@@ -91,4 +91,3 @@ const nextConfig: NextConfig = {
 }
 
 export default nextConfig
-

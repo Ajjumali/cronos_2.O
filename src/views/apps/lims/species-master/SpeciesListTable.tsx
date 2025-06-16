@@ -13,7 +13,7 @@ import IconButton from '@mui/material/IconButton'
 import Typography from '@mui/material/Typography'
 import type { TextFieldProps } from '@mui/material/TextField'
 
-// Third-party Imports 
+// Third-party Imports
 import { rankItem } from '@tanstack/match-sorter-utils'
 import {
   createColumnHelper,
@@ -46,6 +46,8 @@ import tableStyles from '@core/styles/table.module.css'
 import { toast } from 'react-toastify'
 import { Divider } from '@mui/material'
 import { formatDate } from '@/utils/dateUtils'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 declare module '@tanstack/table-core' {
   interface FilterFns {
@@ -133,13 +135,13 @@ const SpeciesListTable = ({ speciesData = [], onDataChange, autoApprovalEnabled 
   // Update data when speciesData prop changes
   useEffect(() => {
     const sortedData = [...speciesData].sort((a, b) => {
-      const dateA = a.updatedOn ? new Date(a.updatedOn).getTime() : 0;
-      const dateB = b.updatedOn ? new Date(b.updatedOn).getTime() : 0;
-      return dateB - dateA;
-    });
-    setData(sortedData);
-    setFilteredData(sortedData);
-  }, [speciesData]);
+      const dateA = a.updatedOn ? new Date(a.updatedOn).getTime() : 0
+      const dateB = b.updatedOn ? new Date(b.updatedOn).getTime() : 0
+      return dateB - dateA
+    })
+    setData(sortedData)
+    setFilteredData(sortedData)
+  }, [speciesData])
 
   const handleDeleteRecord = async (reason: string) => {
     if (deleteId !== null) {
@@ -148,7 +150,7 @@ const SpeciesListTable = ({ speciesData = [], onDataChange, autoApprovalEnabled 
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${(session?.user as any)?.accessToken}`
+            Authorization: `Bearer ${(session?.user as any)?.accessToken}`
           }
         })
 
@@ -158,7 +160,7 @@ const SpeciesListTable = ({ speciesData = [], onDataChange, autoApprovalEnabled 
         }
 
         const result = await response.json()
-        
+
         if (result.success) {
           const updatedData = data?.filter(species => species.speciesId !== deleteId)
           setData(updatedData)
@@ -179,13 +181,16 @@ const SpeciesListTable = ({ speciesData = [], onDataChange, autoApprovalEnabled 
   const handleDeleteClick = async (speciesId: number) => {
     if (autoApprovalEnabled) {
       try {
-        const response = await fetch(`/api/apps/lims/Species-master/${speciesId}?reason=${encodeURIComponent('Auto-approved deletion')}`, {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${(session?.user as any)?.accessToken}`
+        const response = await fetch(
+          `/api/apps/lims/Species-master/${speciesId}?reason=${encodeURIComponent('Auto-approved deletion')}`,
+          {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${(session?.user as any)?.accessToken}`
+            }
           }
-        })
+        )
 
         if (!response.ok) {
           const errorText = await response.text()
@@ -193,7 +198,7 @@ const SpeciesListTable = ({ speciesData = [], onDataChange, autoApprovalEnabled 
         }
 
         const result = await response.json()
-        
+
         if (result.success) {
           const updatedData = data?.filter(species => species.speciesId !== speciesId)
           setData(updatedData)
@@ -235,7 +240,7 @@ const SpeciesListTable = ({ speciesData = [], onDataChange, autoApprovalEnabled 
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${(session?.user as any)?.accessToken}`
+            Authorization: `Bearer ${(session?.user as any)?.accessToken}`
           },
           body: JSON.stringify({
             ...species,
@@ -249,7 +254,7 @@ const SpeciesListTable = ({ speciesData = [], onDataChange, autoApprovalEnabled 
         }
 
         const result = await response.json()
-        
+
         if (result.success) {
           toast.success(result.message)
           onDataChange?.()
@@ -283,7 +288,7 @@ const SpeciesListTable = ({ speciesData = [], onDataChange, autoApprovalEnabled 
       const response = await fetch('/api/apps/lims/Species-master/download?fileType=CSV', {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(session?.user as any)?.accessToken}`
+          Authorization: `Bearer ${(session?.user as any)?.accessToken}`
         }
       })
 
@@ -301,7 +306,7 @@ const SpeciesListTable = ({ speciesData = [], onDataChange, autoApprovalEnabled 
       a.click()
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
-      
+
       toast.success('CSV file downloaded successfully')
     } catch (error: any) {
       console.error('Export failed:', error)
@@ -315,32 +320,42 @@ const SpeciesListTable = ({ speciesData = [], onDataChange, autoApprovalEnabled 
   const handlePdfExport = async () => {
     setIsPdfLoading(true)
     try {
-      const response = await fetch('/api/apps/lims/Species-master/download?fileType=PDF', {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(session?.user as any)?.accessToken}`
-        }
+      const doc = new jsPDF()
+
+      // Add title
+      doc.setFontSize(16)
+      doc.text('Species Master List', 14, 15)
+
+      // Add date
+      doc.setFontSize(10)
+      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22)
+
+      // Prepare table data
+      const tableData = data.map(species => [
+        species.speciesName || '-',
+        species.remarks || '-',
+        species.isActive ? 'Active' : 'Inactive',
+        species.updatedBy || '-',
+        formatDate(species.updatedOn)
+      ])
+
+      // Add table using autoTable
+      autoTable(doc, {
+        head: [['Species Name', 'Remarks', 'Status', 'Performed By', 'Performed On']],
+        body: tableData,
+        startY: 30,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [41, 128, 185] },
+        alternateRowStyles: { fillColor: [245, 245, 245] },
+        margin: { top: 30 }
       })
 
-      if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(`Failed to download PDF: ${response.status} ${response.statusText}`)
-      }
-
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = 'Species_List.pdf'
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
-      
+      // Save the PDF
+      doc.save(`species-master-${new Date().toISOString().split('T')[0]}.pdf`)
       toast.success('PDF file downloaded successfully')
-    } catch (error: any) {
+    } catch (error) {
       console.error('PDF export failed:', error)
-      toast.error(error.message || 'Failed to download PDF file')
+      toast.error('Failed to download PDF file')
     } finally {
       setIsPdfLoading(false)
     }
@@ -390,13 +405,8 @@ const SpeciesListTable = ({ speciesData = [], onDataChange, autoApprovalEnabled 
       }),
       columnHelper.accessor('updatedOn', {
         header: 'Performed On',
-        cell: ({ row }) => (
-          <Typography>
-            {formatDate(row.original.updatedOn)}
-          </Typography>
-        )
-      }),
-      
+        cell: ({ row }) => <Typography>{formatDate(row.original.updatedOn)}</Typography>
+      })
     ],
     []
   )
@@ -421,68 +431,59 @@ const SpeciesListTable = ({ speciesData = [], onDataChange, autoApprovalEnabled 
   })
 
   const handleAddSpecies = () => {
-      setSpeciesDrawerOpen(true);
-      setSelectedSpecies(null);
-  };
+    setSpeciesDrawerOpen(true)
+    setSelectedSpecies(null)
+  }
 
   return (
-   
-     <Card>
-        <CardHeader 
-          title='Species Master'
-          action={
-            <div className='flex gap-2'>
-              <Button
-                variant='outlined'
-                startIcon={
-                  isExporting ? (
-                    <i className='tabler-loader animate-spin' />
-                  ) : (
-                    <i className='tabler-file-spreadsheet' />
-                  )
-                }
-                onClick={handleExport}
-                disabled={isExporting}
-              >
-                {isExporting ? 'Exporting...' : 'Excel'}
-              </Button>
-              <Button
-                variant='outlined'
-                startIcon={
-                  isPdfLoading ? (
-                    <i className='tabler-loader animate-spin' />
-                  ) : (
-                    <i className='tabler-file-text' />
-                  )
-                }
-                onClick={handlePdfExport}
-                disabled={isPdfLoading}
-              >
-                {isPdfLoading ? 'Exporting...' : 'PDF'}
-              </Button>
+    <Card>
+      <CardHeader
+        title='Species Master'
+        action={
+          <div className='flex gap-2'>
+            <Button
+              variant='outlined'
+              startIcon={
+                isExporting ? <i className='tabler-loader animate-spin' /> : <i className='tabler-file-spreadsheet' />
+              }
+              onClick={handleExport}
+              disabled={isExporting}
+            >
+              {isExporting ? 'Exporting...' : 'Excel'}
+            </Button>
+            <Button
+              variant='outlined'
+              startIcon={
+                isPdfLoading ? <i className='tabler-loader animate-spin' /> : <i className='tabler-file-text' />
+              }
+              onClick={handlePdfExport}
+              disabled={isPdfLoading}
+            >
+              {isPdfLoading ? 'Exporting...' : 'PDF'}
+            </Button>
 
-              <Button
-                variant='contained'
-                color='primary'
-                className='max-sm:is-full'
-                startIcon={<i className='tabler-plus' />}
-                onClick={handleAddSpecies}
-              >
-                Add Species
-              </Button>
-            </div>
-          }
+            <Button
+              variant='contained'
+              color='primary'
+              className='max-sm:is-full'
+              startIcon={<i className='tabler-plus' />}
+              onClick={handleAddSpecies}
+            >
+              Add Species
+            </Button>
+          </div>
+        }
+      />
+      <Divider />
+      <div className='flex flex-wrap justify-between gap-4 p-6'>
+        <DebouncedInput
+          value={globalFilter ?? ''}
+          onChange={value => setGlobalFilter(String(value))}
+          placeholder='Search Species'
+          className='max-sm:is-full'
         />
-        <Divider />
-        <div className='flex flex-wrap justify-between gap-4 p-6'>
-          <DebouncedInput
-            value={globalFilter ?? ''}
-            onChange={value => setGlobalFilter(String(value))}
-            placeholder='Search Species'
-            className='max-sm:is-full'
-          />
-        </div>
-            
+      </div>
+
       <div className='overflow-x-auto'>
         <table className={tableStyles.table}>
           <thead>
@@ -548,4 +549,4 @@ const SpeciesListTable = ({ speciesData = [], onDataChange, autoApprovalEnabled 
   )
 }
 
-export default SpeciesListTable 
+export default SpeciesListTable

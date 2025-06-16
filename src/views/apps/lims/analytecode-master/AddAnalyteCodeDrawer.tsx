@@ -110,8 +110,8 @@ const AddAnalyteCodeDrawer = (props: Props) => {
       try {
         const [instrumentsResponse, sampleTypesResponse, testsResponse] = await Promise.all([
           fetch('/api/apps/lims/Analytecode-master?endpoint=instruments'),
-          fetch('/api/apps/lims/Analytecode-master?endpoint=sampletypes'),
-          fetch('/api/apps/lims/Analytecode-master?endpoint=tests')
+          fetch('/api/apps/lims/sample-type-master'),
+          fetch('/api/apps/lims/test-master')
         ])
 
         if (!instrumentsResponse.ok || !sampleTypesResponse.ok || !testsResponse.ok) {
@@ -124,9 +124,10 @@ const AddAnalyteCodeDrawer = (props: Props) => {
           testsResponse.json()
         ])
 
+        console.log('Test data:', tests)
         setInstrumentList(instruments)
-        setSampleTypeList(sampleTypes)
-        setTestList(tests)
+        setSampleTypeList(sampleTypes.result)
+        setTestList(tests.result || [])
       } catch (error) {
         console.error('Error fetching lists:', error)
         setError('Failed to load data. Please try again later.')
@@ -163,7 +164,7 @@ const AddAnalyteCodeDrawer = (props: Props) => {
         testId: formData.testId || 0,
         instrumentName: instrumentList.find(i => i.instrumentId === formData.instrumentId)?.instrumentName || '',
         sampletype: sampleTypeList.find(s => s.sampleId === formData.sampleTypeId)?.sampleType || '',
-        testName: testList.find(t => t.id === formData.testId)?.name || '',
+        testName: testList.find(t => t.id === formData.testId)?.testName || '',
         remark: formData.remark,
         isActive: formData.isActive,
         createdBy: selectedAnalyteCode?.createdBy || 'System',
@@ -345,6 +346,11 @@ const AddAnalyteCodeDrawer = (props: Props) => {
                         onChange={(_, newValue) => {
                           field.onChange(newValue?.instrumentId || null)
                         }}
+                        renderOption={(props, option) => (
+                          <li {...props} key={option.instrumentId}>
+                            {option.instrumentName}
+                          </li>
+                        )}
                         renderInput={params => (
                           <TextField
                             {...params}
@@ -374,6 +380,11 @@ const AddAnalyteCodeDrawer = (props: Props) => {
                         onChange={(_, newValue) => {
                           field.onChange(newValue?.sampleId || null)
                         }}
+                        renderOption={(props, option) => (
+                          <li {...props} key={option.sampleId}>
+                            {option.sampleType}
+                          </li>
+                        )}
                         renderInput={params => (
                           <TextField
                             {...params}
@@ -399,12 +410,20 @@ const AddAnalyteCodeDrawer = (props: Props) => {
                     render={({ field }) => (
                       <CustomAutocomplete
                         options={testList}
-                        getOptionLabel={option => option?.name || ''}
-                        isOptionEqualToValue={(option, value) => option?.id === value?.id}
+                        getOptionLabel={option => option?.testName || ''}
+                        isOptionEqualToValue={(option, value) => {
+                          if (!option || !value) return false
+                          return option.id === (typeof value === 'object' ? value.id : value)
+                        }}
                         value={testList.find(test => test.id === field.value) || null}
                         onChange={(_, newValue) => {
                           field.onChange(newValue?.id || null)
                         }}
+                        renderOption={(props, option) => (
+                          <li {...props} key={option.id}>
+                            {option.testName}
+                          </li>
+                        )}
                         renderInput={params => (
                           <TextField
                             {...params}

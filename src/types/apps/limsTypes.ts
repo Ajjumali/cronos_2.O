@@ -130,7 +130,8 @@ export interface TestResultType {
 
 export interface TestType {
   id: number
-  name: string
+  testCode: string | null
+  testName: string
   description?: string
   unit?: string
   referenceRange?: string
