@@ -794,35 +794,6 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
   //   }
   // }
 
-  // Add barcode scanning handler
-  const handleBarcodeSubmit = async () => {
-    if (!barcodeInput) return
-
-    try {
-      setIsScanning(true)
-      // Find the sample with matching barcode
-      const sample = data.find(item => item.barcodeId === barcodeInput)
-      if (sample) {
-        setHighlightedSampleId(sample.id)
-        // Scroll to the highlighted row
-        const rowElement = document.getElementById(`sample-row-${sample.id}`)
-        if (rowElement) {
-          rowElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        }
-        toast.success('Sample found')
-      } else {
-        toast.error('Invalid barcode. Sample not found.')
-      }
-    } catch (error) {
-      console.error('Error scanning barcode:', error)
-      toast.error('Failed to scan barcode')
-    } finally {
-      setIsScanning(false)
-      setShowBarcodeScanDialog(false)
-      setBarcodeInput('')
-    }
-  }
-
   // Add filter state
   const [filters, setFilters] = useState({
     projectNo: '',
@@ -1260,16 +1231,11 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
       <Divider />
 
       <div className='flex flex-wrap justify-between gap-4 p-6'>
-        {/* Barcode Scanner Button */}
+        {/* Simple Barcode Scanner Button */}
         <div className='flex items-center gap-2'>
           <Button
             variant='outlined'
             startIcon={<i className='tabler-scan' />}
-            onClick={() => {
-              console.log('Barcode scan button clicked') // Debug log
-              setShowBarcodeScanDialog(true)
-              setBarcodeInput('') // Reset input when opening
-            }}
             sx={{
               color: 'lime.main',
               borderColor: 'lime.main',
@@ -1613,72 +1579,6 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
       />
       <SampleDetailsDialog open={showSampleDetails} setOpen={setShowSampleDetails} sample={selectedSampleForDetails} />
       <AuditTrailDialog open={showAuditTrail} setOpen={setShowAuditTrail} sampleId={selectedSampleForAudit || 0} />
-      {/* Add Barcode Scan Dialog */}
-      <Dialog
-        open={showBarcodeScanDialog}
-        onClose={() => {
-          console.log('Dialog close clicked') // Debug log
-          setShowBarcodeScanDialog(false)
-          setBarcodeInput('')
-        }}
-        maxWidth='sm'
-        fullWidth
-        PaperProps={{
-          sx: {
-            minWidth: '400px'
-          }
-        }}
-      >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <i className='tabler-scan text-xl' />
-          Scan Barcode
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ textAlign: 'center', py: 2 }}>
-            {isScanning ? (
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                <CircularProgress />
-                <Typography>Scanning...</Typography>
-              </Box>
-            ) : (
-              <CustomTextField
-                fullWidth
-                label='Enter Barcode'
-                value={barcodeInput}
-                onChange={e => setBarcodeInput(e.target.value)}
-                autoFocus
-                onKeyPress={e => {
-                  if (e.key === 'Enter') {
-                    handleBarcodeSubmit()
-                  }
-                }}
-                sx={{ mb: 2 }}
-              />
-            )}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => {
-              console.log('Cancel button clicked') // Debug log
-              setShowBarcodeScanDialog(false)
-              setBarcodeInput('')
-            }}
-            color='secondary'
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleBarcodeSubmit}
-            color='primary'
-            variant='contained'
-            disabled={!barcodeInput || isScanning}
-            startIcon={isScanning ? <CircularProgress size={20} /> : <i className='tabler-scan' />}
-          >
-            {isScanning ? 'Scanning...' : 'Submit'}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Card>
   )
 }

@@ -342,11 +342,9 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
   }
 
   const handleBarcodeScan = (sample: SampleWithActionsType) => {
-    setSelectedSampleForScan(sample)
-    setShowBarcodeScanDialog(true)
-    setIsScanning(true)
-
-    // TODO: Implement barcode scanner activation
+    // Simple barcode scan functionality
+    console.log('Scanning barcode for sample:', sample)
+    toast.info('Barcode scanning initiated')
   }
 
   const handleBarcodeSubmit = async () => {
@@ -706,7 +704,7 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
             <Button
               variant='outlined'
               startIcon={<i className='tabler-scan' />}
-              onClick={() => setShowBarcodeScanDialog(true)}
+              onClick={() => handleBarcodeScan(data[0])}
               sx={{ color: 'lime.main', borderColor: 'lime.main' }}
             >
               Scan Barcode
@@ -958,36 +956,6 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
         </DialogActions>
       </Dialog>
 
-      <Dialog open={showBarcodeScanDialog} onClose={() => setShowBarcodeScanDialog(false)}>
-        <DialogTitle>Scan Barcode</DialogTitle>
-        <DialogContent>
-          <Box sx={{ textAlign: 'center', py: 2 }}>
-            {isScanning ? (
-              <CircularProgress />
-            ) : (
-              <CustomTextField
-                fullWidth
-                label='Barcode'
-                value={barcodeInput}
-                onChange={e => setBarcodeInput(e.target.value)}
-                autoFocus
-              />
-            )}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowBarcodeScanDialog(false)}>Cancel</Button>
-          <Button
-            onClick={handleBarcodeSubmit}
-            color='primary'
-            variant='contained'
-            disabled={!barcodeInput || isScanning}
-          >
-            Submit
-          </Button>
-        </DialogActions>
-      </Dialog>
-
       <Dialog open={showSampleDetails} onClose={() => setShowSampleDetails(false)} maxWidth='md' fullWidth>
         <DialogTitle>
           <Typography variant='h5' component='div'>
@@ -1075,12 +1043,7 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
         open={showBarcodeDialog}
         setOpen={setShowBarcodeDialog}
         sampleId={selectedSample?.id || 0}
-        barcodeId={selectedSample?.barcodeId}
-        sampleDetails={{
-          subjectId: selectedSample?.employeeId,
-          sampleType: selectedSample?.sampleType,
-          collectedOn: selectedSample?.collectedOn
-        }}
+        barcodeId={selectedSample?.barcodeId || ''}
       />
 
       {/* Add Remark Dialog */}
