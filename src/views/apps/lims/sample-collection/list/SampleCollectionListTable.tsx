@@ -701,14 +701,19 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
         title='Sample Collection'
         action={
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <Button
-              variant='outlined'
-              startIcon={<i className='tabler-scan' />}
-              onClick={() => handleBarcodeScan(data[0])}
-              sx={{ color: 'lime.main', borderColor: 'lime.main' }}
-            >
-              Scan Barcode
-            </Button>
+            <CustomTextField
+              placeholder='Scan barcode'
+              size='small'
+              sx={{ width: '200px' }}
+              onChange={e => {
+                // Handle barcode scan input
+                const value = e.target.value
+                if (value) {
+                  // TODO: Implement barcode scan logic
+                  console.log('Barcode scanned:', value)
+                }
+              }}
+            />
             <Button
               variant='outlined'
               startIcon={

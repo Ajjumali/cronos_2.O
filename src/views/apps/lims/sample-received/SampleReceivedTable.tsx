@@ -1231,23 +1231,15 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
       <Divider />
 
       <div className='flex flex-wrap justify-between gap-4 p-6'>
-        {/* Simple Barcode Scanner Button */}
+        {/* Search Box */}
         <div className='flex items-center gap-2'>
-          <Button
-            variant='outlined'
-            startIcon={<i className='tabler-scan' />}
-            sx={{
-              color: 'lime.main',
-              borderColor: 'lime.main',
-              '&:hover': {
-                borderColor: 'lime.dark',
-                backgroundColor: 'lime.light'
-              }
-            }}
-            className='max-sm:is-full is-auto'
-          >
-            Scan Barcode
-          </Button>
+          <DebouncedInput
+            value={globalFilter ?? ''}
+            onChange={value => setGlobalFilter(String(value))}
+            placeholder='Scan Barcode'
+            className='max-sm:is-full'
+            sx={{ minWidth: '300px' }}
+          />
         </div>
 
         {/* Search and other controls */}

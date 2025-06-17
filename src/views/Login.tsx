@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 // Next Imports
 import Link from 'next/link'
@@ -94,6 +94,8 @@ const Login = ({ mode }: { mode: SystemMode }) => {
   const [isPasswordShown, setIsPasswordShown] = useState(false)
   const [errorState, setErrorState] = useState<ErrorType | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isVerifyingToken, setIsVerifyingToken] = useState(false)
+  const [loadingMessage, setLoadingMessage] = useState<string>('')
 
   // Vars
   const darkImg = '/images/pages/auth-mask-dark.png'
@@ -134,11 +136,44 @@ const Login = ({ mode }: { mode: SystemMode }) => {
 
   const handleClickShowPassword = () => setIsPasswordShown(show => !show)
 
+  // Add token verification effect
+  useEffect(() => {
+    const verifyToken = async () => {
+      const token = searchParams.get('token')
+      if (token) {
+        try {
+          setIsVerifyingToken(true)
+          setLoadingMessage('Verifying your access token...')
+          const res = await signIn('credentials', {
+            token,
+            redirect: false
+          })
+
+          if (res?.error) {
+            setErrorState({ message: [res.error] })
+          } else if (res?.ok) {
+            setLoadingMessage('Successfully verified! Redirecting...')
+            const redirectURL = searchParams.get('redirectTo') ?? themeConfig.homePageUrl
+            router.replace(getLocalizedUrl(redirectURL, locale as Locale))
+          }
+        } catch (error) {
+          setErrorState({ message: ['Error verifying token'] })
+        } finally {
+          setIsVerifyingToken(false)
+          setLoadingMessage('')
+        }
+      }
+    }
+
+    verifyToken()
+  }, [searchParams, router, locale])
+
   const onSubmit: SubmitHandler<FormData> = async (data: FormData) => {
     try {
       console.log('Starting login process with:', data)
-      setErrorState(null) // Clear any previous errors
-      setIsLoading(true) // Start loading state
+      setErrorState(null)
+      setIsLoading(true)
+      setLoadingMessage('Signing in with your credentials...')
 
       const res = await signIn('credentials', {
         username: data.username,
@@ -149,23 +184,21 @@ const Login = ({ mode }: { mode: SystemMode }) => {
       console.log('SignIn Response:', res)
 
       if (res?.error) {
-        console.error('SignIn Error:', res.error)
-        // Handle authentication error
         setErrorState({ message: [res.error] })
-        setIsLoading(false) // Stop loading state on error
+        setIsLoading(false)
+        setLoadingMessage('')
         return
       }
 
       if (res?.ok) {
-        console.log('Login successful, redirecting...')
-        // Successful login
+        setLoadingMessage('Successfully signed in! Redirecting...')
         const redirectURL = searchParams.get('redirectTo') ?? themeConfig.homePageUrl
         router.replace(getLocalizedUrl(redirectURL, locale as Locale))
       }
     } catch (error) {
-      console.error('Login Error:', error)
       setErrorState({ message: ['An unexpected error occurred. Please try again.'] })
-      setIsLoading(false) // Stop loading state on error
+      setIsLoading(false)
+      setLoadingMessage('')
     }
   }
 
@@ -191,11 +224,20 @@ const Login = ({ mode }: { mode: SystemMode }) => {
             <Typography variant='h4'>{`Welcome to ${themeConfig.templateName}! 👋🏻`}</Typography>
             <Typography>Please sign-in to your account and start the adventure</Typography>
           </div>
-          <Alert icon={false} className='bg-[var(--mui-palette-primary-lightOpacity)]'>
+          {(isVerifyingToken || isLoading) && (
+            <Alert
+              severity={loadingMessage.includes('Successfully') ? 'success' : 'info'}
+              className='flex items-center gap-2'
+            >
+              <i className='tabler-loader-2 animate-spin' />
+              <Typography>{loadingMessage}</Typography>
+            </Alert>
+          )}
+          {/* <Alert icon={false} className='bg-[var(--mui-palette-primary-lightOpacity)]'>
             <Typography variant='body2' color='primary.main'>
               Username: <span className='font-medium'>admin</span> / Pass: <span className='font-medium'>admin</span>
             </Typography>
-          </Alert>
+          </Alert> */}
           <form
             noValidate
             autoComplete='off'
@@ -271,14 +313,14 @@ const Login = ({ mode }: { mode: SystemMode }) => {
                 Forgot password?
               </Typography>
             </div>
-            <Button 
-              fullWidth 
-              variant='contained' 
+            <Button
+              fullWidth
+              variant='contained'
               type='submit'
-              disabled={isLoading}
+              disabled={isLoading || isVerifyingToken}
               startIcon={isLoading ? <i className='tabler-loader-2 animate-spin' /> : null}
             >
-              {isLoading ? 'Logging in...' : 'Login'}
+              {isLoading ? 'Signing in...' : 'Login'}
             </Button>
             <div className='flex justify-center items-center flex-wrap gap-2'>
               <Typography>New on our platform?</Typography>
@@ -286,8 +328,8 @@ const Login = ({ mode }: { mode: SystemMode }) => {
                 Create an account
               </Typography>
             </div>
-            <Divider className='gap-2'>or</Divider>
-            <Button
+            <Divider className='gap-2'></Divider>
+            {/* <Button
               color='secondary'
               className='self-center text-textPrimary'
               startIcon={<img src='/images/logos/google.png' alt='Google' width={22} />}
@@ -295,7 +337,7 @@ const Login = ({ mode }: { mode: SystemMode }) => {
               onClick={() => signIn('google')}
             >
               Sign in with Google
-            </Button>
+            </Button> */}
           </form>
         </div>
       </div>

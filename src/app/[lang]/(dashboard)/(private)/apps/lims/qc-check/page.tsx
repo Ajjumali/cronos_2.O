@@ -8,7 +8,7 @@ import Box from '@mui/material/Box'
 
 // Component Imports
 import QcCheckListTable from '@/views/apps/lims/qc-check/Qc-checkListTable'
-import type { QcCheckType } from '@/types/qc-check'
+import type { QcCheckType } from '@/types/apps/limsTypes'
 
 // Dummy service (replace with real service as needed)
 const dummyQcCheckService = {

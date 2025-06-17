@@ -49,7 +49,8 @@ import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import BarcodePrintDialog from '@/components/dialogs/barcode-print'
 import FormControlLabel from '@mui/material/FormControlLabel'
-import { FormGroup, TextField } from '@mui/material'
+import { FormGroup, TextField, Tooltip } from '@mui/material'
+import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 
 // Dummy data for demonstration
 const dummySample = {
@@ -71,6 +72,34 @@ const dummyTestRows = [
   { checked: true, testName: 'Chloride', result: '15', referenceRange: '10-15', remark: 'XYZ' },
   { checked: false, testName: 'Glucose', result: '99', referenceRange: '80-100', remark: 'ABC' }
 ]
+
+// Add function to check if result is outside reference range
+const isResultOutsideRange = (result: string, referenceRange: string): boolean => {
+  // Handle non-numeric results
+  if (isNaN(Number(result))) return false
+
+  // Parse reference range
+  const [min, max] = referenceRange.split('-').map(Number)
+  const resultNum = Number(result)
+
+  // Check if result is outside range
+  return resultNum < min || resultNum > max
+}
+
+// Add function to get range status
+const getRangeStatus = (
+  result: string,
+  referenceRange: string
+): { status: 'high' | 'low' | 'normal'; message: string } => {
+  if (isNaN(Number(result))) return { status: 'normal', message: 'Non-numeric result' }
+
+  const [min, max] = referenceRange.split('-').map(Number)
+  const resultNum = Number(result)
+
+  if (resultNum > max) return { status: 'high', message: `Result is above normal range (${max})` }
+  if (resultNum < min) return { status: 'low', message: `Result is below normal range (${min})` }
+  return { status: 'normal', message: 'Result is within normal range' }
+}
 
 declare module '@tanstack/table-core' {
   interface FilterFns {
@@ -154,6 +183,7 @@ interface TestRow {
   remark: string
   remarks: string
   actionRemarks: TestRemark[]
+  status: string
 }
 
 interface TestAction {
@@ -229,7 +259,8 @@ const ValidateSample = () => {
     dummyTestRows.map(row => ({
       ...row,
       remarks: row.remark || '',
-      actionRemarks: []
+      actionRemarks: [],
+      status: 'pending'
     }))
   )
   const [qcAcceptance, setQcAcceptance] = useState(dummySample.qcAcceptance)
@@ -281,6 +312,8 @@ const ValidateSample = () => {
   const [isAcknowledged, setIsAcknowledged] = useState(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [isOutOfRangeDialogOpen, setIsOutOfRangeDialogOpen] = useState(false)
+  const [outOfRangeTestNames, setOutOfRangeTestNames] = useState<string[]>([])
 
   const columns = useMemo<ColumnDef<any, any>[]>(
     () => [
@@ -333,24 +366,83 @@ const ValidateSample = () => {
       }),
       columnHelper.accessor('result', {
         header: 'Test Result',
-        cell: ({ row }) => (
-          <CustomTextField
-            size='small'
-            fullWidth
-            value={row.original.result}
-            onChange={e => {
-              const newTestRows = [...testRows]
-              const index = newTestRows.findIndex(item => item.testName === row.original.testName)
-              if (index !== -1) {
-                newTestRows[index] = {
-                  ...newTestRows[index],
-                  result: e.target.value
-                }
-                setTestRows(newTestRows)
-              }
-            }}
-          />
-        )
+        cell: ({ row }) => {
+          const isOutOfRange = isResultOutsideRange(row.original.result, row.original.referenceRange)
+          const rangeStatus = getRangeStatus(row.original.result, row.original.referenceRange)
+
+          return (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Tooltip title={rangeStatus.message}>
+                <Box sx={{ position: 'relative', width: '100%' }}>
+                  <CustomTextField
+                    size='small'
+                    fullWidth
+                    value={row.original.result}
+                    onChange={e => {
+                      const newTestRows = [...testRows]
+                      const index = newTestRows.findIndex(item => item.testName === row.original.testName)
+                      if (index !== -1) {
+                        newTestRows[index] = {
+                          ...newTestRows[index],
+                          result: e.target.value
+                        }
+                        setTestRows(newTestRows)
+                      }
+                    }}
+                    sx={{
+                      '& .MuiInputBase-root': {
+                        backgroundColor: isOutOfRange ? 'error.lighter' : 'inherit',
+                        '&:hover': {
+                          backgroundColor: isOutOfRange ? 'error.lighter' : 'action.hover'
+                        },
+                        border: isOutOfRange ? '2px solid' : '1px solid',
+                        borderColor: isOutOfRange ? 'error.main' : 'divider',
+                        borderRadius: 1
+                      },
+                      '& .MuiInputBase-input': {
+                        color: isOutOfRange ? 'error.main' : 'inherit',
+                        fontWeight: isOutOfRange ? 'bold' : 'normal'
+                      }
+                    }}
+                    disabled={!qcAcceptance}
+                  />
+                  {isOutOfRange && (
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: -8,
+                        right: -8,
+                        bgcolor: 'error.main',
+                        color: 'white',
+                        borderRadius: '50%',
+                        width: 20,
+                        height: 20,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      !
+                    </Box>
+                  )}
+                </Box>
+              </Tooltip>
+              {isOutOfRange && (
+                <Tooltip title={rangeStatus.message}>
+                  <WarningAmberIcon
+                    sx={{
+                      color: 'error.main',
+                      fontSize: '1.25rem',
+                      animation: 'pulse 2s infinite'
+                    }}
+                  />
+                </Tooltip>
+              )}
+            </Box>
+          )
+        }
       }),
       columnHelper.accessor('referenceRange', {
         header: 'Reference Range',
@@ -374,6 +466,7 @@ const ValidateSample = () => {
                 setTestRows(newTestRows)
               }
             }}
+            disabled={!qcAcceptance}
           />
         )
       }),
@@ -505,10 +598,21 @@ const ValidateSample = () => {
 
     const selectedTestNames = selectedRows.map(row => row.original.testName)
 
+    if (action === 'Validate') {
+      // Check for out-of-range results
+      const outOfRangeTests = selectedRows.filter(row =>
+        isResultOutsideRange(row.original.result, row.original.referenceRange)
+      )
+      if (outOfRangeTests.length > 0) {
+        setOutOfRangeTestNames(outOfRangeTests.map(row => row.original.testName))
+        setIsOutOfRangeDialogOpen(true)
+        return
+      }
+      setIsApprovalModalOpen(true)
+      return
+    }
+
     switch (action) {
-      case 'Validate':
-        setIsApprovalModalOpen(true)
-        break
       case 'Non-Validate':
         // TODO: Implement non-validate logic
         toast.success(`Non-validated tests: ${selectedTestNames.join(', ')}`)
@@ -1255,131 +1359,185 @@ const ValidateSample = () => {
               </Grid>
             </Grid>
             {/* Rows */}
-            {table.getRowModel().rows.map((row, idx) => (
-              <Grid size={{ xs: 12 }} key={row.id}>
-                <Grid
-                  container
-                  spacing={2}
-                  sx={{
-                    py: 2,
-                    borderBottom: idx !== table.getRowModel().rows.length - 1 ? '1px solid' : 'none',
-                    borderColor: 'divider',
-                    backgroundColor: row.getIsSelected() ? 'action.selected' : 'transparent'
-                  }}
-                >
-                  <Grid size={{ xs: 1 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
-                      <OptionMenu
-                        iconButtonProps={{ size: 'small' }}
-                        options={[
-                          {
-                            text: 'Test Information',
-                            icon: 'tabler-info-circle',
-                            menuItemProps: {
-                              onClick: () => handleTestInfoOpen(row.original.testName),
-                              className: 'text-info'
+            {table.getRowModel().rows.map((row, idx) => {
+              const isOutOfRange = isResultOutsideRange(row.original.result, row.original.referenceRange)
+              return (
+                <Grid size={{ xs: 12 }} key={row.id}>
+                  <Grid
+                    container
+                    spacing={2}
+                    sx={{
+                      py: 2,
+                      borderBottom: idx !== table.getRowModel().rows.length - 1 ? '1px solid' : 'none',
+                      borderColor: 'divider',
+                      backgroundColor: row.getIsSelected()
+                        ? 'action.selected'
+                        : isOutOfRange
+                          ? 'error.lighter'
+                          : 'transparent',
+                      borderLeft: isOutOfRange ? '4px solid' : 'none',
+                      borderLeftColor: isOutOfRange ? 'error.main' : 'transparent',
+                      '&:hover': {
+                        backgroundColor: row.getIsSelected()
+                          ? 'action.selected'
+                          : isOutOfRange
+                            ? 'error.lighter'
+                            : 'action.hover'
+                      }
+                    }}
+                  >
+                    <Grid size={{ xs: 1 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
+                        <OptionMenu
+                          iconButtonProps={{
+                            size: 'small',
+                            sx: {
+                              color: isOutOfRange ? 'error.main' : 'inherit'
                             }
-                          },
-                          {
-                            text: 'Test Remark',
-                            icon: 'tabler-message',
-                            menuItemProps: {
-                              onClick: () => handleRemarksOpen(row.original.testName),
-                              className: 'text-primary'
+                          }}
+                          options={[
+                            {
+                              text: 'Test Information',
+                              icon: 'tabler-info-circle',
+                              menuItemProps: {
+                                onClick: () => handleTestInfoOpen(row.original.testName),
+                                className: 'text-info'
+                              }
+                            },
+                            {
+                              text: 'Test Remark',
+                              icon: 'tabler-message',
+                              menuItemProps: {
+                                onClick: () => handleRemarksOpen(row.original.testName),
+                                className: 'text-primary'
+                              }
+                            },
+                            {
+                              text: 'Repeat Test',
+                              icon: 'tabler-refresh',
+                              menuItemProps: {
+                                onClick: () => handleActionOpen(TEST_ACTIONS[0], row.original.testName),
+                                className: 'text-primary'
+                              }
+                            },
+                            {
+                              text: 'Print Barcode',
+                              icon: 'tabler-printer',
+                              menuItemProps: {
+                                onClick: () => handlePrintBarcode(row.original.testName),
+                                className: 'text-primary'
+                              }
+                            },
+                            {
+                              text: 'Dilute',
+                              icon: 'tabler-droplet',
+                              menuItemProps: {
+                                onClick: () => handleActionOpen(TEST_ACTIONS[2], row.original.testName),
+                                className: 'text-info'
+                              }
+                            },
+                            {
+                              text: 'Attach Document',
+                              icon: 'tabler-paperclip',
+                              menuItemProps: {
+                                onClick: () => handleActionOpen(TEST_ACTIONS[5], row.original.testName),
+                                className: 'text-success'
+                              }
+                            },
+                            {
+                              text: 'QC',
+                              icon: 'tabler-check',
+                              menuItemProps: {
+                                onClick: () => handleActionOpen(TEST_ACTIONS[4], row.original.testName),
+                                className: 'text-warning'
+                              }
                             }
-                          },
-                          {
-                            text: 'Repeat Test',
-                            icon: 'tabler-refresh',
-                            menuItemProps: {
-                              onClick: () => handleActionOpen(TEST_ACTIONS[0], row.original.testName),
-                              className: 'text-primary'
-                            }
-                          },
-                          {
-                            text: 'Print Barcode',
-                            icon: 'tabler-printer',
-                            menuItemProps: {
-                              onClick: () => handlePrintBarcode(row.original.testName),
-                              className: 'text-primary'
-                            }
-                          },
-                          {
-                            text: 'Dilute',
-                            icon: 'tabler-droplet',
-                            menuItemProps: {
-                              onClick: () => handleActionOpen(TEST_ACTIONS[2], row.original.testName),
-                              className: 'text-info'
-                            }
-                          },
-                          {
-                            text: 'Attach Document',
-                            icon: 'tabler-paperclip',
-                            menuItemProps: {
-                              onClick: () => handleActionOpen(TEST_ACTIONS[5], row.original.testName),
-                              className: 'text-success'
-                            }
-                          },
-                          {
-                            text: 'QC',
-                            icon: 'tabler-check',
-                            menuItemProps: {
-                              onClick: () => handleActionOpen(TEST_ACTIONS[4], row.original.testName),
-                              className: 'text-warning'
-                            }
+                          ]}
+                        />
+                      </Box>
+                    </Grid>
+                    <Grid size={{ xs: 1 }}>
+                      <Checkbox
+                        checked={row.getIsSelected()}
+                        onChange={row.getToggleSelectedHandler()}
+                        sx={{
+                          color: isOutOfRange ? 'error.main' : 'inherit',
+                          '&.Mui-checked': {
+                            color: isOutOfRange ? 'error.main' : 'primary.main'
                           }
-                        ]}
+                        }}
                       />
-                    </Box>
-                  </Grid>
-                  <Grid size={{ xs: 1 }}>
-                    <Checkbox checked={row.getIsSelected()} onChange={row.getToggleSelectedHandler()} />
-                  </Grid>
-                  <Grid size={{ xs: 2 }}>
-                    <Typography>{row.original.testName}</Typography>
-                  </Grid>
-                  <Grid size={{ xs: 2 }}>
-                    <CustomTextField
-                      size='small'
-                      fullWidth
-                      value={row.original.result}
-                      onChange={e => {
-                        const newTestRows = [...testRows]
-                        const index = newTestRows.findIndex(item => item.testName === row.original.testName)
-                        if (index !== -1) {
-                          newTestRows[index] = {
-                            ...newTestRows[index],
-                            result: e.target.value
+                    </Grid>
+                    <Grid size={{ xs: 2 }}>
+                      <Typography
+                        sx={{
+                          color: isOutOfRange ? 'error.main' : 'inherit',
+                          fontWeight: isOutOfRange ? 'bold' : 'normal'
+                        }}
+                      >
+                        {row.original.testName}
+                      </Typography>
+                    </Grid>
+                    <Grid size={{ xs: 2 }}>
+                      <CustomTextField
+                        size='small'
+                        fullWidth
+                        value={row.original.result}
+                        onChange={e => {
+                          const newTestRows = [...testRows]
+                          const index = newTestRows.findIndex(item => item.testName === row.original.testName)
+                          if (index !== -1) {
+                            newTestRows[index] = {
+                              ...newTestRows[index],
+                              result: e.target.value
+                            }
+                            setTestRows(newTestRows)
                           }
-                          setTestRows(newTestRows)
-                        }
-                      }}
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 2 }}>
-                    <Typography>{row.original.referenceRange}</Typography>
-                  </Grid>
-                  <Grid size={{ xs: 2 }}>
-                    <CustomTextField
-                      size='small'
-                      fullWidth
-                      value={row.original.remark}
-                      onChange={e => {
-                        const newTestRows = [...testRows]
-                        const index = newTestRows.findIndex(item => item.testName === row.original.testName)
-                        if (index !== -1) {
-                          newTestRows[index] = {
-                            ...newTestRows[index],
-                            remark: e.target.value
+                        }}
+                        sx={{
+                          '& .MuiInputBase-root': {
+                            backgroundColor: isOutOfRange ? 'error.lighter' : 'inherit',
+                            '&:hover': {
+                              backgroundColor: isOutOfRange ? 'error.lighter' : 'action.hover'
+                            },
+                            border: isOutOfRange ? '2px solid' : '1px solid',
+                            borderColor: isOutOfRange ? 'error.main' : 'divider',
+                            borderRadius: 1
+                          },
+                          '& .MuiInputBase-input': {
+                            color: isOutOfRange ? 'error.main' : 'inherit',
+                            fontWeight: isOutOfRange ? 'bold' : 'normal'
                           }
-                          setTestRows(newTestRows)
-                        }
-                      }}
-                    />
+                        }}
+                        disabled={!qcAcceptance}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 2 }}>
+                      <Typography>{row.original.referenceRange}</Typography>
+                    </Grid>
+                    <Grid size={{ xs: 2 }}>
+                      <CustomTextField
+                        size='small'
+                        fullWidth
+                        value={row.original.remark}
+                        onChange={e => {
+                          const newTestRows = [...testRows]
+                          const index = newTestRows.findIndex(item => item.testName === row.original.testName)
+                          if (index !== -1) {
+                            newTestRows[index] = {
+                              ...newTestRows[index],
+                              remark: e.target.value
+                            }
+                            setTestRows(newTestRows)
+                          }
+                        }}
+                        disabled={!qcAcceptance}
+                      />
+                    </Grid>
                   </Grid>
                 </Grid>
-              </Grid>
-            ))}
+              )
+            })}
           </Grid>
         </Paper>
 
@@ -1799,6 +1957,9 @@ const ValidateSample = () => {
         <DialogTitle>Test Result Declaration</DialogTitle>
 
         <DialogContent dividers>
+          <Typography variant='subtitle2' sx={{ mb: 2, fontWeight: 'bold' }}>
+            Acknowledgment:
+          </Typography>
           <FormGroup sx={{ mb: 2 }}>
             <FormControlLabel
               control={<Checkbox checked={isAcknowledged} onChange={e => setIsAcknowledged(e.target.checked)} />}
@@ -1984,6 +2145,30 @@ const ValidateSample = () => {
         sampleId={selectedTestForBarcode?.id}
         barcodeId={selectedTestForBarcode?.barcodeId}
       />
+
+      {/* Out-of-Range Dialog */}
+      <Dialog open={isOutOfRangeDialogOpen} onClose={() => setIsOutOfRangeDialogOpen(false)} maxWidth='xs' fullWidth>
+        <DialogTitle>Cannot Validate</DialogTitle>
+        <DialogContent>
+          <Typography color='error' sx={{ mb: 2 }}>
+            The following test result(s) are out of range and cannot be validated:
+          </Typography>
+          <ul style={{ margin: 0, paddingLeft: 20 }}>
+            {outOfRangeTestNames.map(name => (
+              <li key={name}>
+                <Typography color='error' variant='body2'>
+                  {name}
+                </Typography>
+              </li>
+            ))}
+          </ul>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsOutOfRangeDialogOpen(false)} color='primary' autoFocus>
+            OK
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   )
 }

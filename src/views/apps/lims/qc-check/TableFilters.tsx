@@ -11,7 +11,7 @@ import { Close as CloseIcon } from '@mui/icons-material'
 
 // Component Imports
 import CustomTextField from '@core/components/mui/TextField'
-import type { QcCheckType } from '@/types/qc-check'
+import type { QcCheckType } from '@/types/apps/limsTypes'
 
 const resultOptions = [
   { value: '', label: 'All Results' },

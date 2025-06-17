@@ -69,14 +69,14 @@ interface AuthResponse {
 const prisma = new PrismaClient()
 
 // First, extend the JWT type
-declare module "next-auth/jwt" {
+declare module 'next-auth/jwt' {
   interface JWT {
     accessToken?: string
     refreshToken?: string
     accessTokenExpires?: number
     user?: User
     error?: string
-    [key: string]: any  // Add index signature
+    [key: string]: any // Add index signature
   }
 }
 
@@ -96,24 +96,41 @@ export const authOptions: NextAuthOptions = {
       type: 'credentials',
       credentials: {
         username: { label: 'Username', type: 'text' },
-        password: { label: 'Password', type: 'password' }
+        password: { label: 'Password', type: 'password' },
+        token: { label: 'Token', type: 'text' }
       },
       async authorize(credentials) {
-        const { username, password } = credentials as { username: string; password: string }
+        const { username, password, token } = credentials as {
+          username?: string
+          password?: string
+          token?: string
+        }
 
         try {
           if (!process.env.API_URL) {
             throw new Error('Server configuration error')
           }
 
-          const apiUrl = `${process.env.API_URL}/tokens/login`
+          let apiUrl: string
+          let body: any
+
+          if (token) {
+            apiUrl = `${process.env.API_URL}/tokens/auth?token=${encodeURIComponent(token)}`
+            body = undefined
+          } else if (username && password) {
+            apiUrl = `${process.env.API_URL}/tokens/login`
+            body = { username, password }
+          } else {
+            throw new Error('Invalid authentication parameters')
+          }
+
           const res = await fetch(apiUrl, {
-            method: 'POST',
+            method: token ? 'GET' : 'POST',
             headers: {
               'Content-Type': 'application/json',
               Accept: 'application/json'
             },
-            body: JSON.stringify({ username, password })
+            body: token ? undefined : JSON.stringify(body)
           })
 
           const responseText = await res.text()
@@ -122,7 +139,7 @@ export const authOptions: NextAuthOptions = {
           }
 
           if (!res.ok) {
-            throw new Error('Invalid credentials')
+            throw new Error('Invalid credentials or token')
           }
 
           const data: SignInResponse = JSON.parse(responseText)
@@ -161,13 +178,13 @@ export const authOptions: NextAuthOptions = {
         } as JWT
       }
 
-      return token;
+      return token
     },
     async session({ session, token }) {
-      const customSession = session as CustomSession;
-      
+      const customSession = session as CustomSession
+
       if (token) {
-        const user = token.user as User;
+        const user = token.user as User
         customSession.user = {
           ...session.user,
           ...user,
@@ -180,15 +197,15 @@ export const authOptions: NextAuthOptions = {
           employeeNo: user.employeeNo,
           userTypeId: user.userTypeId
         }
-        customSession.accessToken = token.accessToken as string;
+        customSession.accessToken = token.accessToken as string
       }
-      
-      if (token.error === "RefreshAccessTokenError") {
-        await signOut();
-        return customSession;
+
+      if (token.error === 'RefreshAccessTokenError') {
+        await signOut()
+        return customSession
       }
-      
-      return customSession;
+
+      return customSession
     }
   }
 }
@@ -196,49 +213,49 @@ export const authOptions: NextAuthOptions = {
 async function refreshAccessToken(token: JWT): Promise<JWT> {
   try {
     if (!token.refreshToken) {
-      throw new Error('No refresh token available');
+      throw new Error('No refresh token available')
     }
 
-    const refreshUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/tokens/refresh`;
-    
+    const refreshUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/tokens/refresh`
+
     const response = await fetch(refreshUrl, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         token: token.accessToken,
-        refreshToken: token.refreshToken,
-      }),
-    });
+        refreshToken: token.refreshToken
+      })
+    })
 
-    const responseText = await response.text();
+    const responseText = await response.text()
 
-    let data;
+    let data
     try {
-      data = JSON.parse(responseText);
+      data = JSON.parse(responseText)
     } catch (e) {
-      throw new Error('Invalid response from server');
+      throw new Error('Invalid response from server')
     }
 
     if (!response.ok) {
-      throw new Error(data.message || 'Failed to refresh token');
+      throw new Error(data.message || 'Failed to refresh token')
     }
 
     if (!data.result?.accessToken || !data.result?.refreshToken) {
-      throw new Error('Invalid response format from server');
+      throw new Error('Invalid response format from server')
     }
 
     return {
       ...token,
       accessToken: data.result.accessToken,
       refreshToken: data.result.refreshToken,
-      accessTokenExpires: Date.now() + 15 * 60 * 1000, // 2 minutes
-    };
+      accessTokenExpires: Date.now() + 15 * 60 * 1000 // 2 minutes
+    }
   } catch (error) {
     return {
       ...token,
-      error: "RefreshAccessTokenError",
-    };
+      error: 'RefreshAccessTokenError'
+    }
   }
 }

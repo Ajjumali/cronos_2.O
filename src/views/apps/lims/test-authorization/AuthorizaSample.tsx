@@ -305,6 +305,8 @@ const AuthorizeSample = () => {
   const [selectedSample, setSelectedSample] = useState<any>(null)
   const [editingCell, setEditingCell] = useState<{ testName: string; field: 'result' | 'remark' } | null>(null)
   const [editValue, setEditValue] = useState('')
+  const [isOutOfRangeDialogOpen, setIsOutOfRangeDialogOpen] = useState(false)
+  const [outOfRangeTestNames, setOutOfRangeTestNames] = useState<string[]>([])
 
   const columns = useMemo<ColumnDef<any, any>[]>(
     () => [
@@ -415,66 +417,76 @@ const AuthorizeSample = () => {
       columnHelper.accessor('result', {
         header: 'Test Result',
         cell: ({ row }) => {
-          const [isEditing, setIsEditing] = useState(false)
-          const [value, setValue] = useState(row.original.result)
-
-          const handleSave = () => {
-            const updatedRows = testRows.map(testRow => {
-              if (testRow.testName === row.original.testName) {
-                return { ...testRow, result: value }
-              }
-              return testRow
-            })
-            setTestRows(updatedRows)
-            setIsEditing(false)
-          }
-
-          return isEditing ? (
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-              <CustomTextField
-                size='small'
-                value={value}
-                onChange={e => setValue(e.target.value)}
-                onBlur={handleSave}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    handleSave()
-                  }
-                }}
-                autoFocus
-              />
-            </Box>
-          ) : (
+          const isEditable = !qcAcceptance
+          return (
             <Box
               sx={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 1,
-                cursor: 'pointer',
-                '&:hover': { bgcolor: 'action.hover' }
-              }}
-              onClick={() => {
-                const newValue = prompt('Enter new test result:', row.original.result)
-                if (newValue !== null) {
-                  const updatedRows = testRows.map(testRow => {
-                    if (testRow.testName === row.original.testName) {
-                      return { ...testRow, result: newValue }
-                    }
-                    return testRow
-                  })
-                  setTestRows(updatedRows)
-                }
+                cursor: isEditable ? 'pointer' : 'not-allowed',
+                opacity: isEditable ? 1 : 0.7
               }}
             >
-              <Typography>{row.original.result}</Typography>
-              <i className='tabler-edit' style={{ fontSize: '1rem', opacity: 0.5 }} />
+              <CustomTextField
+                size='small'
+                fullWidth
+                value={row.original.result}
+                onChange={e => {
+                  if (qcAcceptance) {
+                    const newTestRows = [...testRows]
+                    const index = newTestRows.findIndex(item => item.testName === row.original.testName)
+                    if (index !== -1) {
+                      newTestRows[index] = {
+                        ...newTestRows[index],
+                        result: e.target.value
+                      }
+                      setTestRows(newTestRows)
+                    }
+                  }
+                }}
+                disabled={!qcAcceptance}
+              />
             </Box>
           )
         }
       }),
       columnHelper.accessor('referenceRange', {
         header: 'Reference Range',
-        cell: ({ row }) => <Typography>{row.original.referenceRange}</Typography>
+        cell: ({ row }) => {
+          const isEditable = !qcAcceptance
+          return (
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                cursor: isEditable ? 'pointer' : 'not-allowed',
+                opacity: isEditable ? 1 : 0.7
+              }}
+            >
+              <CustomTextField
+                size='small'
+                fullWidth
+                value={row.original.referenceRange}
+                onChange={e => {
+                  if (isEditable) {
+                    const newTestRows = [...testRows]
+                    const index = newTestRows.findIndex(item => item.testName === row.original.testName)
+                    if (index !== -1) {
+                      newTestRows[index] = {
+                        ...newTestRows[index],
+                        referenceRange: e.target.value
+                      }
+                      setTestRows(newTestRows)
+                    }
+                  }
+                }}
+                disabled={!isEditable}
+              />
+            </Box>
+          )
+        }
       }),
       columnHelper.accessor('remark', {
         header: 'Report Remark',
@@ -648,7 +660,12 @@ const AuthorizeSample = () => {
   const isAlphanumeric = (val: string) => /^[a-zA-Z0-9]+$/.test(val)
 
   // Handlers for field changes (for demonstration, not saving changes)
-  const handleSwitch = () => setQcAcceptance(val => !val)
+  const handleSwitch = () => {
+    setQcAcceptance(val => !val)
+    // Reset any in-progress edits when QC status changes
+    setEditingCell(null)
+    setEditValue('')
+  }
 
   const handleBulkAction = (action: string) => {
     const selectedRows = table.getSelectedRowModel().rows
@@ -659,10 +676,31 @@ const AuthorizeSample = () => {
 
     const selectedTestNames = selectedRows.map(row => row.original.testName)
 
+    if (action === 'Validate') {
+      // Check for out-of-range results
+      const outOfRangeTests = selectedRows.filter(row => {
+        const result = row.original.result
+        const referenceRange = row.original.referenceRange
+
+        // Skip validation if result is not numeric
+        if (!/^\d+$/.test(result)) return false
+
+        const [min, max] = referenceRange.split('-').map(Number)
+        const resultNum = Number(result)
+
+        return resultNum < min || resultNum > max
+      })
+
+      if (outOfRangeTests.length > 0) {
+        setOutOfRangeTestNames(outOfRangeTests.map(row => row.original.testName))
+        setIsOutOfRangeDialogOpen(true)
+        return
+      }
+      setIsApprovalModalOpen(true)
+      return
+    }
+
     switch (action) {
-      case 'Validate':
-        setIsApprovalModalOpen(true)
-        break
       case 'Non-Validate':
         // TODO: Implement non-validate logic
         toast.success(`Non-validated tests: ${selectedTestNames.join(', ')}`)
@@ -1205,6 +1243,18 @@ const AuthorizeSample = () => {
     setEditValue('')
   }
 
+  // Add helper function to check if result is outside range
+  const isResultOutsideRange = (result: string, referenceRange: string) => {
+    // Parse reference range (assuming format like "10-15" or "80-100")
+    const [min, max] = referenceRange.split('-').map(Number)
+
+    // Convert result to number
+    const resultNum = Number(result)
+
+    // Check if result is outside range
+    return isNaN(resultNum) || resultNum < min || resultNum > max
+  }
+
   return (
     <Card>
       <CardHeader
@@ -1572,16 +1622,19 @@ const AuthorizeSample = () => {
                       fullWidth
                       value={row.original.result}
                       onChange={e => {
-                        const newTestRows = [...testRows]
-                        const index = newTestRows.findIndex(item => item.testName === row.original.testName)
-                        if (index !== -1) {
-                          newTestRows[index] = {
-                            ...newTestRows[index],
-                            result: e.target.value
+                        if (qcAcceptance) {
+                          const newTestRows = [...testRows]
+                          const index = newTestRows.findIndex(item => item.testName === row.original.testName)
+                          if (index !== -1) {
+                            newTestRows[index] = {
+                              ...newTestRows[index],
+                              result: e.target.value
+                            }
+                            setTestRows(newTestRows)
                           }
-                          setTestRows(newTestRows)
                         }
                       }}
+                      disabled={!qcAcceptance}
                     />
                   </Grid>
                   <Grid size={{ xs: 2 }}>
@@ -1593,16 +1646,19 @@ const AuthorizeSample = () => {
                       fullWidth
                       value={row.original.remark}
                       onChange={e => {
-                        const newTestRows = [...testRows]
-                        const index = newTestRows.findIndex(item => item.testName === row.original.testName)
-                        if (index !== -1) {
-                          newTestRows[index] = {
-                            ...newTestRows[index],
-                            remark: e.target.value
+                        if (qcAcceptance) {
+                          const newTestRows = [...testRows]
+                          const index = newTestRows.findIndex(item => item.testName === row.original.testName)
+                          if (index !== -1) {
+                            newTestRows[index] = {
+                              ...newTestRows[index],
+                              remark: e.target.value
+                            }
+                            setTestRows(newTestRows)
                           }
-                          setTestRows(newTestRows)
                         }
                       }}
+                      disabled={!qcAcceptance}
                     />
                   </Grid>
                 </Grid>
@@ -2228,6 +2284,33 @@ const AuthorizeSample = () => {
         onClose={() => setIsDetailsDialogOpen(false)}
         sample={selectedSample}
       />
+
+      {/* Out-of-Range Dialog */}
+      <Dialog open={isOutOfRangeDialogOpen} onClose={() => setIsOutOfRangeDialogOpen(false)} maxWidth='xs' fullWidth>
+        <DialogTitle>Cannot Validate</DialogTitle>
+        <DialogContent>
+          <Typography color='error' sx={{ mb: 2 }}>
+            The following test result(s) are out of range and cannot be validated:
+          </Typography>
+          <ul style={{ margin: 0, paddingLeft: 20 }}>
+            {outOfRangeTestNames.map(name => (
+              <li key={name}>
+                <Typography color='error' variant='body2'>
+                  {name}
+                </Typography>
+              </li>
+            ))}
+          </ul>
+          <Typography variant='body2' color='text.secondary' sx={{ mt: 2 }}>
+            Please review and adjust the test results before validation.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsOutOfRangeDialogOpen(false)} color='primary' autoFocus>
+            OK
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   )
 }

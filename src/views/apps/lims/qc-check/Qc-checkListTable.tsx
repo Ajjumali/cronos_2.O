@@ -41,7 +41,7 @@ import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
 import Typography from '@mui/material/Typography'
 import Box from '@mui/material/Box'
-import type { QcCheckType } from '@/types/qc-check'
+import type { QcCheckType } from '@/types/apps/limsTypes'
 
 declare global {
   interface Window {
@@ -124,6 +124,17 @@ const QcCheckListTable = ({ qcData = [], onDataChange }: Props) => {
   useEffect(() => {
     setFilteredData(qcData)
   }, [qcData])
+
+  const handleLevelChange = (rowIndex: number, level: 'level1' | 'level2' | 'level3', value: string) => {
+    const newData = [...filteredData]
+    newData[rowIndex] = {
+      ...newData[rowIndex],
+      [level]: value
+    }
+    setFilteredData(newData)
+    // Call onDataChange to notify parent component of the update
+    onDataChange?.()
+  }
 
   const handleExportClick = (event: React.MouseEvent<HTMLElement>) => {
     setExportAnchorEl(event.currentTarget)
@@ -256,15 +267,48 @@ const QcCheckListTable = ({ qcData = [], onDataChange }: Props) => {
       }),
       columnHelper.accessor('level1', {
         header: 'Level 1',
-        cell: info => info.getValue()
+        cell: info => (
+          <Select
+            value={info.getValue() || ''}
+            onChange={e => handleLevelChange(info.row.index, 'level1', e.target.value)}
+            size='small'
+            fullWidth
+          >
+            <MenuItem value='Pass'>Yes</MenuItem>
+            <MenuItem value='Fail'>NO</MenuItem>
+            <MenuItem value='NA'>NA</MenuItem>
+          </Select>
+        )
       }),
       columnHelper.accessor('level2', {
         header: 'Level 2',
-        cell: info => info.getValue()
+        cell: info => (
+          <Select
+            value={info.getValue() || ''}
+            onChange={e => handleLevelChange(info.row.index, 'level2', e.target.value)}
+            size='small'
+            fullWidth
+          >
+            <MenuItem value='Pass'>Yes</MenuItem>
+            <MenuItem value='Fail'>NO</MenuItem>
+            <MenuItem value='NA'>NA</MenuItem>
+          </Select>
+        )
       }),
       columnHelper.accessor('level3', {
         header: 'Level 3',
-        cell: info => info.getValue()
+        cell: info => (
+          <Select
+            value={info.getValue() || ''}
+            onChange={e => handleLevelChange(info.row.index, 'level3', e.target.value)}
+            size='small'
+            fullWidth
+          >
+            <MenuItem value='Pass'>Yes</MenuItem>
+            <MenuItem value='Fail'>NO</MenuItem>
+            <MenuItem value='NA'>NA</MenuItem>
+          </Select>
+        )
       }),
       columnHelper.accessor('doneOn', {
         header: 'Done On',
