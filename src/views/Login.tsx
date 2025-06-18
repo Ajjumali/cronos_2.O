@@ -151,6 +151,8 @@ const Login = ({ mode }: { mode: SystemMode }) => {
 
           if (res?.error) {
             setErrorState({ message: [res.error] })
+            setIsVerifyingToken(false)
+            setLoadingMessage('')
           } else if (res?.ok) {
             setLoadingMessage('Successfully verified! Redirecting...')
             const redirectURL = searchParams.get('redirectTo') ?? themeConfig.homePageUrl
@@ -158,7 +160,6 @@ const Login = ({ mode }: { mode: SystemMode }) => {
           }
         } catch (error) {
           setErrorState({ message: ['Error verifying token'] })
-        } finally {
           setIsVerifyingToken(false)
           setLoadingMessage('')
         }
@@ -203,145 +204,167 @@ const Login = ({ mode }: { mode: SystemMode }) => {
   }
 
   return (
-    <div className='flex bs-full justify-center'>
-      <div
-        className={classnames(
-          'flex bs-full items-center justify-center flex-1 min-bs-[100dvh] relative p-6 max-md:hidden',
-          {
-            'border-ie': settings.skin === 'bordered'
-          }
-        )}
-      >
-        <LoginIllustration src={characterIllustration} alt='character-illustration' />
-        {!hidden && <MaskImg alt='mask' src={authBackground} />}
-      </div>
-      <div className='flex justify-center items-center bs-full bg-backgroundPaper !min-is-full p-6 md:!min-is-[unset] md:p-12 md:is-[480px]'>
-        <div className='absolute block-start-5 sm:block-start-[33px] inline-start-6 sm:inline-start-[38px]'>
-          <Logo />
+    <>
+      {isVerifyingToken && (
+        <div
+          style={{
+            position: 'fixed',
+            zIndex: 9999,
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(255,255,255,0.85)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          <i className='tabler-loader-2 animate-spin' style={{ fontSize: 48, marginBottom: 16 }} />
+          <Typography variant='h6'>{loadingMessage || 'Verifying your access token...'}</Typography>
         </div>
-        <div className='flex flex-col gap-6 is-full sm:is-auto md:is-full sm:max-is-[400px] md:max-is-[unset] mbs-8 sm:mbs-11 md:mbs-0'>
-          <div className='flex flex-col gap-1'>
-            <Typography variant='h4'>{`Welcome to ${themeConfig.templateName}! 👋🏻`}</Typography>
-            <Typography>Please sign-in to your account and start the adventure</Typography>
-          </div>
-          {(isVerifyingToken || isLoading) && (
-            <Alert
-              severity={loadingMessage.includes('Successfully') ? 'success' : 'info'}
-              className='flex items-center gap-2'
-            >
-              <i className='tabler-loader-2 animate-spin' />
-              <Typography>{loadingMessage}</Typography>
-            </Alert>
+      )}
+      <div className='flex bs-full justify-center'>
+        <div
+          className={classnames(
+            'flex bs-full items-center justify-center flex-1 min-bs-[100dvh] relative p-6 max-md:hidden',
+            {
+              'border-ie': settings.skin === 'bordered'
+            }
           )}
-          {/* <Alert icon={false} className='bg-[var(--mui-palette-primary-lightOpacity)]'>
-            <Typography variant='body2' color='primary.main'>
-              Username: <span className='font-medium'>admin</span> / Pass: <span className='font-medium'>admin</span>
-            </Typography>
-          </Alert> */}
-          <form
-            noValidate
-            autoComplete='off'
-            action={() => {}}
-            onSubmit={handleSubmit(onSubmit)}
-            className='flex flex-col gap-6'
-          >
-            <Controller
-              name='username'
-              control={control}
-              rules={{ required: true }}
-              render={({ field }) => (
-                <CustomTextField
-                  {...field}
-                  autoFocus
-                  fullWidth
-                  label='Username'
-                  placeholder='Enter your username'
-                  onChange={e => {
-                    field.onChange(e.target.value)
-                    errorState !== null && setErrorState(null)
-                  }}
-                  {...((errors.username || errorState !== null) && {
-                    error: true,
-                    helperText: errors?.username?.message || errorState?.message[0]
-                  })}
-                />
-              )}
-            />
-            <Controller
-              name='password'
-              control={control}
-              rules={{ required: true }}
-              render={({ field }) => (
-                <CustomTextField
-                  {...field}
-                  fullWidth
-                  label='Password'
-                  placeholder='············'
-                  id='login-password'
-                  type={isPasswordShown ? 'text' : 'password'}
-                  onChange={e => {
-                    field.onChange(e.target.value)
-                    errorState !== null && setErrorState(null)
-                  }}
-                  slotProps={{
-                    input: {
-                      endAdornment: (
-                        <InputAdornment position='end'>
-                          <IconButton
-                            edge='end'
-                            onClick={handleClickShowPassword}
-                            onMouseDown={e => e.preventDefault()}
-                          >
-                            <i className={isPasswordShown ? 'tabler-eye' : 'tabler-eye-off'} />
-                          </IconButton>
-                        </InputAdornment>
-                      )
-                    }
-                  }}
-                  {...(errors.password && { error: true, helperText: errors.password.message })}
-                />
-              )}
-            />
-            <div className='flex justify-between items-center gap-x-3 gap-y-1 flex-wrap'>
-              <FormControlLabel control={<Checkbox defaultChecked />} label='Remember me' />
-              <Typography
-                className='text-end'
-                color='primary.main'
-                component={Link}
-                href={getLocalizedUrl('/forgot-password', locale as Locale)}
+        >
+          <LoginIllustration src={characterIllustration} alt='character-illustration' />
+          {!hidden && <MaskImg alt='mask' src={authBackground} />}
+        </div>
+        <div className='flex justify-center items-center bs-full bg-backgroundPaper !min-is-full p-6 md:!min-is-[unset] md:p-12 md:is-[480px]'>
+          <div className='absolute block-start-5 sm:block-start-[33px] inline-start-6 sm:inline-start-[38px]'>
+            <Logo />
+          </div>
+          <div className='flex flex-col gap-6 is-full sm:is-auto md:is-full sm:max-is-[400px] md:max-is-[unset] mbs-8 sm:mbs-11 md:mbs-0'>
+            <div className='flex flex-col gap-1'>
+              <Typography variant='h4'>{`Welcome to ${themeConfig.templateName}! 👋🏻`}</Typography>
+              <Typography>Please sign-in to your account and start the adventure</Typography>
+            </div>
+            {(isVerifyingToken || isLoading) && (
+              <Alert
+                severity={loadingMessage.includes('Successfully') ? 'success' : 'info'}
+                className='flex items-center gap-2'
               >
-                Forgot password?
+                <i className='tabler-loader-2 animate-spin' />
+                <Typography>{loadingMessage}</Typography>
+              </Alert>
+            )}
+            {/* <Alert icon={false} className='bg-[var(--mui-palette-primary-lightOpacity)]'>
+              <Typography variant='body2' color='primary.main'>
+                Username: <span className='font-medium'>admin</span> / Pass: <span className='font-medium'>admin</span>
               </Typography>
-            </div>
-            <Button
-              fullWidth
-              variant='contained'
-              type='submit'
-              disabled={isLoading || isVerifyingToken}
-              startIcon={isLoading ? <i className='tabler-loader-2 animate-spin' /> : null}
+            </Alert> */}
+            <form
+              noValidate
+              autoComplete='off'
+              action={() => {}}
+              onSubmit={handleSubmit(onSubmit)}
+              className='flex flex-col gap-6'
             >
-              {isLoading ? 'Signing in...' : 'Login'}
-            </Button>
-            <div className='flex justify-center items-center flex-wrap gap-2'>
-              <Typography>New on our platform?</Typography>
-              <Typography component={Link} href={getLocalizedUrl('/register', locale as Locale)} color='primary.main'>
-                Create an account
-              </Typography>
-            </div>
-            <Divider className='gap-2'></Divider>
-            {/* <Button
-              color='secondary'
-              className='self-center text-textPrimary'
-              startIcon={<img src='/images/logos/google.png' alt='Google' width={22} />}
-              sx={{ '& .MuiButton-startIcon': { marginInlineEnd: 3 } }}
-              onClick={() => signIn('google')}
-            >
-              Sign in with Google
-            </Button> */}
-          </form>
+              <Controller
+                name='username'
+                control={control}
+                rules={{ required: true }}
+                render={({ field }) => (
+                  <CustomTextField
+                    {...field}
+                    autoFocus
+                    fullWidth
+                    label='Username'
+                    placeholder='Enter your username'
+                    onChange={e => {
+                      field.onChange(e.target.value)
+                      errorState !== null && setErrorState(null)
+                    }}
+                    {...((errors.username || errorState !== null) && {
+                      error: true,
+                      helperText: errors?.username?.message || errorState?.message[0]
+                    })}
+                  />
+                )}
+              />
+              <Controller
+                name='password'
+                control={control}
+                rules={{ required: true }}
+                render={({ field }) => (
+                  <CustomTextField
+                    {...field}
+                    fullWidth
+                    label='Password'
+                    placeholder='············'
+                    id='login-password'
+                    type={isPasswordShown ? 'text' : 'password'}
+                    onChange={e => {
+                      field.onChange(e.target.value)
+                      errorState !== null && setErrorState(null)
+                    }}
+                    slotProps={{
+                      input: {
+                        endAdornment: (
+                          <InputAdornment position='end'>
+                            <IconButton
+                              edge='end'
+                              onClick={handleClickShowPassword}
+                              onMouseDown={e => e.preventDefault()}
+                            >
+                              <i className={isPasswordShown ? 'tabler-eye' : 'tabler-eye-off'} />
+                            </IconButton>
+                          </InputAdornment>
+                        )
+                      }
+                    }}
+                    {...(errors.password && { error: true, helperText: errors.password.message })}
+                  />
+                )}
+              />
+              <div className='flex justify-between items-center gap-x-3 gap-y-1 flex-wrap'>
+                <FormControlLabel control={<Checkbox defaultChecked />} label='Remember me' />
+                <Typography
+                  className='text-end'
+                  color='primary.main'
+                  component={Link}
+                  href={getLocalizedUrl('/forgot-password', locale as Locale)}
+                >
+                  Forgot password?
+                </Typography>
+              </div>
+              <Button
+                fullWidth
+                variant='contained'
+                type='submit'
+                disabled={isLoading || isVerifyingToken}
+                startIcon={isLoading ? <i className='tabler-loader-2 animate-spin' /> : null}
+              >
+                {isLoading ? 'Signing in...' : 'Login'}
+              </Button>
+              <div className='flex justify-center items-center flex-wrap gap-2'>
+                <Typography>New on our platform?</Typography>
+                <Typography component={Link} href={getLocalizedUrl('/register', locale as Locale)} color='primary.main'>
+                  Create an account
+                </Typography>
+              </div>
+              <Divider className='gap-2'></Divider>
+              {/* <Button
+                color='secondary'
+                className='self-center text-textPrimary'
+                startIcon={<img src='/images/logos/google.png' alt='Google' width={22} />}
+                sx={{ '& .MuiButton-startIcon': { marginInlineEnd: 3 } }}
+                onClick={() => signIn('google')}
+              >
+                Sign in with Google
+              </Button> */}
+            </form>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }
 

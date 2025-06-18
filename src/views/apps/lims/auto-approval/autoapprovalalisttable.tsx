@@ -68,6 +68,17 @@ const AutoApprovalListTable = ({ autoApprovalData = [], onDataChange, autoApprov
   const [isConfigDialogOpen, setIsConfigDialogOpen] = useState(false)
   const [selectedRowId, setSelectedRowId] = useState<number | null>(null)
   const [effectiveDate, setEffectiveDate] = useState<Date | null>(null)
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [newConfig, setNewConfig] = useState<Partial<AutoApprovalType>>({
+    testName: '',
+    analyteCode: '',
+    instrumentName: '',
+    referenceRange: '',
+    approvalCondition: '',
+    effectiveDate: '',
+    version: 1,
+    status: 'active'
+  })
 
   useEffect(() => {
     setData(autoApprovalData)
@@ -303,6 +314,14 @@ const AutoApprovalListTable = ({ autoApprovalData = [], onDataChange, autoApprov
         action={
           <Box sx={{ display: 'flex', gap: 2 }}>
             <Button
+              variant='contained'
+              color='primary'
+              onClick={() => setIsAddDialogOpen(true)}
+              disabled={!autoApprovalEnabled}
+            >
+              Add Auto Approval
+            </Button>
+            <Button
               variant='outlined'
               startIcon={
                 isExporting ? <i className='tabler-loader animate-spin' /> : <i className='tabler-file-spreadsheet' />
@@ -410,6 +429,137 @@ const AutoApprovalListTable = ({ autoApprovalData = [], onDataChange, autoApprov
           <Button onClick={handleCloseConfig}>Cancel</Button>
           <Button onClick={handleSaveConfig} variant='contained' color='primary'>
             Save Configuration
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Add Auto Approval Dialog */}
+      <Dialog open={isAddDialogOpen} onClose={() => setIsAddDialogOpen(false)} maxWidth='md' fullWidth>
+        <DialogTitle>Add Auto Approval</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={3} sx={{ mt: 1 }}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label='Test Name'
+                value={newConfig.testName}
+                onChange={e => setNewConfig({ ...newConfig, testName: e.target.value })}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label='Analyte Code'
+                value={newConfig.analyteCode}
+                onChange={e => setNewConfig({ ...newConfig, analyteCode: e.target.value })}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label='Instrument Name'
+                value={newConfig.instrumentName}
+                onChange={e => setNewConfig({ ...newConfig, instrumentName: e.target.value })}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label='Reference Range'
+                value={newConfig.referenceRange}
+                onChange={e => setNewConfig({ ...newConfig, referenceRange: e.target.value })}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label='Approval Condition'
+                value={newConfig.approvalCondition}
+                onChange={e => setNewConfig({ ...newConfig, approvalCondition: e.target.value })}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <DatePicker
+                  label='Effective Date'
+                  value={newConfig.effectiveDate ? new Date(newConfig.effectiveDate) : null}
+                  onChange={date =>
+                    setNewConfig({ ...newConfig, effectiveDate: date ? date.toISOString().split('T')[0] : '' })
+                  }
+                  slotProps={{ textField: { fullWidth: true } }}
+                />
+              </LocalizationProvider>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label='Version'
+                type='number'
+                value={newConfig.version}
+                onChange={e => setNewConfig({ ...newConfig, version: Number(e.target.value) })}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Select
+                label='Status'
+                value={newConfig.status}
+                onChange={e => setNewConfig({ ...newConfig, status: e.target.value })}
+                fullWidth
+                size='small'
+              >
+                <MenuItem value='active'>Active</MenuItem>
+                <MenuItem value='inactive'>Inactive</MenuItem>
+              </Select>
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={() => {
+              if (
+                !newConfig.testName ||
+                !newConfig.analyteCode ||
+                !newConfig.instrumentName ||
+                !newConfig.referenceRange ||
+                !newConfig.approvalCondition ||
+                !newConfig.effectiveDate
+              ) {
+                toast.error('Please fill all fields')
+                return
+              }
+              setData(prev => [
+                ...prev,
+                {
+                  id: Math.max(0, ...prev.map(r => r.id)) + 1,
+                  testName: newConfig.testName!,
+                  analyteCode: newConfig.analyteCode!,
+                  instrumentName: newConfig.instrumentName!,
+                  referenceRange: newConfig.referenceRange!,
+                  approvalCondition: newConfig.approvalCondition!,
+                  effectiveDate: newConfig.effectiveDate!,
+                  version: newConfig.version || 1,
+                  status: newConfig.status || 'active'
+                }
+              ])
+              setIsAddDialogOpen(false)
+              setNewConfig({
+                testName: '',
+                analyteCode: '',
+                instrumentName: '',
+                referenceRange: '',
+                approvalCondition: '',
+                effectiveDate: '',
+                version: 1,
+                status: 'active'
+              })
+              toast.success('Auto Approval added')
+              onDataChange?.()
+            }}
+            variant='contained'
+            color='primary'
+          >
+            Save
           </Button>
         </DialogActions>
       </Dialog>

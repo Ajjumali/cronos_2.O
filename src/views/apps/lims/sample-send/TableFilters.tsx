@@ -19,6 +19,9 @@ import FileDownload from '@mui/icons-material/FileDownload'
 import Divider from '@mui/material/Divider'
 import Autocomplete from '@mui/material/Autocomplete'
 
+// Component Imports
+import CustomTextField from '@core/components/mui/TextField'
+
 interface SampleType {
   id: string
   volunteerId: string
@@ -33,13 +36,46 @@ interface SampleType {
   sentBy: string
   sentOn: string
   status: 'pending' | 'sent' | 'received'
+  projectNo: string
+  statusId: string
+  location: string
+  study: string
   avatar?: string
+}
+
+interface SampleTypeDto {
+  sampleId: number
+  sampleType: string
+  activeFlag: string
 }
 
 interface LabDto {
   id: number
   labName: string
   activeFlag: string
+}
+
+interface LocationDto {
+  id: number
+  name: string
+  activeFlag: string
+}
+
+interface ProjectDto {
+  id: number
+  studyProtocolNumber: string
+  studyProtocolName: string
+  activeFlag: string
+  studyTitle: string
+}
+
+interface StudySiteDto {
+  id: number
+  siteName: string
+  siteNumber: string
+  activeFlag: string
+  siteGroupName: string
+  siteProtocolNumber: string
 }
 
 interface TableFiltersProps {
@@ -58,13 +94,39 @@ const TableFilters = ({
   onSelectSamples
 }: TableFiltersProps) => {
   // States
-  const [searchText, setSearchText] = useState('')
-  const [lab, setLab] = useState('')
+  const [projectNo, setProjectNo] = useState<number>(0)
+  const [study, setStudy] = useState<string>('')
+  const [receiveStatus, setReceiveStatus] = useState<string>('')
+  const [sampleType, setSampleType] = useState<string>('')
+  const [location, setLocation] = useState<string>('')
+  const [lab, setLab] = useState<string>('')
   const [isFiltersExpanded, setIsFiltersExpanded] = useState(false)
+  const [sampleTypes, setSampleTypes] = useState<SampleTypeDto[]>([])
   const [labs, setLabs] = useState<LabDto[]>([])
+  const [locations, setLocations] = useState<LocationDto[]>([])
+  const [projects, setProjects] = useState<ProjectDto[]>([])
+  const [studySites, setStudySites] = useState<StudySiteDto[]>([])
 
-  // Fetch labs on component mount
+  // Fetch sample types, labs, locations, and projects on component mount
   useEffect(() => {
+    const fetchSampleTypes = async () => {
+      try {
+        const response = await fetch('/api/apps/lims/sample-type-master')
+        if (!response.ok) {
+          throw new Error('Failed to fetch sample types')
+        }
+        const data = await response.json()
+        if (data.result) {
+          setSampleTypes(data.result)
+        } else {
+          setSampleTypes([])
+        }
+      } catch (error) {
+        console.error('Error fetching sample types:', error)
+        setSampleTypes([])
+      }
+    }
+
     const fetchLabs = async () => {
       try {
         const response = await fetch('/api/apps/lims/lab-master')
@@ -83,27 +145,94 @@ const TableFilters = ({
       }
     }
 
+    const fetchLocations = async () => {
+      try {
+        const response = await fetch('/api/apps/lims/location-master')
+        if (!response.ok) {
+          throw new Error('Failed to fetch locations')
+        }
+        const data = await response.json()
+        if (data.result) {
+          setLocations(data.result)
+        } else {
+          setLocations([])
+        }
+      } catch (error) {
+        console.error('Error fetching locations:', error)
+        setLocations([])
+      }
+    }
+
+    const fetchProjects = async () => {
+      try {
+        const response = await fetch('/api/apps/lims/project-master')
+        if (!response.ok) {
+          throw new Error('Failed to fetch projects')
+        }
+        const data = await response.json()
+        if (data.result) {
+          setProjects(data.result)
+        } else {
+          setProjects([])
+        }
+      } catch (error) {
+        console.error('Error fetching projects:', error)
+        setProjects([])
+      }
+    }
+
+    fetchSampleTypes()
     fetchLabs()
+    fetchLocations()
+    fetchProjects()
   }, [])
+
+  // Fetch study sites when project changes
+  useEffect(() => {
+    const fetchStudySites = async () => {
+      if (!projectNo) {
+        setStudySites([])
+        return
+      }
+
+      try {
+        const response = await fetch(`/api/apps/lims/study-site-master?id=${projectNo}`)
+        const data = await response.json()
+        if (data.result) {
+          setStudySites(data.result)
+        } else {
+          setStudySites([])
+        }
+      } catch (error) {
+        console.error('Error fetching study sites:', error)
+        setStudySites([])
+      }
+    }
+
+    fetchStudySites()
+  }, [projectNo])
 
   // Function to clear all filters
   const clearFilters = () => {
-    setSearchText('')
+    setProjectNo(0)
+    setStudy('')
+    setReceiveStatus('')
+    setSampleType('')
+    setLocation('')
     setLab('')
+    setStudySites([])
     setData(sampleData)
   }
 
   // Function to apply filters
   const handleApplyFilters = () => {
     const filteredData = sampleData.filter(sample => {
-      if (
-        searchText &&
-        !sample.volunteerId.toLowerCase().includes(searchText.toLowerCase()) &&
-        !sample.volunteerName.toLowerCase().includes(searchText.toLowerCase()) &&
-        !sample.barcodeId.toLowerCase().includes(searchText.toLowerCase())
-      )
-        return false
+      if (projectNo && sample.projectNo !== projectNo.toString()) return false
+      if (receiveStatus && sample.statusId !== receiveStatus) return false
+      if (sampleType && sample.sampleType !== sampleType) return false
+      if (location && sample.location !== location) return false
       if (lab && sample.screeningFacility !== lab) return false
+      if (study && sample.study !== study) return false
 
       return true
     })
@@ -123,12 +252,26 @@ const TableFilters = ({
           <Button variant='outlined' startIcon={<FileDownload />}>
             Export
           </Button>
-          <Button
-            variant='contained'
-            color='primary'
-            disabled={selectedSamples.length === 0}
-            onClick={() => handleSendSamples(selectedSamples)}
-          >
+          <Grid item xs={12} md={4}>
+            <CustomTextField
+              select
+              fullWidth
+              id='lab'
+              value={lab}
+              onChange={e => setLab(e.target.value)}
+              slotProps={{
+                select: { displayEmpty: true }
+              }}
+            >
+              <MenuItem value=''>Select Lab</MenuItem>
+              {labs.map(lab => (
+                <MenuItem key={lab.id} value={lab.labName}>
+                  {lab.labName}
+                </MenuItem>
+              ))}
+            </CustomTextField>
+          </Grid>
+          <Button variant='contained' color='primary' onClick={() => handleSendSamples(selectedSamples)}>
             Send to Lab
           </Button>
         </Box>
@@ -160,44 +303,117 @@ const TableFilters = ({
           <Grid item xs={12} md={4}>
             <Autocomplete
               fullWidth
-              id='search-text'
-              options={sampleData}
-              getOptionLabel={option => `${option.volunteerId} - ${option.volunteerName}`}
-              value={
-                sampleData.find(
-                  sample =>
-                    sample.volunteerId === searchText ||
-                    sample.volunteerName === searchText ||
-                    sample.barcodeId === searchText
-                ) || null
-              }
-              onChange={(_, newValue) => setSearchText(newValue?.volunteerId || '')}
-              renderInput={params => <TextField {...params} size='small' placeholder='Search by name or ID' />}
-              isOptionEqualToValue={(option, value) =>
-                option.volunteerId === value.volunteerId ||
-                option.volunteerName === value.volunteerName ||
-                option.barcodeId === value.barcodeId
-              }
+              id='project-no'
+              options={projects}
+              getOptionLabel={option => option.studyProtocolNumber + ' - ' + option.studyTitle}
+              value={projects.find(project => project.id === projectNo) || null}
+              onChange={(_, newValue) => setProjectNo(newValue?.id || 0)}
+              renderInput={params => <CustomTextField {...params} placeholder='Search Project' />}
+              isOptionEqualToValue={(option, value) => option.studyProtocolNumber === value.studyProtocolNumber}
               renderOption={(props, option) => (
                 <li {...props} key={option.id}>
-                  {option.volunteerId} - {option.volunteerName} ({option.barcodeId})
+                  {option.studyProtocolNumber} - {option.studyTitle}
                 </li>
               )}
             />
           </Grid>
+
           <Grid item xs={12} md={4}>
-            <FormControl fullWidth size='small'>
-              <InputLabel>Lab</InputLabel>
-              <Select value={lab} label='Lab' onChange={e => setLab(e.target.value as string)}>
-                <MenuItem value=''>All Labs</MenuItem>
-                {labs.map(lab => (
-                  <MenuItem key={lab.id} value={lab.labName}>
-                    {lab.labName}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <Autocomplete
+              fullWidth
+              id='study'
+              options={studySites}
+              getOptionLabel={option => `${option.siteProtocolNumber} - ${option.siteGroupName}`}
+              value={studySites.find(site => site.siteNumber === study) || null}
+              onChange={(_, newValue) => setStudy(newValue?.siteNumber || '')}
+              renderInput={params => <CustomTextField {...params} placeholder='Search Study Site' />}
+              isOptionEqualToValue={(option, value) => option.siteNumber === value.siteNumber}
+              renderOption={(props, option) => (
+                <li {...props} key={option.id}>
+                  {option.siteProtocolNumber} - {option.siteGroupName}
+                </li>
+              )}
+              disabled={!projectNo}
+            />
           </Grid>
+
+          <Grid item xs={12} md={4}>
+            <CustomTextField
+              select
+              fullWidth
+              id='receive-status'
+              value={receiveStatus}
+              onChange={e => setReceiveStatus(e.target.value)}
+              slotProps={{
+                select: { displayEmpty: true }
+              }}
+            >
+              <MenuItem value=''>Select Receive Status</MenuItem>
+              <MenuItem value='3'>Pending</MenuItem>
+              <MenuItem value='5'>Completed</MenuItem>
+            </CustomTextField>
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <CustomTextField
+              select
+              fullWidth
+              id='sample-type'
+              value={sampleType}
+              onChange={e => setSampleType(e.target.value)}
+              slotProps={{
+                select: { displayEmpty: true }
+              }}
+            >
+              <MenuItem value=''>Select Sample Type</MenuItem>
+              {sampleTypes.map(type => (
+                <MenuItem key={type.sampleId} value={type.sampleType}>
+                  {type.sampleType}
+                </MenuItem>
+              ))}
+            </CustomTextField>
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <CustomTextField
+              select
+              fullWidth
+              id='location'
+              value={location}
+              onChange={e => setLocation(e.target.value)}
+              slotProps={{
+                select: { displayEmpty: true }
+              }}
+            >
+              <MenuItem value=''>Select Location</MenuItem>
+              {locations.map(loc => (
+                <MenuItem key={loc.id} value={loc.name}>
+                  {loc.name}
+                </MenuItem>
+              ))}
+            </CustomTextField>
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <CustomTextField
+              select
+              fullWidth
+              id='lab'
+              value={lab}
+              onChange={e => setLab(e.target.value)}
+              slotProps={{
+                select: { displayEmpty: true }
+              }}
+            >
+              <MenuItem value=''>Select Lab</MenuItem>
+              {labs.map(lab => (
+                <MenuItem key={lab.id} value={lab.labName}>
+                  {lab.labName}
+                </MenuItem>
+              ))}
+            </CustomTextField>
+          </Grid>
+
           <Grid item xs={12} md={4}>
             <Button
               fullWidth
@@ -206,7 +422,7 @@ const TableFilters = ({
               onClick={handleApplyFilters}
               startIcon={<i className='tabler-search' />}
             >
-              Search
+              Go
             </Button>
           </Grid>
         </Grid>

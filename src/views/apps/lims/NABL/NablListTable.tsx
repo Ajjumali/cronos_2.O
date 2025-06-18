@@ -21,7 +21,9 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Pagination
+  Pagination,
+  CardHeader,
+  Divider
 } from '@mui/material'
 import { format } from 'date-fns'
 import { AccreditationDetail, AccreditationTest } from '@/app/api/apps/lims/types'
@@ -62,6 +64,7 @@ const NablListTable = ({ accreditationData, onDataChange }: Props) => {
   })
   const [page, setPage] = useState(1)
   const rowsPerPage = 5
+  const [search, setSearch] = useState('')
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, row: AccreditationDetail) => {
     setAnchorEl(event.currentTarget)
@@ -138,23 +141,24 @@ const NablListTable = ({ accreditationData, onDataChange }: Props) => {
       field: 'dateRange',
       headerName: 'Date Range',
       flex: 1,
-      valueGetter: (row) => `${format(new Date(row.fromDate), 'dd/MM/yyyy')} - ${format(new Date(row.toDate), 'dd/MM/yyyy')}`
+      valueGetter: row =>
+        `${format(new Date(row.fromDate), 'dd/MM/yyyy')} - ${format(new Date(row.toDate), 'dd/MM/yyyy')}`
     },
     {
       field: 'testCount',
       headerName: 'Test Count',
       flex: 1,
-      valueGetter: (row) => row.tests.length
+      valueGetter: row => row.tests.length
     },
     {
       field: 'accreditationType',
       headerName: 'Accreditation Type',
       flex: 1,
-      renderCell: (row) => (
+      renderCell: row => (
         <Chip
           label={row.accreditationType}
           color={row.accreditationType === 'NABL' ? 'primary' : 'secondary'}
-          size="small"
+          size='small'
         />
       )
     },
@@ -162,26 +166,62 @@ const NablListTable = ({ accreditationData, onDataChange }: Props) => {
       field: 'actions',
       headerName: 'Actions',
       flex: 1,
-      renderCell: (row) => (
-        <IconButton onClick={(e) => handleMenuOpen(e, row)}>
+      renderCell: row => (
+        <IconButton onClick={e => handleMenuOpen(e, row)}>
           <MoreVerticalIcon />
         </IconButton>
       )
     }
   ]
 
-  const paginatedData = accreditationData.slice(
-    (page - 1) * rowsPerPage,
-    page * rowsPerPage
-  )
+  const filteredData = accreditationData.filter(row => {
+    if (!search) return true
+    // Search by accreditationType or test name
+    return (
+      row.accreditationType.toLowerCase().includes(search.toLowerCase()) ||
+      row.tests.some(test => test.testName.toLowerCase().includes(search.toLowerCase()))
+    )
+  })
+  const paginatedData = filteredData.slice((page - 1) * rowsPerPage, page * rowsPerPage)
 
   return (
     <Card>
+      <CardHeader
+        title='NABL Accreditation'
+        action={
+          <Button
+            variant='contained'
+            color='primary'
+            onClick={() => {
+              setDialogMode('add')
+              setFormData({
+                fromDate: new Date().toISOString(),
+                toDate: new Date().toISOString(),
+                accreditationType: 'NABL',
+                tests: []
+              })
+              setOpenDialog(true)
+            }}
+          >
+            Add NABL
+          </Button>
+        }
+      />
+      <Divider />
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 2, p: 3 }}>
+        <TextField
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder='Search NABL or Test Name'
+          size='small'
+          sx={{ minWidth: 250 }}
+        />
+      </Box>
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
-              {columns.map((column) => (
+              {columns.map(column => (
                 <TableCell key={column.field} style={{ width: column.width, flex: column.flex }}>
                   {column.headerName}
                 </TableCell>
@@ -189,35 +229,39 @@ const NablListTable = ({ accreditationData, onDataChange }: Props) => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {paginatedData.map((row) => (
-              <TableRow key={row.id}>
-                {columns.map((column) => (
-                  <TableCell key={`${row.id}-${column.field}`}>
-                    {column.renderCell
-                      ? column.renderCell(row)
-                      : column.valueGetter
-                      ? column.valueGetter(row)
-                      : String(row[column.field as keyof AccreditationDetail] || '')}
-                  </TableCell>
-                ))}
+            {paginatedData.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={columns.length} align='center'>
+                  No data available
+                </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              paginatedData.map(row => (
+                <TableRow key={row.id}>
+                  {columns.map(column => (
+                    <TableCell key={`${row.id}-${column.field}`}>
+                      {column.renderCell
+                        ? column.renderCell(row)
+                        : column.valueGetter
+                          ? column.valueGetter(row)
+                          : String(row[column.field as keyof AccreditationDetail] || '')}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </TableContainer>
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, mb: 2 }}>
         <Pagination
-          count={Math.ceil(accreditationData.length / rowsPerPage)}
+          count={Math.ceil(filteredData.length / rowsPerPage)}
           page={page}
           onChange={(_, value) => setPage(value)}
         />
       </Box>
 
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-      >
+      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
         <MenuItem onClick={handleEdit}>
           <EditIcon /> Edit
         </MenuItem>
@@ -232,28 +276,32 @@ const NablListTable = ({ accreditationData, onDataChange }: Props) => {
         </MenuItem>
       </Menu>
 
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
+      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth='md' fullWidth>
         <DialogTitle>
-          {dialogMode === 'add' ? 'Add Accreditation' : dialogMode === 'edit' ? 'Edit Accreditation' : 'Copy Accreditation'}
+          {dialogMode === 'add'
+            ? 'Add Accreditation'
+            : dialogMode === 'edit'
+              ? 'Edit Accreditation'
+              : 'Copy Accreditation'}
         </DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12} sm={6}>
               <TextField
-                label="From Date"
-                type="date"
+                label='From Date'
+                type='date'
                 value={formData.fromDate?.split('T')[0]}
-                onChange={(e) => setFormData({ ...formData, fromDate: new Date(e.target.value).toISOString() })}
+                onChange={e => setFormData({ ...formData, fromDate: new Date(e.target.value).toISOString() })}
                 fullWidth
                 InputLabelProps={{ shrink: true }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
-                label="To Date"
-                type="date"
+                label='To Date'
+                type='date'
                 value={formData.toDate?.split('T')[0]}
-                onChange={(e) => setFormData({ ...formData, toDate: new Date(e.target.value).toISOString() })}
+                onChange={e => setFormData({ ...formData, toDate: new Date(e.target.value).toISOString() })}
                 fullWidth
                 InputLabelProps={{ shrink: true }}
               />
@@ -262,13 +310,13 @@ const NablListTable = ({ accreditationData, onDataChange }: Props) => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
-          <Button onClick={handleSave} variant="contained" color="primary">
+          <Button onClick={handleSave} variant='contained' color='primary'>
             Save
           </Button>
         </DialogActions>
       </Dialog>
 
-      <Dialog open={openTestDetailsDialog} onClose={() => setOpenTestDetailsDialog(false)} maxWidth="md" fullWidth>
+      <Dialog open={openTestDetailsDialog} onClose={() => setOpenTestDetailsDialog(false)} maxWidth='md' fullWidth>
         <DialogTitle>Test Details</DialogTitle>
         <DialogContent>
           {selectedRow && (
