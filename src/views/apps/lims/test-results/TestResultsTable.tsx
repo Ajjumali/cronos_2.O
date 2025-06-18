@@ -58,7 +58,7 @@ import CustomTextField from '@core/components/mui/TextField'
 import OptionMenu from '@core/components/option-menu'
 import TableFilters from './TableFilters'
 import RemarkDialog from '@/components/dialogs/test-result/remark-dialog'
-import BarcodePrintDialog from '@/components/dialogs/barcode-print'
+import BarcodePrintDialog from '@/components/dialogs/barcode-print/index'
 import SampleDetailsDialog from '@/components/dialogs/sample-details'
 import ConfirmDialog from '@/components/dialogs/ConfirmDialog/ConfirmDialog'
 
@@ -465,7 +465,7 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
       result: testResult.result || '',
       unit: testResult.unit || '',
       referenceRange: testResult.referenceRange || '',
-      status: testResult.StatusID.toString() || '',
+      status: testResult.StatusID ? testResult.StatusID.toString() : '',
       registrationDateTime: testResult.registrationDate || '',
       performedBy: testResult.performedBy || '',
       performedOn: testResult.performedOn || '',
@@ -543,7 +543,14 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
               {table.getRowModel().rows.map(row => (
                 <tr
                   key={row.id}
-                  onClick={() => openValidateSample(row.original)}
+                  onClick={e => {
+                    // Check if the click was on the actions column
+                    const target = e.target as HTMLElement
+                    const isActionsColumn = target.closest('td:first-child')
+                    if (!isActionsColumn) {
+                      openValidateSample(row.original)
+                    }
+                  }}
                   style={{ cursor: 'pointer' }}
                   className='hover:bg-gray-50'
                 >
@@ -571,6 +578,11 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
         setOpen={setShowBarcodeDialog}
         sampleId={selectedTest?.sampleTypeId || 0}
         barcodeId={selectedTest?.sampleTypeId ? String(selectedTest.sampleTypeId) : undefined}
+        sampleDetails={{
+          subjectId: selectedTest?.subjectId,
+          sampleType: selectedTest?.sampleType,
+          collectedOn: selectedTest?.registrationDate
+        }}
       />
       <SampleDetailsDialog
         open={showSampleDetails}

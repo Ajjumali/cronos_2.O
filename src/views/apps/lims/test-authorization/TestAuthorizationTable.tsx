@@ -161,7 +161,7 @@ const TestAuthorizationTable = ({ testData }: { testData?: TestAuthorizationType
           const test = info.row.original
 
           return (
-            <Box sx={{ display: 'flex', gap: 1 }}>
+            <Box sx={{ display: 'flex', gap: 1 }} onClick={e => e.stopPropagation()}>
               <OptionMenu
                 iconButtonProps={{ size: 'medium' }}
                 iconClassName='text-textSecondary'

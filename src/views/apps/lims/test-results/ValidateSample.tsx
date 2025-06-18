@@ -1387,7 +1387,7 @@ const ValidateSample = () => {
                     }}
                   >
                     <Grid size={{ xs: 1 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-start' }} onClick={e => e.stopPropagation()}>
                         <OptionMenu
                           iconButtonProps={{
                             size: 'small',
