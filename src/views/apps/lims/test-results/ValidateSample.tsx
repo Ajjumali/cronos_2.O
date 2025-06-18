@@ -184,6 +184,7 @@ interface TestRow {
   remarks: string
   actionRemarks: TestRemark[]
   status: string
+  qcAcceptance: boolean
 }
 
 interface TestAction {
@@ -260,7 +261,8 @@ const ValidateSample = () => {
       ...row,
       remarks: row.remark || '',
       actionRemarks: [],
-      status: 'pending'
+      status: 'pending',
+      qcAcceptance: true
     }))
   )
   const [qcAcceptance, setQcAcceptance] = useState(dummySample.qcAcceptance)
@@ -404,7 +406,7 @@ const ValidateSample = () => {
                         fontWeight: isOutOfRange ? 'bold' : 'normal'
                       }
                     }}
-                    disabled={!qcAcceptance}
+                    disabled={!row.original.qcAcceptance}
                   />
                   {isOutOfRange && (
                     <Box
@@ -466,10 +468,31 @@ const ValidateSample = () => {
                 setTestRows(newTestRows)
               }
             }}
-            disabled={!qcAcceptance}
+            disabled={!row.original.qcAcceptance}
           />
         )
       }),
+      {
+        id: 'qcAcceptance',
+        header: 'QC Acceptance',
+        cell: ({ row }) => (
+          <Switch
+            checked={row.original.qcAcceptance}
+            onChange={e => {
+              const newTestRows = [...testRows]
+              const index = newTestRows.findIndex(item => item.testName === row.original.testName)
+              if (index !== -1) {
+                newTestRows[index] = {
+                  ...newTestRows[index],
+                  qcAcceptance: e.target.checked
+                }
+                setTestRows(newTestRows)
+              }
+            }}
+          />
+        ),
+        enableHiding: false
+      },
       columnHelper.accessor('status', {
         header: 'Status',
         cell: ({ row }) => {
@@ -1188,17 +1211,6 @@ const ValidateSample = () => {
                 <Typography variant='body1'>{sample.volunteerId}</Typography>
               </Box>
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <Box sx={{ mb: 2 }}>
-                <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mb: 0.5 }}>
-                  QC Acceptance
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography variant='body1'>{qcAcceptance ? 'Yes' : 'No'}</Typography>
-                  <Switch checked={qcAcceptance} onChange={handleSwitch} />
-                </Box>
-              </Box>
-            </Grid>
           </Grid>
         </Paper>
         <Divider sx={{ my: 4 }} />
@@ -1356,6 +1368,7 @@ const ValidateSample = () => {
                 <Grid size={{ xs: 2 }}>Test Result</Grid>
                 <Grid size={{ xs: 2 }}>Reference Range</Grid>
                 <Grid size={{ xs: 2 }}>Report Remark</Grid>
+                <Grid size={{ xs: 2 }}>QC Acceptance</Grid>
               </Grid>
             </Grid>
             {/* Rows */}
@@ -1509,7 +1522,7 @@ const ValidateSample = () => {
                             fontWeight: isOutOfRange ? 'bold' : 'normal'
                           }
                         }}
-                        disabled={!qcAcceptance}
+                        disabled={!row.original.qcAcceptance}
                       />
                     </Grid>
                     <Grid size={{ xs: 2 }}>
@@ -1531,7 +1544,23 @@ const ValidateSample = () => {
                             setTestRows(newTestRows)
                           }
                         }}
-                        disabled={!qcAcceptance}
+                        disabled={!row.original.qcAcceptance}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 2 }}>
+                      <Switch
+                        checked={row.original.qcAcceptance}
+                        onChange={e => {
+                          const newTestRows = [...testRows]
+                          const index = newTestRows.findIndex(item => item.testName === row.original.testName)
+                          if (index !== -1) {
+                            newTestRows[index] = {
+                              ...newTestRows[index],
+                              qcAcceptance: e.target.checked
+                            }
+                            setTestRows(newTestRows)
+                          }
+                        }}
                       />
                     </Grid>
                   </Grid>
@@ -1601,6 +1630,28 @@ const ValidateSample = () => {
           >
             Outsource
           </Button>
+        </Box>
+        {/* Authorize all test results toggle below the table */}
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={table.getSelectedRowModel().rows.length === testRows.length && testRows.length > 0}
+                onChange={e => {
+                  if (e.target.checked) {
+                    const allRowSelection: Record<string, boolean> = {}
+                    table.getRowModel().rows.forEach(row => {
+                      allRowSelection[row.id] = true
+                    })
+                    setRowSelection(allRowSelection)
+                  } else {
+                    setRowSelection({})
+                  }
+                }}
+              />
+            }
+            label='Authorize all test results'
+          />
         </Box>
       </CardContent>
 
