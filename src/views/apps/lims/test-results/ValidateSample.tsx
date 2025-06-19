@@ -285,6 +285,8 @@ const ValidateSample = () => {
   const [expandedSection, setExpandedSection] = useState<string | false>('testInfo')
   const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false)
   const [isApproving, setIsApproving] = useState(false)
+  const [isRejecting, setIsRejecting] = useState(false)
+  const [isValidating, setIsValidating] = useState(false)
   const [approvalComment, setApprovalComment] = useState('')
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [isDrawing, setIsDrawing] = useState(false)
@@ -925,14 +927,21 @@ const ValidateSample = () => {
     setSignatureData(null)
     setIsSignatureValid(false)
     setShowSignatureError(false)
+    setIsRejecting(false)
+    setIsValidating(false)
     if (canvasRef.current) {
       canvasRef.current.getContext('2d')?.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height)
     }
   }
 
   const handleApprovalSubmit = async () => {
-    if (!signatureData) {
-      setShowSignatureError(true)
+    if (!isAcknowledged) {
+      toast.error('Please acknowledge the declaration before validating')
+      return
+    }
+
+    if (!username.trim() || !password.trim()) {
+      toast.error('Please provide both username and password')
       return
     }
 
@@ -940,20 +949,44 @@ const ValidateSample = () => {
     const selectedTestNames = selectedRows.map(row => row.original.testName)
 
     try {
-      setIsApproving(true)
+      setIsValidating(true)
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000))
 
-      toast.success(`Successfully approved ${selectedTestNames.length} test(s)`)
+      toast.success(`Successfully validated ${selectedTestNames.length} test(s)`)
       handleCloseApprovalModal()
 
       // Refresh the test results
       // await fetchSampleData()
     } catch (error) {
-      console.error('Error approving test results:', error)
-      toast.error('Failed to approve test results')
+      console.error('Error validating test results:', error)
+      toast.error('Failed to validate test results')
     } finally {
-      setIsApproving(false)
+      setIsValidating(false)
+    }
+  }
+
+  function handleReject(): void {
+    if (!username.trim() || !password.trim()) {
+      toast.error('Please provide both username and password')
+      return
+    }
+
+    const selectedRows = table.getSelectedRowModel().rows
+    const selectedTestNames = selectedRows.map(row => row.original.testName)
+
+    try {
+      setIsRejecting(true)
+      // Simulate API call for rejection
+      setTimeout(() => {
+        toast.success(`Successfully rejected ${selectedTestNames.length} test(s)`)
+        handleCloseApprovalModal()
+        setIsRejecting(false)
+      }, 1000)
+    } catch (error) {
+      console.error('Error rejecting test results:', error)
+      toast.error('Failed to reject test results')
+      setIsRejecting(false)
     }
   }
 
@@ -1108,10 +1141,6 @@ const ValidateSample = () => {
       })
       setShowBarcodeDialog(true)
     }
-  }
-
-  function handleReject(): void {
-    throw new Error('Function not implemented.')
   }
 
   return (
@@ -2005,7 +2034,7 @@ const ValidateSample = () => {
 
       {/* Approval Confirmation Dialog */}
       <Dialog open={isApprovalModalOpen} onClose={handleCloseApprovalModal} maxWidth='xs' fullWidth>
-        <DialogTitle>Test Result Declaration</DialogTitle>
+        <DialogTitle>Test Result Validation</DialogTitle>
 
         <DialogContent dividers>
           <Typography variant='subtitle2' sx={{ mb: 2, fontWeight: 'bold' }}>
@@ -2014,7 +2043,7 @@ const ValidateSample = () => {
           <FormGroup sx={{ mb: 2 }}>
             <FormControlLabel
               control={<Checkbox checked={isAcknowledged} onChange={e => setIsAcknowledged(e.target.checked)} />}
-              label='I confirm that the details are accurate and approve the digital authorization of this result.'
+              label='I confirm that the test results are accurate and ready for validation.'
             />
           </FormGroup>
 
@@ -2040,16 +2069,28 @@ const ValidateSample = () => {
           </Box>
 
           <Typography variant='caption' color='text.secondary'>
-            Please provide your credentials to authorize the result. Your signature will be recorded digitally.
+            Please provide your credentials to validate the test results. Your validation will be recorded digitally.
           </Typography>
         </DialogContent>
 
         <DialogActions sx={{ justifyContent: 'center' }}>
-          <Button variant='contained' color='error' onClick={handleReject}>
-            Reject
+          <Button
+            variant='contained'
+            color='error'
+            onClick={handleReject}
+            disabled={isRejecting}
+            startIcon={isRejecting ? <i className='tabler-loader animate-spin' /> : <i className='tabler-x' />}
+          >
+            {isRejecting ? 'Rejecting...' : 'Reject'}
           </Button>
-          <Button variant='contained' color='success' onClick={handleCloseApprovalModal}>
-            Close
+          <Button
+            variant='contained'
+            color='success'
+            onClick={handleApprovalSubmit}
+            disabled={isValidating}
+            startIcon={isValidating ? <i className='tabler-loader animate-spin' /> : <i className='tabler-check' />}
+          >
+            {isValidating ? 'Validating...' : 'Validate'}
           </Button>
         </DialogActions>
       </Dialog>

@@ -144,6 +144,7 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
 
   useEffect(() => {
     if (testData) {
+      console.log('testData', testData)
       setData(testData)
       setFilteredData(testData)
       setIsLoading(false)
@@ -219,7 +220,7 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
         header: 'Gender',
         cell: info => <Typography component='span'>{info.getValue()}</Typography>
       }),
-      columnHelper.accessor('VolunteerName', {
+      columnHelper.accessor('volunteerName', {
         header: 'VolunteerName',
         cell: info => <Typography component='span'>{info.getValue()}</Typography>
       }),
@@ -365,7 +366,7 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
         test.sampleTypeId || '-',
         test.subjectId || '-',
         test.gender || '-',
-        test.VolunteerName || '-',
+        test.volunteerName || '-',
         test.testPanelName || '-',
         test.sampleType || '-',
         test.StatusID || '-',
@@ -458,7 +459,7 @@ const TestResultsTable = ({ testData, onDataChange }: { testData?: TestResultTyp
     return {
       sampleId: testResult.sampleTypeId || 0,
       volunteerId: testResult.subjectId || '',
-      name: testResult.VolunteerName || '',
+      name: testResult.volunteerName || '',
       gender: testResult.gender || '',
       testPanelName: testResult.testPanelName || '',
       testName: testResult.testName || '',

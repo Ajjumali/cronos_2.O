@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 
 // Next Imports
 import { useParams } from 'next/navigation'
@@ -142,10 +142,6 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
   const [showAuditTrailDialog, setShowAuditTrailDialog] = useState(false)
   const [selectedSampleForAudit, setSelectedSampleForAudit] = useState<SampleWithActionsType | null>(null)
   const [auditTrailData, setAuditTrailData] = useState<any[]>([])
-  const [showBarcodeScanDialog, setShowBarcodeScanDialog] = useState(false)
-  const [selectedSampleForScan, setSelectedSampleForScan] = useState<SampleWithActionsType | null>(null)
-  const [barcodeInput, setBarcodeInput] = useState('')
-  const [isScanning, setIsScanning] = useState(false)
   const [showBarcodeDialog, setShowBarcodeDialog] = useState<boolean>(false)
   const [selectedSample, setSelectedSample] = useState<SampleWithActionsType | null>(null)
   const [showSampleDetails, setShowSampleDetails] = useState(false)
@@ -153,6 +149,11 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
   const [showRemarkDialog, setShowRemarkDialog] = useState(false)
   const [selectedSampleForRemark, setSelectedSampleForRemark] = useState<SampleWithActionsType | null>(null)
   const [remark, setRemark] = useState('')
+  const [barcodeFilter, setBarcodeFilter] = useState('')
+  const [highlightedRowId, setHighlightedRowId] = useState<number | null>(null)
+
+  // Refs
+  const highlightedRowRef = useRef<HTMLTableRowElement>(null)
 
   // Hooks
   const { lang: locale } = useParams()
@@ -341,28 +342,48 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
     }
   }
 
-  const handleBarcodeScan = (sample: SampleWithActionsType) => {
-    // Simple barcode scan functionality
-    console.log('Scanning barcode for sample:', sample)
-    toast.info('Barcode scanning initiated')
+  const handleBarcodeSearch = (searchValue: string) => {
+    if (!searchValue.trim()) {
+      setHighlightedRowId(null)
+      return
+    }
+
+    // Search in the full data array (not filtered data)
+    const foundSample = data.find(
+      sample =>
+        sample.employeeId?.toLowerCase().includes(searchValue.toLowerCase()) ||
+        sample.sampleId?.toLowerCase().includes(searchValue.toLowerCase()) ||
+        sample.barcodeId?.toLowerCase().includes(searchValue.toLowerCase())
+    )
+
+    if (foundSample) {
+      setHighlightedRowId(foundSample.id)
+      toast.success(`Found sample: ${foundSample.employeeName} (${foundSample.employeeId})`)
+
+      // Auto-scroll to highlighted row after a short delay
+      setTimeout(() => {
+        if (highlightedRowRef.current) {
+          highlightedRowRef.current.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+          })
+        }
+      }, 100)
+    } else {
+      setHighlightedRowId(null)
+      toast.error(`No sample found with ID: ${searchValue}`)
+    }
   }
 
-  const handleBarcodeSubmit = async () => {
-    if (!selectedSampleForScan || !barcodeInput) return
-
-    try {
-      // TODO: Implement barcode validation and collection API call
-      toast.success('Sample collected successfully')
-      onDataChange?.()
-    } catch (error) {
-      console.error('Error collecting sample:', error)
-      toast.error('Failed to collect sample')
-    } finally {
-      setShowBarcodeScanDialog(false)
-      setSelectedSampleForScan(null)
-      setBarcodeInput('')
-      setIsScanning(false)
+  const handleBarcodeInputKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleBarcodeSearch(barcodeFilter)
     }
+  }
+
+  const handleClearBarcode = () => {
+    setBarcodeFilter('')
+    setHighlightedRowId(null)
   }
 
   const handleAddRemark = (sample: SampleWithActionsType) => {
@@ -701,19 +722,26 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
         title='Sample Collection'
         action={
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <CustomTextField
-              placeholder='Scan barcode'
-              size='small'
-              sx={{ width: '200px' }}
-              onChange={e => {
-                // Handle barcode scan input
-                const value = e.target.value
-                if (value) {
-                  // TODO: Implement barcode scan logic
-                  console.log('Barcode scanned:', value)
-                }
-              }}
-            />
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Typography variant='caption' color='text.secondary'>
+                Type Volunteer ID and press Enter to highlight the row
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                <CustomTextField
+                  placeholder='Scan Barcode (Press Enter to search)'
+                  size='small'
+                  sx={{ width: '250px' }}
+                  value={barcodeFilter}
+                  onChange={e => setBarcodeFilter(e.target.value)}
+                  onKeyPress={handleBarcodeInputKeyPress}
+                />
+                {barcodeFilter && (
+                  <IconButton size='small' onClick={handleClearBarcode} sx={{ color: 'text.secondary' }}>
+                    <i className='tabler-x' />
+                  </IconButton>
+                )}
+              </Box>
+            </Box>
             <Button
               variant='outlined'
               startIcon={
@@ -781,7 +809,14 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
               </tr>
             ) : (
               table.getRowModel().rows.map(row => (
-                <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
+                <tr
+                  key={row.id}
+                  ref={highlightedRowId === row.original.id ? highlightedRowRef : null}
+                  className={classnames({
+                    selected: row.getIsSelected(),
+                    'highlighted-row': highlightedRowId === row.original.id
+                  })}
+                >
                   {row.getVisibleCells().map(cell => (
                     <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
                   ))}

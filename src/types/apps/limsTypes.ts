@@ -104,7 +104,7 @@ export interface TestResultType {
   receivedOn?: string
   subjectId: string
   gender: string
-  VolunteerName: string
+  volunteerName: string
   StatusID: number
   testPanelName?: string
   testId?: number

@@ -215,6 +215,8 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
   const [data, setData] = useState<SampleType[]>(initialData)
   const [filteredData, setFilteredData] = useState<SampleType[]>(initialData)
   const [globalFilter, setGlobalFilter] = useState('')
+  const [barcodeFilter, setBarcodeFilter] = useState('')
+  const [highlightedRowId, setHighlightedRowId] = useState<number | null>(null)
   const [isPdfLoading, setIsPdfLoading] = useState(false)
   const [isExcelLoading, setIsExcelLoading] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
@@ -228,8 +230,6 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
   const [showBarcodeScanDialog, setShowBarcodeScanDialog] = useState(false)
   const [barcodeInput, setBarcodeInput] = useState('')
   const [isScanning, setIsScanning] = useState(false)
-  const [highlightedSampleId, setHighlightedSampleId] = useState<number | null>(null)
-  const barcodeInputRef = useRef<HTMLInputElement>(null)
   const [showOutsourceConfirm, setShowOutsourceConfirm] = useState(false)
   const [selectedSamplesForOutsource, setSelectedSamplesForOutsource] = useState<number[]>([])
   const [showReceiveConfirm, setShowReceiveConfirm] = useState(false)
@@ -270,6 +270,19 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
 
     fetchData()
   }, [sampleData])
+
+  // Add effect to handle filtering - only global filter affects table data
+  useEffect(() => {
+    // Only apply global filter, barcode filter doesn't affect table filtering
+    if (globalFilter.trim()) {
+      const filtered = data.filter(item => {
+        return Object.values(item).some(value => value?.toString().toLowerCase().includes(globalFilter.toLowerCase()))
+      })
+      setFilteredData(filtered)
+    } else {
+      setFilteredData(data)
+    }
+  }, [globalFilter, data])
 
   // Add effect to log when data changes
   useEffect(() => {
@@ -453,7 +466,6 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
     },
     state: {
       rowSelection,
-      globalFilter,
       columnVisibility
     },
     enableRowSelection: true,
@@ -465,9 +477,7 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
     getPaginationRowModel: getPaginationRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
-    getFacetedMinMaxValues: getFacetedMinMaxValues(),
-    onGlobalFilterChange: setGlobalFilter,
-    globalFilterFn: fuzzyFilter
+    getFacetedMinMaxValues: getFacetedMinMaxValues()
   })
 
   const handleSampleReceive = async (id: number) => {
@@ -841,10 +851,13 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
 
   // Add row highlighting styles
   const getRowStyle = (row: any) => {
-    if (row.original.id === highlightedSampleId) {
-      return { backgroundColor: '#e8f5e9' } // Light green for highlighted
+    const baseStyle = { transition: 'background-color 0.3s ease' }
+
+    if (row.original.id === highlightedRowId) {
+      console.log('Highlighting row with ID:', row.original.id, 'Subject ID:', row.original.subjectId)
+      return { ...baseStyle, backgroundColor: '#fff3cd' } // Light yellow for barcode search highlight
     }
-    return {}
+    return baseStyle
   }
 
   const handleManualReceive = (sample: SampleType) => {
@@ -1199,6 +1212,52 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
     </Box>
   )
 
+  // Handle Enter key press in barcode search
+  const handleBarcodeKeyPress = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter') {
+      const searchValue = barcodeFilter.trim()
+      if (searchValue) {
+        console.log('Current highlightedRowId before search:', highlightedRowId)
+
+        // Find exact match in full data (not filtered data)
+        const exactMatch = data.find(item => item.subjectId?.toLowerCase() === searchValue.toLowerCase())
+
+        console.log('Searching for:', searchValue)
+        console.log('Found match:', exactMatch)
+        console.log(
+          'All items with this subjectId:',
+          data.filter(item => item.subjectId?.toLowerCase() === searchValue.toLowerCase())
+        )
+
+        if (exactMatch) {
+          console.log('Setting highlightedRowId to:', exactMatch.id)
+
+          // Check if there are multiple rows with the same subject ID
+          const allMatches = data.filter(item => item.subjectId?.toLowerCase() === searchValue.toLowerCase())
+
+          if (allMatches.length > 1) {
+            console.warn(`Multiple rows found with Subject ID "${searchValue}":`, allMatches)
+            toast.warning(`Multiple rows found with Subject ID "${searchValue}". Only the first match is highlighted.`)
+          }
+
+          setHighlightedRowId(exactMatch.id)
+          toast.success(`Subject ID "${searchValue}" found`)
+          // Scroll to the row
+          setTimeout(() => {
+            const rowElement = document.getElementById(`sample-row-${exactMatch.id}`)
+            if (rowElement) {
+              rowElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }
+          }, 100)
+        } else {
+          console.log('No match found, clearing highlight')
+          setHighlightedRowId(null)
+          toast.warning(`Subject ID "${searchValue}" not found`)
+        }
+      }
+    }
+  }
+
   return (
     <Card>
       <CardHeader
@@ -1232,24 +1291,52 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
 
       <div className='flex flex-wrap justify-between gap-4 p-6'>
         {/* Search Box */}
-        <div className='flex items-center gap-2'>
-          <DebouncedInput
-            value={globalFilter ?? ''}
-            onChange={value => setGlobalFilter(String(value))}
-            placeholder='Scan Barcode'
-            className='max-sm:is-full'
-            sx={{ minWidth: '300px' }}
-          />
+        <div className='flex flex-col gap-1'>
+          <div className='flex items-center gap-2'>
+            <DebouncedInput
+              value={barcodeFilter ?? ''}
+              onChange={value => setBarcodeFilter(String(value))}
+              placeholder='Scan Barcode (Press Enter to search)'
+              className='max-sm:is-full'
+              sx={{ minWidth: '300px' }}
+              onKeyDown={handleBarcodeKeyPress}
+            />
+            {highlightedRowId !== null && (
+              <Chip label='Found' color='success' size='small' icon={<i className='tabler-check' />} />
+            )}
+            {barcodeFilter && (
+              <IconButton
+                size='small'
+                onClick={() => {
+                  setBarcodeFilter('')
+                  setHighlightedRowId(null)
+                }}
+                title='Clear barcode search'
+              >
+                <i className='tabler-x' />
+              </IconButton>
+            )}
+          </div>
+          <Typography variant='caption' color='text.secondary'>
+            Type Volunteer ID and press Enter to highlight the row
+          </Typography>
         </div>
 
         {/* Search and other controls */}
         <div className='flex flex-wrap items-center max-sm:flex-col gap-4 max-sm:is-full is-auto'>
-          <DebouncedInput
-            value={globalFilter ?? ''}
-            onChange={value => setGlobalFilter(String(value))}
-            placeholder='Search Sample'
-            className='max-sm:is-full'
-          />
+          <div className='flex items-center gap-2'>
+            <DebouncedInput
+              value={globalFilter ?? ''}
+              onChange={value => setGlobalFilter(String(value))}
+              placeholder='Search Sample'
+              className='max-sm:is-full'
+            />
+            {globalFilter && (
+              <IconButton size='small' onClick={() => setGlobalFilter('')} title='Clear search'>
+                <i className='tabler-x' />
+              </IconButton>
+            )}
+          </div>
           <div className='flex items-center gap-2'>
             <IconButton
               size='small'

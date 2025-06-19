@@ -77,6 +77,11 @@
     tr {
       border-block-start: 1px solid var(--border-color);
     }
+
+    tr.highlighted-row {
+      background-color: #fff3cd !important;
+      transition: background-color 0.3s ease;
+    }
   }
 }
 

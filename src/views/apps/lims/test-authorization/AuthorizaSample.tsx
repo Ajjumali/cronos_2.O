@@ -342,6 +342,7 @@ const AuthorizeSample = () => {
   const [isOutOfRangeDialogOpen, setIsOutOfRangeDialogOpen] = useState(false)
   const [outOfRangeTestNames, setOutOfRangeTestNames] = useState<string[]>([])
   const [authorizeAll, setAuthorizeAll] = useState(false)
+  const [isRejecting, setIsRejecting] = useState(false)
 
   const columns = useMemo<ColumnDef<any, any>[]>(
     () => [
@@ -1062,9 +1063,14 @@ const AuthorizeSample = () => {
     }
   }
 
-  const handleApprovalSubmit = async () => {
-    if (!signatureData) {
-      setShowSignatureError(true)
+  const handleApprove = async () => {
+    if (!isAcknowledged) {
+      toast.error('Please acknowledge the declaration before approving')
+      return
+    }
+
+    if (!username.trim() || !password.trim()) {
+      toast.error('Please provide both username and password')
       return
     }
 
@@ -1078,8 +1084,7 @@ const AuthorizeSample = () => {
       // await testResultsService.approveTestResults(sampleId, {
       //   testNames: selectedTestNames,
       //   comment: approvalComment,
-      //   signature: signatureData,
-      //   signedBy: 'Current User', // Replace with actual user info
+      //   signedBy: username,
       //   signedAt: new Date().toISOString()
       // })
 
@@ -1253,7 +1258,14 @@ const AuthorizeSample = () => {
   }
 
   function handleReject(): void {
-    throw new Error('Function not implemented.')
+    setIsRejecting(true)
+    const selectedRows = table.getSelectedRowModel().rows
+    const selectedTestNames = selectedRows.map(row => row.original.testName)
+    setTimeout(() => {
+      toast.success(`Successfully rejected ${selectedTestNames.length} test(s)`)
+      setIsRejecting(false)
+      handleCloseApprovalModal()
+    }, 1000)
   }
 
   const handleViewDetails = (testName: string) => {
@@ -2226,25 +2238,30 @@ const AuthorizeSample = () => {
             />
           </Box>
 
-          <Box display='flex' justifyContent='center' mb={2}>
-            <img
-              src='/images/tick-ico-image.png' // Ensure this path is correct
-              alt='Digital Signature'
-              height={50}
-            />
-          </Box>
-
           <Typography variant='caption' color='text.secondary' sx={{ textAlign: 'center' }}>
-            Please provide your credentials to authorize the result. Your signature will be recorded digitally.
+            Please provide your credentials to authorize the result.
           </Typography>
         </DialogContent>
 
         <DialogActions sx={{ justifyContent: 'center' }}>
-          <Button variant='contained' color='error' onClick={handleReject} sx={{ marginRight: 2 }}>
-            Reject
+          <Button
+            variant='contained'
+            color='error'
+            onClick={handleReject}
+            sx={{ marginRight: 2 }}
+            disabled={isApproving || isRejecting}
+            startIcon={isRejecting ? <i className='tabler-loader animate-spin' /> : undefined}
+          >
+            {isRejecting ? 'Rejecting...' : 'Reject'}
           </Button>
-          <Button variant='contained' color='success' onClick={handleCloseApprovalModal}>
-            Close
+          <Button
+            variant='contained'
+            color='success'
+            onClick={handleApprove}
+            disabled={isApproving || isRejecting}
+            startIcon={isApproving ? <i className='tabler-loader animate-spin' /> : undefined}
+          >
+            {isApproving ? 'Approving...' : 'Approve'}
           </Button>
         </DialogActions>
       </Dialog>
