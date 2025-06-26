@@ -76,8 +76,15 @@ const DebouncedInput = ({
   debounce?: number
 } & Omit<TextFieldProps, 'onChange'>) => {
   const [value, setValue] = useState(initialValue)
-  useEffect(() => { setValue(initialValue) }, [initialValue])
-  useEffect(() => { const timeout = setTimeout(() => { onChange(value) }, debounce); return () => clearTimeout(timeout) }, [value])
+  useEffect(() => {
+    setValue(initialValue)
+  }, [initialValue])
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      onChange(value)
+    }, debounce)
+    return () => clearTimeout(timeout)
+  }, [value])
   return <CustomTextField {...props} value={value} onChange={e => setValue(e.target.value)} />
 }
 
@@ -175,7 +182,7 @@ const ReasonListTable = ({ reasonData = [], onDataChange }: Props) => {
       createColumnHelper<ReasonWithActionsType>().accessor('updatedOn', {
         header: 'Performed On',
         cell: ({ row }) => <Typography>{row.original.updatedOn}</Typography>
-      }),
+      })
       // createColumnHelper<ReasonWithActionsType>().accessor('createdBy', {
       //   header: 'Created By',
       //   cell: ({ row }) => <Typography>{row.original.createdBy}</Typography>
@@ -233,7 +240,16 @@ const ReasonListTable = ({ reasonData = [], onDataChange }: Props) => {
       ])
       autoTable(doc, {
         head: [
-          ['Reason Name', 'Operation ID', 'Timezone ID', 'Status', 'Updated By', 'Updated On', 'Created By', 'Created On']
+          [
+            'Reason Name',
+            'Operation ID',
+            'Timezone ID',
+            'Status',
+            'Updated By',
+            'Updated On',
+            'Created By',
+            'Created On'
+          ]
         ],
         body: tableData,
         startY: 30,
@@ -274,13 +290,16 @@ const ReasonListTable = ({ reasonData = [], onDataChange }: Props) => {
           body: JSON.stringify({ ...pendingData, reason })
         })
         if (!response.ok) throw new Error('Failed to update reason')
-        const updatedData = data.map(r => r.reasonId === pendingData.reasonId ? pendingData : r)
+        const updatedData = data.map(r => (r.reasonId === pendingData.reasonId ? pendingData : r))
         setData(updatedData)
         setFilteredData(updatedData)
         toast.success('Record updated successfully')
         onDataChange?.()
       } else if (pendingAction === 'delete') {
-        const response = await fetch(`/api/apps/lims/reason-master/${pendingData.reasonId}?reason=${encodeURIComponent(reason)}`, { method: 'DELETE' })
+        const response = await fetch(
+          `/api/apps/lims/reason-master/${pendingData.reasonId}?reason=${encodeURIComponent(reason)}`,
+          { method: 'DELETE' }
+        )
         if (!response.ok) throw new Error('Failed to delete reason')
         const updatedData = data.filter(r => r.reasonId !== pendingData.reasonId)
         setData(updatedData)
@@ -309,7 +328,9 @@ const ReasonListTable = ({ reasonData = [], onDataChange }: Props) => {
           <Box sx={{ display: 'flex', gap: 2 }}>
             <Button
               variant='outlined'
-              startIcon={isPdfLoading ? <i className='tabler-loader animate-spin' /> : <i className='tabler-file-text' />}
+              startIcon={
+                isPdfLoading ? <i className='tabler-loader animate-spin' /> : <i className='tabler-file-text' />
+              }
               onClick={handlePdfExport}
               disabled={isPdfLoading}
             >
