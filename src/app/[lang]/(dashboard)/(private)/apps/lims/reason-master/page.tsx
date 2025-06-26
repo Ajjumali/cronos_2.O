@@ -5,36 +5,33 @@ import Grid from '@mui/material/Grid2'
 import { useState, useEffect } from 'react'
 import CircularProgress from '@mui/material/CircularProgress'
 import Box from '@mui/material/Box'
-import Button from '@mui/material/Button'
 
 // Component Imports
-import SampleReceivedTable from '@/views/apps/lims/sample-received/SampleReceivedTable'
-import type { SampleType } from '@/views/apps/lims/sample-received/SampleReceivedTable'
+import ReasonListTable from '@/views/apps/lims/reason-master/ReasonListTable'
+import { ReasonType } from '@/types/apps/limsTypes'
 
-const SampleReceivedPage = () => {
-  const [data, setData] = useState<SampleType[]>([])
+const LimsReasonMaster = () => {
+  const [reasons, setReasons] = useState<ReasonType[]>([])
   const [loading, setLoading] = useState(true)
 
-  const fetchData = async () => {
+  const fetchReasons = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/apps/lims/Sample-received')
+      const response = await fetch('/api/apps/lims/reason-master')
       if (!response.ok) {
-        throw new Error('Failed to fetch data')
+        throw new Error('Failed to fetch reasons')
       }
-      const result = await response.json()
-      setData(result)
+      const data = await response.json()
+      setReasons(data.result)
     } catch (error) {
-      console.error('Error fetching data:', error)
-      setData([])
+      console.error('Error fetching reasons:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  // Initial data fetch
   useEffect(() => {
-    fetchData()
+    fetchReasons()
   }, [])
 
   if (loading) {
@@ -48,10 +45,10 @@ const SampleReceivedPage = () => {
   return (
     <Grid container spacing={6}>
       <Grid size={{ xs: 12 }}>
-        <SampleReceivedTable sampleData={data} onDataChange={fetchData} />
+        <ReasonListTable reasonData={reasons} onDataChange={fetchReasons} />
       </Grid>
     </Grid>
   )
 }
 
-export default SampleReceivedPage
+export default LimsReasonMaster

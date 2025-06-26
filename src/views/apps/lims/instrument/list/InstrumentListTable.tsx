@@ -17,24 +17,7 @@ import IconButton from '@mui/material/IconButton'
 import TablePagination from '@mui/material/TablePagination'
 import Typography from '@mui/material/Typography'
 import type { TextFieldProps } from '@mui/material/TextField'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Box,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions
-} from '@mui/material'
+import { Box, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material'
 import { DatePicker } from '@mui/x-date-pickers'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
@@ -189,21 +172,89 @@ const InstrumentListTable = ({ instrumentData = [], onDataChange }: Props) => {
   })
   // Hooks
   const { lang: locale } = useParams()
-  const handleDeleteRecord = async () => {
+  const handleDeleteRecord = async (reason: string) => {
     if (deleteId !== null) {
       try {
-        // First close the confirmation dialog
+        const response = await fetch(
+          `/api/apps/lims/Instrument-master/${deleteId}?reason=${encodeURIComponent(reason)}`,
+          {
+            method: 'DELETE'
+          }
+        )
+
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.message || 'Failed to delete instrument')
+        }
+
+        const updatedData = data.filter(instrument => instrument.instrumentId !== deleteId)
+        setData(updatedData)
+        setFilteredData(updatedData)
         handleCloseDelete()
-        // Then open the reason dialog
-        setPendingAction('delete')
-        setPendingData(data.find(instrument => instrument.instrumentId === deleteId) || null)
-        setIsReasonDialogOpen(true)
-      } catch (error) {
-        console.error('Error initiating delete:', error)
-        toast.error('Failed to initiate deletion')
+        toast.success('Record deleted successfully')
+        onDataChange?.()
+      } catch (error: any) {
+        console.error('Error deleting instrument:', error)
+        toast.error(error.message || 'Failed to delete instrument')
       }
     }
   }
+
+  const handleDeleteClick = (instrumentId: number) => {
+    setDeleteId(instrumentId)
+    setIsDeleteDialogOpen(true)
+  }
+
+  const handleDeleteConfirm = () => {
+    setIsDeleteDialogOpen(false)
+    setIsReasonDialogOpen(true)
+    setPendingAction('delete')
+  }
+
+  const handleReasonSubmit = async (reason: string) => {
+    setIsReasonDialogOpen(false)
+    if (pendingAction === 'delete') {
+      await handleDeleteRecord(reason)
+    } else if (pendingAction === 'update') {
+      // Handle update logic here if needed
+      if (!pendingData || !pendingData.instrumentId) {
+        toast.error('Invalid instrument data. Please try again.')
+        return
+      }
+
+      try {
+        const response = await fetch(`/api/apps/lims/Instrument-master/${pendingData.instrumentId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            ...pendingData,
+            reason: reason
+          })
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to update instrument')
+        }
+
+        const updatedData = data.map(instrument =>
+          instrument.instrumentId === pendingData.instrumentId ? pendingData : instrument
+        )
+        setData(updatedData)
+        setFilteredData(updatedData)
+
+        toast.success('Record Updated successfully')
+        onDataChange?.()
+      } catch (error) {
+        console.error('Error updating instrument:', error)
+        toast.error('Failed to update instrument')
+      }
+    }
+    setPendingAction(null)
+    setPendingData(null)
+  }
+
   const handleEditInstrument = (instrument: InstrumentType) => {
     setSelectedInstrument(instrument)
     setInstrumentDrawerOpen(true)
@@ -216,13 +267,6 @@ const InstrumentListTable = ({ instrumentData = [], onDataChange }: Props) => {
   const handleCloseDelete = () => {
     setDeleteId(null)
     setIsDeleteDialogOpen(false)
-    setIsReasonDialogOpen(false)
-    setPendingAction(null)
-    setPendingData(null)
-  }
-  const handleConfirmDelete = () => {
-    setIsDeleteDialogOpen(false)
-    setIsReasonDialogOpen(true)
   }
   const handleDrawerDataChange = (updatedInstrument: InstrumentType) => {
     setPendingAction('update')
@@ -240,8 +284,7 @@ const InstrumentListTable = ({ instrumentData = [], onDataChange }: Props) => {
             </IconButton>
             <IconButton
               onClick={() => {
-                setDeleteId(row.original.instrumentId)
-                setIsDeleteDialogOpen(true)
+                handleDeleteClick(row.original.instrumentId)
               }}
             >
               <i className='tabler-trash text-textSecondary' />
@@ -410,73 +453,6 @@ const InstrumentListTable = ({ instrumentData = [], onDataChange }: Props) => {
   const handleAddInstrument = () => {
     setSelectedInstrument(null)
     setInstrumentDrawerOpen(true)
-  }
-
-  const handleReasonSubmit = async (reason: string) => {
-    if (!reason.trim()) {
-      toast.error('Please provide a reason')
-      return
-    }
-
-    if (!pendingData || !pendingData.instrumentId) {
-      toast.error('Invalid instrument data. Please try again.')
-      return
-    }
-
-    try {
-      if (pendingAction === 'update') {
-        // Send the update with the reason
-        const response = await fetch(`/api/apps/lims/Instrument-master/${pendingData.instrumentId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            ...pendingData,
-            reason: reason
-          })
-        })
-
-        if (!response.ok) {
-          throw new Error('Failed to update instrument')
-        }
-
-        // Update the local state
-        const updatedData = data.map(instrument =>
-          instrument.instrumentId === pendingData.instrumentId ? pendingData : instrument
-        )
-        setData(updatedData)
-        setFilteredData(updatedData)
-
-        toast.success('Record Updated successfully')
-        onDataChange?.()
-      } else if (pendingAction === 'delete') {
-        // Perform the actual deletion with the reason
-        const response = await fetch(
-          `/api/apps/lims/Instrument-master/${pendingData.instrumentId}?reason=${encodeURIComponent(reason)}`,
-          {
-            method: 'DELETE'
-          }
-        )
-
-        if (!response.ok) {
-          throw new Error('Failed to delete instrument')
-        }
-
-        // Update the local state
-        const updatedData = data.filter(instrument => instrument.instrumentId !== pendingData.instrumentId)
-        setData(updatedData)
-        setFilteredData(updatedData)
-
-        toast.success('Record deleted successfully')
-        onDataChange?.()
-      }
-    } catch (error) {
-      console.error(`Error ${pendingAction}ing instrument:`, error)
-      toast.error(`Failed to ${pendingAction} instrument`)
-    } finally {
-      handleCloseDelete()
-    }
   }
 
   const handleFilterChange = (
@@ -674,16 +650,20 @@ const InstrumentListTable = ({ instrumentData = [], onDataChange }: Props) => {
         <ConfirmDialog
           open={isDeleteDialogOpen}
           handleClose={handleCloseDelete}
-          handleConfirm={handleConfirmDelete}
+          handleConfirm={handleDeleteConfirm}
           title='Delete'
           description='Are you sure want to delete record?'
         />
 
         <ReasonInputDialog
           open={isReasonDialogOpen}
-          handleClose={handleCloseDelete}
+          handleClose={() => {
+            setIsReasonDialogOpen(false)
+            setPendingAction(null)
+            setPendingData(null)
+          }}
           handleConfirm={handleReasonSubmit}
-          title={pendingAction === 'update' ? 'Update Reason' : 'Delete Reason'}
+          title='Provide Reason'
           description='Please provide a reason for this action.'
         />
       </Card>
@@ -764,7 +744,3 @@ const InstrumentListTable = ({ instrumentData = [], onDataChange }: Props) => {
 }
 
 export default InstrumentListTable
-
-function handleDeleteClick(instrumentId: number) {
-  throw new Error('Function not implemented.')
-}

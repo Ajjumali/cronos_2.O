@@ -1,7 +1,8 @@
 'use client'
 
 // React Imports
-import { useMemo, useState, useEffect, useRef } from 'react'
+import React from 'react'
+import { useMemo, useState, useEffect } from 'react'
 
 // Next Imports
 import { useParams } from 'next/navigation'
@@ -29,9 +30,11 @@ import {
   Checkbox,
   CircularProgress,
   Typography,
-  Grid
+  Grid,
+  TablePagination
 } from '@mui/material'
-import { Add as AddIcon, CheckCircle as CheckCircleIcon, History as HistoryIcon } from '@mui/icons-material'
+import { Add as AddIcon, CheckCircle as CheckCircleIcon, History as HistoryIcon, Remove as RemoveIcon } from '@mui/icons-material'
+import Collapse from '@mui/material/Collapse'
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -142,18 +145,22 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
   const [showAuditTrailDialog, setShowAuditTrailDialog] = useState(false)
   const [selectedSampleForAudit, setSelectedSampleForAudit] = useState<SampleWithActionsType | null>(null)
   const [auditTrailData, setAuditTrailData] = useState<any[]>([])
-  const [showBarcodeDialog, setShowBarcodeDialog] = useState<boolean>(false)
+  const [showBarcodeScanDialog, setShowBarcodeScanDialog] = useState(false)
+  const [selectedSampleForScan, setSelectedSampleForScan] = useState<SampleWithActionsType | null>(null)
+  const [barcodeInput, setBarcodeInput] = useState('')
+  const [isScanning, setIsScanning] = useState(false)
+  const [showBarcodeDialog, setShowBarcodeDialog] = useState(false)
   const [selectedSample, setSelectedSample] = useState<SampleWithActionsType | null>(null)
   const [showSampleDetails, setShowSampleDetails] = useState(false)
   const [selectedSampleForDetails, setSelectedSampleForDetails] = useState<SampleWithActionsType | null>(null)
   const [showRemarkDialog, setShowRemarkDialog] = useState(false)
   const [selectedSampleForRemark, setSelectedSampleForRemark] = useState<SampleWithActionsType | null>(null)
   const [remark, setRemark] = useState('')
-  const [barcodeFilter, setBarcodeFilter] = useState('')
-  const [highlightedRowId, setHighlightedRowId] = useState<number | null>(null)
-
-  // Refs
-  const highlightedRowRef = useRef<HTMLTableRowElement>(null)
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+  const [selectedGroups, setSelectedGroups] = useState<Record<string, boolean>>({})
+  const [selectedSamples, setSelectedSamples] = useState<Record<string, boolean>>({})
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(5)
 
   // Hooks
   const { lang: locale } = useParams()
@@ -342,48 +349,28 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
     }
   }
 
-  const handleBarcodeSearch = (searchValue: string) => {
-    if (!searchValue.trim()) {
-      setHighlightedRowId(null)
-      return
-    }
-
-    // Search in the full data array (not filtered data)
-    const foundSample = data.find(
-      sample =>
-        sample.employeeId?.toLowerCase().includes(searchValue.toLowerCase()) ||
-        sample.sampleId?.toLowerCase().includes(searchValue.toLowerCase()) ||
-        sample.barcodeId?.toLowerCase().includes(searchValue.toLowerCase())
-    )
-
-    if (foundSample) {
-      setHighlightedRowId(foundSample.id)
-      toast.success(`Found sample: ${foundSample.employeeName} (${foundSample.employeeId})`)
-
-      // Auto-scroll to highlighted row after a short delay
-      setTimeout(() => {
-        if (highlightedRowRef.current) {
-          highlightedRowRef.current.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center'
-          })
-        }
-      }, 100)
-    } else {
-      setHighlightedRowId(null)
-      toast.error(`No sample found with ID: ${searchValue}`)
-    }
+  const handleBarcodeScan = (sample: SampleWithActionsType) => {
+    // Simple barcode scan functionality
+    console.log('Scanning barcode for sample:', sample)
+    toast.info('Barcode scanning initiated')
   }
 
-  const handleBarcodeInputKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      handleBarcodeSearch(barcodeFilter)
-    }
-  }
+  const handleBarcodeSubmit = async () => {
+    if (!selectedSampleForScan || !barcodeInput) return
 
-  const handleClearBarcode = () => {
-    setBarcodeFilter('')
-    setHighlightedRowId(null)
+    try {
+      // TODO: Implement barcode validation and collection API call
+      toast.success('Sample collected successfully')
+      onDataChange?.()
+    } catch (error) {
+      console.error('Error collecting sample:', error)
+      toast.error('Failed to collect sample')
+    } finally {
+      setShowBarcodeScanDialog(false)
+      setSelectedSampleForScan(null)
+      setBarcodeInput('')
+      setIsScanning(false)
+    }
   }
 
   const handleAddRemark = (sample: SampleWithActionsType) => {
@@ -469,8 +456,8 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
                   icon: 'tabler-printer',
                   menuItemProps: {
                     onClick: () => {
-                      handlePrintBarcode(row.original.id)
-                      handleMenuClose()
+                      setSelectedSample(row.original)
+                      setShowBarcodeDialog(true)
                     },
                     className: 'text-primary'
                   }
@@ -716,32 +703,85 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
     console.log('Barcode dialog state:', { showBarcodeDialog, selectedSample })
   }, [showBarcodeDialog, selectedSample])
 
+  // Add this handler for the Cancel button
+  const handleBulkCancel = () => {
+    toast.info('Cancel action triggered')
+  }
+
+  // Helper to group samples by employeeId
+  const groupSamplesByEmployee = (samples: SampleWithActionsType[]) => {
+    const groups: Record<string, { employeeName: string; employeeId: string; samples: SampleWithActionsType[]; collectionStatus: string }> = {}
+    samples.forEach(sample => {
+      const empId = sample.employeeId || 'Unknown'
+      if (!groups[empId]) {
+        groups[empId] = {
+          employeeName: sample.employeeName || '-',
+          employeeId: empId,
+          collectionStatus: sample.collectionStatus || 'Pending',
+          samples: []
+        }
+      }
+      groups[empId].samples.push(sample)
+    })
+    return groups
+  }
+
+  const grouped = useMemo(() => groupSamplesByEmployee(data), [data])
+  const groupKeys = Object.keys(grouped)
+  const pagedGroupKeys = groupKeys.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+
+  const handleExpand = (employeeId: string, samples: SampleWithActionsType[]) => {
+    const newExpanded = !expanded[employeeId]
+    setExpanded(prev => ({ ...prev, [employeeId]: newExpanded }))
+    if (newExpanded && selectedGroups[employeeId]) {
+      const newSelectedSamples = { ...selectedSamples }
+      samples.forEach(sample => {
+        if (sample.barcodeId) newSelectedSamples[sample.barcodeId] = true
+      })
+      setSelectedSamples(newSelectedSamples)
+    }
+  }
+  const handleGroupSelect = (employeeId: string, samples: SampleWithActionsType[]) => {
+    const newSelected = !selectedGroups[employeeId]
+    setSelectedGroups(prev => ({ ...prev, [employeeId]: newSelected }))
+    const newSelectedSamples = { ...selectedSamples }
+    samples.forEach(sample => {
+      if (sample.barcodeId) newSelectedSamples[sample.barcodeId] = newSelected
+    })
+    setSelectedSamples(newSelectedSamples)
+  }
+  const handleSampleSelect = (barcodeId: string) => {
+    setSelectedSamples(prev => ({ ...prev, [barcodeId]: !prev[barcodeId] }))
+  }
+  const isGroupSelected = (employeeId: string, samples: SampleWithActionsType[]) => {
+    return samples.every(sample => sample.barcodeId && selectedSamples[sample.barcodeId])
+  }
+  const isGroupIndeterminate = (employeeId: string, samples: SampleWithActionsType[]) => {
+    const selectedCount = samples.filter(sample => sample.barcodeId && selectedSamples[sample.barcodeId]).length
+    return selectedCount > 0 && selectedCount < samples.length
+  }
+
+  const anySelected = Object.keys(selectedSamples).filter(k => selectedSamples[k]).length > 0
+
   return (
     <Card>
       <CardHeader
-        title='Sample Collection'
+        title={<Typography variant='h4' fontWeight={600}>Sample Collection</Typography>}
         action={
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              <Typography variant='caption' color='text.secondary'>
-                Type Volunteer ID and press Enter to highlight the row
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                <CustomTextField
-                  placeholder='Scan Barcode (Press Enter to search)'
-                  size='small'
-                  sx={{ width: '250px' }}
-                  value={barcodeFilter}
-                  onChange={e => setBarcodeFilter(e.target.value)}
-                  onKeyPress={handleBarcodeInputKeyPress}
-                />
-                {barcodeFilter && (
-                  <IconButton size='small' onClick={handleClearBarcode} sx={{ color: 'text.secondary' }}>
-                    <i className='tabler-x' />
-                  </IconButton>
-                )}
-              </Box>
-            </Box>
+            <CustomTextField
+              placeholder='Scan barcode'
+              size='small'
+              sx={{ width: '200px' }}
+              onChange={e => {
+                // Handle barcode scan input
+                const value = e.target.value
+                if (value) {
+                  // TODO: Implement barcode scan logic
+                  console.log('Barcode scanned:', value)
+                }
+              }}
+            />
             <Button
               variant='outlined'
               startIcon={
@@ -771,62 +811,168 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
       />
       <Divider />
       <TableFilters setData={setData} sampleData={sampleData} />
-      <div className='overflow-x-auto'>
-        <table className={tableStyles.table}>
-          <thead>
-            {table.getHeaderGroups().map(headerGroup => (
-              <tr key={headerGroup.id}>
-                {headerGroup.headers.map(header => (
-                  <th key={header.id}>
-                    {header.isPlaceholder ? null : (
-                      <>
-                        <div
-                          className={classnames({
-                            'flex items-center': header.column.getIsSorted(),
-                            'cursor-pointer select-none': header.column.getCanSort()
-                          })}
-                          onClick={header.column.getToggleSortingHandler()}
-                        >
-                          {flexRender(header.column.columnDef.header, header.getContext())}
-                          {{
-                            asc: <i className='tabler-chevron-up text-xl' />,
-                            desc: <i className='tabler-chevron-down text-xl' />
-                          }[header.column.getIsSorted() as 'asc' | 'desc'] ?? null}
-                        </div>
-                      </>
-                    )}
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-          <tbody>
-            {table.getRowModel().rows.length === 0 ? (
-              <tr>
-                <td colSpan={table.getVisibleFlatColumns().length} className='text-center'>
-                  No samples registered
-                </td>
-              </tr>
-            ) : (
-              table.getRowModel().rows.map(row => (
-                <tr
-                  key={row.id}
-                  ref={highlightedRowId === row.original.id ? highlightedRowRef : null}
-                  className={classnames({
-                    selected: row.getIsSelected(),
-                    'highlighted-row': highlightedRowId === row.original.id
-                  })}
-                >
-                  {row.getVisibleCells().map(cell => (
-                    <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-                  ))}
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-      <TablePaginationComponent table={table} />
+      <Box sx={{ px: 4, pb: 4 }}>
+        <Paper sx={{ width: '100%', overflow: 'hidden', boxShadow: t => t.shadows[1], borderRadius: 1, border: t => `1px solid ${t.palette.divider}` }}>
+          <TableContainer sx={{ maxHeight: 640 }}>
+            <Table stickyHeader>
+              <TableHead>
+                <TableRow>
+                  <TableCell padding='checkbox' />
+                  <TableCell>Employee Name</TableCell>
+                  <TableCell>Employee ID</TableCell>
+                  <TableCell>Status</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {pagedGroupKeys.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} align='center'>No data found</TableCell>
+                  </TableRow>
+                ) : (
+                  pagedGroupKeys.map(employeeId => {
+                    const group = grouped[employeeId]
+                    return (
+                      <React.Fragment key={`group-${employeeId}`}>
+                        <TableRow hover key={`group-row-${employeeId}`}>
+                          <TableCell padding='checkbox'>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Checkbox
+                                checked={isGroupSelected(employeeId, group.samples)}
+                                indeterminate={isGroupIndeterminate(employeeId, group.samples)}
+                                onChange={() => handleGroupSelect(employeeId, group.samples)}
+                              />
+                              <IconButton
+                                size='small'
+                                onClick={() => handleExpand(employeeId, group.samples)}
+                                sx={{
+                                  width: 28,
+                                  height: 28,
+                                  backgroundColor: theme => expanded[employeeId] ? theme.palette.primary.main : theme.palette.action.hover,
+                                  color: theme => expanded[employeeId] ? theme.palette.primary.contrastText : theme.palette.text.primary,
+                                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                  '&:hover': {
+                                    backgroundColor: theme => expanded[employeeId] ? theme.palette.primary.dark : theme.palette.action.selected,
+                                    transform: 'scale(1.1) rotate(180deg)'
+                                  }
+                                }}
+                              >
+                                {expanded[employeeId] ? <RemoveIcon fontSize='small' /> : <AddIcon fontSize='small' />}
+                              </IconButton>
+                            </Box>
+                          </TableCell>
+                          <TableCell>{group.employeeName}</TableCell>
+                          <TableCell>{employeeId}</TableCell>
+                          <TableCell>
+                            <Chip label={collectionStatusObj[group.collectionStatus]?.title} color={collectionStatusObj[group.collectionStatus]?.color} size='small' />
+                          </TableCell>
+                        </TableRow>
+                        <TableRow key={`collapse-row-${employeeId}`}>
+                          <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={4}>
+                            <Collapse in={!!expanded[employeeId]} timeout={300} unmountOnExit>
+                              <Box margin={1}>
+                                <Table size='small'>
+                                  <TableHead>
+                                    <TableRow>
+                                      <TableCell>Actions</TableCell>
+                                      <TableCell padding='checkbox' />
+                                      <TableCell>Sample ID</TableCell>
+                                      <TableCell>Barcode ID</TableCell>
+                                      <TableCell>Sample Type</TableCell>
+                                      <TableCell>Collected By</TableCell>
+                                      <TableCell>Collected On</TableCell>
+                                      <TableCell>Location</TableCell>
+                                      <TableCell>Laboratory</TableCell>
+                                      <TableCell>Status</TableCell>
+                                    </TableRow>
+                                  </TableHead>
+                                  <TableBody>
+                                    {group.samples.map(sample => (
+                                      <TableRow key={`sample-${sample.barcodeId || sample.sampleId}` } hover>
+                                        <TableCell>
+                                          <Box sx={{ display: 'flex', gap: 1 }}>
+                                            <OptionMenu
+                                              iconButtonProps={{ size: 'medium' }}
+                                              iconClassName='text-textSecondary'
+                                              options={[
+                                                {
+                                                  text: 'View Details',
+                                                  icon: 'tabler-eye',
+                                                  menuItemProps: {
+                                                    onClick: () => {
+                                                      setSelectedSampleForDetails(sample)
+                                                      setShowSampleDetails(true)
+                                                    },
+                                                    className: 'text-info'
+                                                  }
+                                                },
+                                                {
+                                                  text: 'Print Barcode',
+                                                  icon: 'tabler-printer',
+                                                  menuItemProps: {
+                                                    onClick: () => {
+                                                      setSelectedSample(sample)
+                                                      setShowBarcodeDialog(true)
+                                                    },
+                                                    className: 'text-primary'
+                                                  }
+                                                },
+                                                {
+                                                  text: 'Add Remark',
+                                                  icon: 'tabler-message',
+                                                  menuItemProps: {
+                                                    onClick: () => handleAddRemark(sample),
+                                                    className: 'text-secondary'
+                                                  }
+                                                }
+                                              ]}
+                                            />
+                                          </Box>
+                                        </TableCell>
+                                        <TableCell padding='checkbox'>
+                                          <Checkbox
+                                            checked={!!selectedSamples[sample.barcodeId || '']}
+                                            onChange={() => sample.barcodeId && handleSampleSelect(sample.barcodeId)}
+                                          />
+                                        </TableCell>
+                                        <TableCell>{sample.sampleId}</TableCell>
+                                        <TableCell>{sample.barcodeId}</TableCell>
+                                        <TableCell>{sample.sampleType}</TableCell>
+                                        <TableCell>{sample.collectedBy}</TableCell>
+                                        <TableCell>{formatDate(sample.collectedOn)}</TableCell>
+                                        <TableCell>{sample.location}</TableCell>
+                                        <TableCell>{sample.laboratory}</TableCell>
+                                        <TableCell>
+                                          <Chip label={collectionStatusObj[sample.collectionStatus]?.title} color={collectionStatusObj[sample.collectionStatus]?.color} size='small' />
+                                        </TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </Box>
+                            </Collapse>
+                          </TableCell>
+                        </TableRow>
+                      </React.Fragment>
+                    )
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <TablePagination
+            rowsPerPageOptions={[5, 10, 25]}
+            component='div'
+            count={groupKeys.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={(_, newPage) => setPage(newPage)}
+            onRowsPerPageChange={e => {
+              setRowsPerPage(parseInt(e.target.value, 10))
+              setPage(0)
+            }}
+          />
+        </Paper>
+      </Box>
 
       {/* Bulk Action Buttons */}
       <div className='flex items-center justify-center gap-4 p-4 border-t'>
@@ -834,7 +980,7 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
           variant='contained'
           color='warning'
           startIcon={<i className='tabler-external-link' />}
-          disabled={Object.keys(rowSelection).length === 0}
+          disabled={!anySelected}
           onClick={handleBulkOutsource}
         >
           Outsource
@@ -843,7 +989,7 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
           variant='contained'
           color='success'
           startIcon={<i className='tabler-check' />}
-          disabled={Object.keys(rowSelection).length === 0}
+          disabled={!anySelected}
           onClick={handleBulkCollect}
         >
           Collect
@@ -852,7 +998,7 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
           variant='contained'
           color='info'
           startIcon={<i className='tabler-printer' />}
-          disabled={Object.keys(rowSelection).length === 0}
+          disabled={!anySelected}
           onClick={handleBulkPrintBarcode}
         >
           Print Barcode
@@ -861,10 +1007,19 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
           variant='contained'
           color='error'
           startIcon={<i className='tabler-x' />}
-          disabled={Object.keys(rowSelection).length === 0}
+          disabled={!anySelected}
           onClick={handleBulkReject}
         >
           Reject
+        </Button>
+        <Button
+          variant='contained'
+          color='error'
+          startIcon={<i className='tabler-circle-x' />}
+          disabled={!anySelected}
+          onClick={handleBulkCancel}
+        >
+          Cancel
         </Button>
       </div>
 
@@ -1058,7 +1213,7 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
                   Location
                 </Typography>
                 <Typography variant='body1'>{selectedSampleForDetails?.location || '-'}</Typography>
-              </Grid>
+              </Grid> 
               <Grid item xs={12} sm={6}>
                 <Typography variant='subtitle2' color='text.secondary'>
                   Laboratory

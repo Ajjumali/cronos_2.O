@@ -45,6 +45,12 @@ import RadioGroup from '@mui/material/RadioGroup'
 import Radio from '@mui/material/Radio'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import FormLabel from '@mui/material/FormLabel'
+import CustomTextField from '@core/components/mui/TextField'
+import CustomAutocomplete from '@core/components/mui/Autocomplete'
+import Collapse from '@mui/material/Collapse'
+import Autocomplete from '@mui/material/Autocomplete'
+import Grid2 from '@mui/material/Grid2'
+import Checkbox from '@mui/material/Checkbox'
 
 interface SampleInformation {
   srNo: number
@@ -86,6 +92,7 @@ interface Activity {
 }
 
 interface LabReport {
+  employeeId: string
   id: number
   registrationDateTime: string
   sampleId: string
@@ -350,9 +357,9 @@ const SampleAnalyticsGrid: React.FC<{ analytics: SampleAnalytics }> = ({ analyti
 
   return (
     <Card sx={{ mb: 4 }}>
-      <CardHeader title='Sample Analytics' />
+      {/* <CardHeader title='Sample Analytics' /> */}
       <CardContent>
-        <Grid container spacing={2} sx={{ mb: 3 }}>
+        {/* <Grid container spacing={2} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
             <Card>
               <CardContent>
@@ -397,10 +404,10 @@ const SampleAnalyticsGrid: React.FC<{ analytics: SampleAnalytics }> = ({ analyti
               </CardContent>
             </Card>
           </Grid>
-        </Grid>
+        </Grid> */}
 
         <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid item xs={12} sm={6} md={3}>
+          {/* <Grid item xs={12} sm={6} md={3}>
             <FormControl fullWidth>
               <InputLabel>Sample Type</InputLabel>
               <Select
@@ -450,8 +457,8 @@ const SampleAnalyticsGrid: React.FC<{ analytics: SampleAnalytics }> = ({ analyti
                 ))}
               </Select>
             </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          </Grid> */}
+          {/* <Grid item xs={12} sm={6} md={3}>
             <TextField
               fullWidth
               label='Search'
@@ -465,10 +472,10 @@ const SampleAnalyticsGrid: React.FC<{ analytics: SampleAnalytics }> = ({ analyti
                 )
               }}
             />
-          </Grid>
+          </Grid> */}
         </Grid>
 
-        <TableContainer component={Paper}>
+        {/* <TableContainer component={Paper}>
           <Table>
             <TableHead>
               <TableRow>
@@ -552,7 +559,7 @@ const SampleAnalyticsGrid: React.FC<{ analytics: SampleAnalytics }> = ({ analyti
               ))}
             </TableBody>
           </Table>
-        </TableContainer>
+        </TableContainer> */}
       </CardContent>
     </Card>
   )
@@ -820,6 +827,30 @@ const ReportDashboard: React.FC = () => {
     }
   ])
   const [isChronologyDialogOpen, setIsChronologyDialogOpen] = useState(false)
+  const [isDepartmentDialogOpen, setIsDepartmentDialogOpen] = useState(false)
+
+  // Filter states
+  const [projectNo, setProjectNo] = useState<number>(0)
+  const [study, setStudy] = useState<string>('')
+  const [sampleType, setSampleType] = useState<string>('')
+  const [location, setLocation] = useState<string>('')
+  const [lab, setLab] = useState<string>('')
+  const [projects, setProjects] = useState<any[]>([])
+  const [studySites, setStudySites] = useState<any[]>([])
+  const [sampleTypes, setSampleTypes] = useState<any[]>([])
+  const [labs, setLabs] = useState<any[]>([])
+  const [locations, setLocations] = useState<any[]>([])
+  const [isFiltersExpanded, setIsFiltersExpanded] = useState(false)
+  const [test, setTest] = useState<string>('')
+  const [panel, setPanel] = useState<string>('')
+  const [fromDate, setFromDate] = useState<string>('')
+  const [toDate, setToDate] = useState<string>('')
+  const [tests, setTests] = useState<any[]>([])
+  const [panels, setPanels] = useState<any[]>([])
+  const [employeeId, setEmployeeId] = useState<string>('')
+  const [employees, setEmployees] = useState<any[]>([])
+  const [searchRequisition, setSearchRequisition] = useState('')
+  const [testStatus, setTestStatus] = useState('')
 
   const router = useRouter()
   const targetPath = '/apps/reports'
@@ -844,6 +875,7 @@ const ReportDashboard: React.FC = () => {
       // For demonstration, using dummy data
       const dummyReports: ReportType[] = [
         {
+          employeeId: 'EMP001',
           id: 1,
           registrationDateTime: new Date().toISOString(),
           sampleId: 'SAMP001',
@@ -899,6 +931,96 @@ const ReportDashboard: React.FC = () => {
       toast.error('Failed to fetch reports')
     }
   }
+
+  // Fetch filter data on mount
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const response = await fetch('/api/apps/lims/project-master')
+        const data = await response.json()
+        setProjects(data.result || [])
+      } catch (e) { setProjects([]) }
+    }
+    const fetchSampleTypes = async () => {
+      try {
+        const response = await fetch('/api/apps/lims/sample-type-master')
+        const data = await response.json()
+        setSampleTypes(data.result || [])
+      } catch (e) { setSampleTypes([]) }
+    }
+    const fetchLabs = async () => {
+      try {
+        const response = await fetch('/api/apps/lims/lab-master')
+        const data = await response.json()
+        setLabs(data.result || [])
+      } catch (e) { setLabs([]) }
+    }
+    const fetchLocations = async () => {
+      try {
+        const response = await fetch('/api/apps/lims/location-master')
+        const data = await response.json()
+        setLocations(data.result || [])
+      } catch (e) { setLocations([]) }
+    }
+    const fetchTests = async () => {
+      try {
+        const response = await fetch('/api/apps/lims/test-master')
+        const data = await response.json()
+        setTests(data.result || [])
+      } catch (e) { setTests([]) }
+    }
+    const fetchPanels = async () => {
+      try {
+        const response = await fetch('/api/apps/lims/panel-master')
+        const data = await response.json()
+        setPanels(data.result || [])
+      } catch (e) { setPanels([]) }
+    }
+    const fetchEmployees = async () => {
+      try {
+        const response = await fetch('/api/apps/lims/employee-master')
+        const data = await response.json()
+        setEmployees(data.result || [])
+      } catch (e) { setEmployees([]) }
+    }
+    fetchProjects(); fetchSampleTypes(); fetchLabs(); fetchLocations(); fetchTests(); fetchPanels(); fetchEmployees();
+  }, [])
+
+  // Fetch study sites when project changes
+  useEffect(() => {
+    const fetchStudySites = async () => {
+      if (!projectNo) { setStudySites([]); return }
+      try {
+        const response = await fetch(`/api/apps/lims/study-site-master?id=${projectNo}`)
+        const data = await response.json()
+        setStudySites(data.result || [])
+      } catch (e) { setStudySites([]) }
+    }
+    fetchStudySites()
+  }, [projectNo])
+
+  // Filtering logic: combine search and filter logic
+  const filteredReports = reports
+    .filter(report =>
+      !searchRequisition ||
+      report.sampleId.toLowerCase().includes(searchRequisition.toLowerCase()) ||
+      report.referenceId.toLowerCase().includes(searchRequisition.toLowerCase()) ||
+      report.name.toLowerCase().includes(searchRequisition.toLowerCase())
+    )
+    .filter(report => {
+      if (projectNo && report.projectNumber !== projects.find(p => p.id === projectNo)?.studyProtocolNumber) return false
+      if (study && report.study !== study) return false
+      if (sampleType && report.sampleInformation.sampleType !== sampleType) return false
+      if (location && report.location !== location) return false
+      if (lab && report.lab !== lab) return false
+      if (test && report.testPanelName !== test) return false
+      if (panel && report.testPanelName !== panel) return false
+      if (fromDate && report.registrationDateTime.slice(0, 10) < fromDate) return false
+      if (toDate && report.registrationDateTime.slice(0, 10) > toDate) return false
+      if (employeeId && report.employeeId !== employeeId) return false
+      if (testStatus && report.testingStatus !== testStatus) return false
+      return true
+    })
 
   const handleViewReport = (report: ReportType) => {
     setSelectedReport(report)
@@ -1296,11 +1418,7 @@ const ReportDashboard: React.FC = () => {
           ['Collection Date & Time', new Date(report.sampleInformation.collectionDateTime).toLocaleString()],
           ['Collected By', report.sampleInformation.collectedBy],
           ['Sample Type', report.sampleInformation.sampleType],
-          ['Test Category', report.sampleInformation.testCategory],
-          ['Validated By', report.sampleInformation.validatedBy],
-          ['Validated On', new Date(report.sampleInformation.validatedOn).toLocaleString()],
-          ['Approved By', report.sampleInformation.approvedBy],
-          ['Approved On', new Date(report.sampleInformation.approvedOn).toLocaleString()]
+          ['Test Category', report.sampleInformation.testCategory]
         ]
 
         autoTable(doc, {
@@ -1564,8 +1682,211 @@ const ReportDashboard: React.FC = () => {
           </div>
         }
       />
+      <Divider sx={{ borderColor: '#E0E0E0', borderBottomWidth: 1, borderBottomStyle: 'solid', mb: 3 }} />
       <CardContent>
-        <SampleAnalyticsGrid analytics={sampleAnalytics} />
+        {/* Search Requisition Input */}
+        <Box sx={{ mb: 3 }}>
+          <CustomTextField
+            value={searchRequisition}
+            onChange={e => setSearchRequisition(e.target.value)}
+            placeholder='Search'
+            fullWidth
+            size='small'
+            sx={{ borderRadius: 2, background: '#fff', maxWidth: 220 }}
+            InputProps={{ sx: { borderRadius: 2 } }}
+          />
+        </Box>
+        {/* Filters Header Row */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Button
+            variant='text'
+            onClick={() => setIsFiltersExpanded(v => !v)}
+            startIcon={<i className='tabler-filter text-sm' />}
+            sx={{ fontWeight: 600, fontSize: 16, color: '#7B61FF' }}
+          >
+            Filters
+          </Button>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Button
+              variant='text'
+              color='inherit'
+              onClick={() => {
+                setProjectNo(0); setStudy(''); setSampleType(''); setLocation(''); setLab(''); setStudySites([]); setTest(''); setPanel(''); setFromDate(''); setToDate(''); setEmployeeId('');
+              }}
+              sx={{ height: 48, color: '#7B61FF' }}
+              startIcon={<i className='tabler-refresh' />}
+            >
+              Clear
+            </Button>
+          </Box>
+        </Box>
+        <Collapse in={isFiltersExpanded}>
+          <Grid container spacing={6} sx={{ mb: 4 }}>
+            <Grid item xs={12} sm={4}>
+              <CustomAutocomplete
+                fullWidth
+                id='project-no'
+                options={projects}
+                getOptionLabel={option => option.studyProtocolNumber + ' - ' + option.studyTitle}
+                value={projects.find(project => project.id === projectNo) || null}
+                onChange={(_, newValue) => setProjectNo(newValue?.id || 0)}
+                renderInput={params => <CustomTextField {...params} placeholder='Search Project' />}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <CustomAutocomplete
+                fullWidth
+                id='study'
+                options={studySites}
+                getOptionLabel={option => `${option.siteProtocolNumber} - ${option.siteGroupName}`}
+                value={studySites.find(site => site.siteNumber === study) || null}
+                onChange={(_, newValue) => setStudy(newValue?.siteNumber || '')}
+                renderInput={params => <CustomTextField {...params} placeholder='Search Study Site' />}
+                isOptionEqualToValue={(option, value) => option.siteNumber === value.siteNumber}
+                disabled={!projectNo}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <CustomTextField
+                select
+                fullWidth
+                id='test-status'
+                value={testStatus}
+                onChange={e => setTestStatus(e.target.value)}
+                slotProps={{ select: { displayEmpty: true } }}
+              >
+                <MenuItem value=''>Select Test Status</MenuItem>
+                <MenuItem value='Pending'>Pending</MenuItem>
+                <MenuItem value='In Progress'>In Progress</MenuItem>
+                <MenuItem value='Completed'>Completed</MenuItem>
+                <MenuItem value='Rejected'>Rejected</MenuItem>
+              </CustomTextField>
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <CustomTextField
+                select
+                fullWidth
+                id='sample-type'
+                value={sampleType}
+                onChange={e => setSampleType(e.target.value)}
+                slotProps={{ select: { displayEmpty: true } }}
+              >
+                <MenuItem value=''>Select Sample Type</MenuItem>
+                {sampleTypes.map(type => (
+                  <MenuItem key={type.sampleId} value={type.sampleType}>{type.sampleType}</MenuItem>
+                ))}
+              </CustomTextField>
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <CustomTextField
+                select
+                fullWidth
+                id='location'
+                value={location}
+                onChange={e => setLocation(e.target.value)}
+                slotProps={{ select: { displayEmpty: true } }}
+              >
+                <MenuItem value=''>Select Location</MenuItem>
+                {locations.map(loc => (
+                  <MenuItem key={loc.id} value={loc.name}>{loc.name}</MenuItem>
+                ))}
+              </CustomTextField>
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <CustomTextField
+                select
+                fullWidth
+                id='lab'
+                value={lab}
+                onChange={e => setLab(e.target.value)}
+                slotProps={{ select: { displayEmpty: true } }}
+              >
+                <MenuItem value=''>Select Lab</MenuItem>
+                {labs.map(lab => (
+                  <MenuItem key={lab.id} value={lab.labName}>{lab.labName}</MenuItem>
+                ))}
+              </CustomTextField>
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <CustomTextField
+                select
+                fullWidth
+                id='test'
+                value={test}
+                onChange={e => setTest(e.target.value)}
+                slotProps={{ select: { displayEmpty: true } }}
+              >
+                <MenuItem value=''>Select Test</MenuItem>
+                {tests.map(testItem => (
+                  <MenuItem key={testItem.id} value={testItem.testName}>{testItem.testName}</MenuItem>
+                ))}
+              </CustomTextField>
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <CustomTextField
+                select
+                fullWidth
+                id='panel'
+                value={panel}
+                onChange={e => setPanel(e.target.value)}
+                slotProps={{ select: { displayEmpty: true } }}
+              >
+                <MenuItem value=''>Select Panel</MenuItem>
+                {panels.map(panelItem => (
+                  <MenuItem key={panelItem.id} value={panelItem.panelName}>{panelItem.panelName}</MenuItem>
+                ))}
+              </CustomTextField>
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <CustomTextField
+                type='date'
+                fullWidth
+                id='from-date'
+                placeholder='From Date'
+                InputLabelProps={{ shrink: false }}
+                value={fromDate}
+                onChange={e => setFromDate(e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <CustomTextField
+                type='date'
+                fullWidth
+                id='to-date'
+                placeholder='To Date'
+                InputLabelProps={{ shrink: false }}
+                value={toDate}
+                onChange={e => setToDate(e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <Autocomplete
+                fullWidth
+                id='employee-id'
+                options={employees}
+                getOptionLabel={option => option.employeeId + ' - ' + option.employeeName}
+                value={employees.find(emp => emp.employeeId === employeeId) || null}
+                onChange={(_, newValue) => setEmployeeId(newValue?.employeeId || '')}
+                renderInput={params => <CustomTextField {...params} placeholder='Search Employee ID' />}
+                isOptionEqualToValue={(option, value) => option.employeeId === value.employeeId}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <Button
+                variant='contained'
+                color='primary'
+                onClick={() => {
+                  setProjectNo(0); setStudy(''); setSampleType(''); setLocation(''); setLab(''); setStudySites([]); setTest(''); setPanel(''); setFromDate(''); setToDate(''); setEmployeeId('');
+                }}
+                fullWidth
+                startIcon={<i className='tabler-search' />}
+              >
+                Go
+              </Button>
+            </Grid>
+          </Grid>
+        </Collapse>
         {selectedReport && (
           <>
             <TestCounts counts={selectedReport.testCounts} />
@@ -1590,7 +1911,7 @@ const ReportDashboard: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {reports.map(report => (
+              {filteredReports.map(report => (
                 <TableRow
                   key={report.id}
                   sx={{
@@ -1622,6 +1943,11 @@ const ReportDashboard: React.FC = () => {
                       <IconButton size='small' onClick={() => handleDownloadReport(report)} title='Download Report'>
                         <i className='tabler-download' />
                       </IconButton>
+                      <Tooltip title='Show Registered Parameters & Departments' placement='top'>
+                        <IconButton size='small' onClick={() => setIsDepartmentDialogOpen(true)}>
+                          <i className='tabler-info-circle' />
+                        </IconButton>
+                      </Tooltip>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -1694,6 +2020,66 @@ const ReportDashboard: React.FC = () => {
         onClose={() => setIsChronologyDialogOpen(false)}
         onPrint={handlePrintWithChronology}
       />
+
+      {/* Department Dialog */}
+      <Dialog open={isDepartmentDialogOpen} onClose={() => setIsDepartmentDialogOpen(false)} maxWidth='md' fullWidth>
+        <DialogTitle>Registered Departments & Parameters</DialogTitle>
+        <DialogContent>
+          {Object.entries(
+            filteredReports.reduce((acc, r) => {
+              const dept = r.sampleInformation?.testCategory || ''
+              if (!dept) return acc
+              if (!acc[dept]) acc[dept] = []
+              acc[dept].push(r.sampleInformation)
+              return acc
+            }, {} as Record<string, SampleInformation[]>)
+          ).map(([dept, params], idx) => (
+            <div key={dept} style={{ marginBottom: 32, border: '1px solid #e0e0e0', borderRadius: 6, padding: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
+                <Checkbox size='small' sx={{ mr: 1 }} />
+                <span style={{ fontWeight: 600 }}>{dept}</span>
+              </div>
+              <Divider sx={{ mb: 1 }} />
+              <TableContainer component={Paper} variant='outlined'>
+                <Table size='small'>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell />
+                      <TableCell>Test Name</TableCell>
+                      <TableCell>Test Method</TableCell>
+                      <TableCell>Unit</TableCell>
+                      <TableCell>Test Result</TableCell>
+                      <TableCell>Is Critical?</TableCell>
+                      <TableCell>RR</TableCell>
+                      <TableCell>Flag</TableCell>
+                      <TableCell>Abnormal</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {params.map((param, i) => (
+                      <TableRow key={param.testName + i}>
+                        <TableCell><Checkbox size='small' /></TableCell>
+                        <TableCell>{String(param.testName)}</TableCell>
+                        <TableCell>{String((param as any).testMethod || '')}</TableCell>
+                        <TableCell>{String((param as any).unit || '')}</TableCell>
+                        <TableCell style={{ fontWeight: 600 }}>{String((param as any).testResult || '')}</TableCell>
+                        <TableCell style={{ color: String((param as any).isCritical) === 'Yes' ? 'red' : undefined }}>{String((param as any).isCritical || '-')}</TableCell>
+                        <TableCell>{String((param as any).rr || '')}</TableCell>
+                        <TableCell style={{ fontWeight: 600 }}>{String((param as any).flag || '')}</TableCell>
+                        <TableCell>{String((param as any).abnormal || '')}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </div>
+          ))}
+        </DialogContent>
+        <DialogActions>
+          <Button variant='contained' color='primary' size='small' onClick={() => alert('Print Selected clicked')}>Print Selected</Button>
+          <Button onClick={() => setIsDepartmentDialogOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   )
 }

@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useEffect, useMemo, useState, useRef } from 'react'
+import React, { useEffect, useMemo, useState, useRef } from 'react'
 
 // Next Imports
 import Link from 'next/link'
@@ -33,6 +33,7 @@ import TableBody from '@mui/material/TableBody'
 import TableRow from '@mui/material/TableRow'
 import TableCell from '@mui/material/TableCell'
 import LinearProgress from '@mui/material/LinearProgress'
+import { TableContainer, Collapse, Paper } from '@mui/material'
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -76,6 +77,14 @@ import tableStyles from '@core/styles/table.module.css'
 import TablePaginationComponent from '@/components/TablePaginationComponent'
 import { toast } from 'react-toastify'
 
+import AddIcon from '@mui/icons-material/Add'
+import RemoveIcon from '@mui/icons-material/Remove'
+import CheckIcon from '@mui/icons-material/Check'
+import CloseIcon from '@mui/icons-material/Close'
+import PrintIcon from '@mui/icons-material/Print'
+import LaunchIcon from '@mui/icons-material/Launch'
+import AutorenewIcon from '@mui/icons-material/Autorenew'
+
 declare module '@tanstack/table-core' {
   interface FilterFns {
     fuzzy: FilterFn<unknown>
@@ -86,6 +95,7 @@ declare module '@tanstack/table-core' {
 }
 
 export type SampleType = {
+  sentByName: string | number | undefined
   id: number
   subjectId?: string
   scrBarcodeId?: number
@@ -114,11 +124,31 @@ export type SampleType = {
   location?: string
   referenceId?: string
   lab?: string
-  statusId?: number
+  statusId?: number | null
   remarks?: string
   labName?: string
   studyProtocol?: string
   VolunteerName?: string
+}
+
+// New types for the API response format
+export type SampleDataItem = {
+  id: string
+  barcodeId: string
+  sampleType: string
+  sampleCollectedBy: string
+  sampleCollectedOn: string
+  sampleSentBy: string
+  sampleSentOn: string
+  status: string
+}
+
+export type VolunteerData = {
+  subjectId: string
+  barcodeId: string
+  sampleType: string
+  volunteerName: string
+  sampleData: SampleDataItem[]
 }
 
 type SampleWithActionsType = SampleType & {
@@ -178,33 +208,425 @@ const statusMap: StatusMapType = {
   6: { label: 'Outsourced', color: 'secondary' }
 }
 
-// Add color legend component
-// const ColorLegend = () => (
-//   <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-//     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-//       <Box sx={{ width: 16, height: 16, bgcolor: 'success.main', borderRadius: 1 }} />
-//       <Typography variant='body2'>Received</Typography>
-//     </Box>
-//     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-//       <Box sx={{ width: 16, height: 16, bgcolor: 'error.main', borderRadius: 1 }} />
-//       <Typography variant='body2'>Rejected</Typography>
-//     </Box>
-//     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-//       <Box sx={{ width: 16, height: 16, bgcolor: 'warning.main', borderRadius: 1 }} />
-//       <Typography variant='body2'>Pending</Typography>
-//     </Box>
-//     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-//       <Box sx={{ width: 16, height: 16, bgcolor: 'secondary.main', borderRadius: 1 }} />
-//       <Typography variant='body2'>Outsourced</Typography>
-//     </Box>
-//   </Box>
-// )
-
 const columnHelper = createColumnHelper<SampleWithActionsType>()
 
 type Props = {
-  sampleData?: SampleType[]
+  sampleData?: VolunteerData[]
   onDataChange?: () => void
+}
+
+// Grouping helper - updated for new API format
+const groupSamplesByVolunteer = (volunteerData: VolunteerData[]) => {
+  return volunteerData.reduce(
+    (groups, volunteer) => {
+      const volunteerId = volunteer.subjectId
+      if (!groups[volunteerId]) {
+        groups[volunteerId] = {
+          volunteerName: volunteer.volunteerName,
+          projectNo: volunteer.subjectId, // Using subjectId as projectNo for now
+          study: volunteer.sampleType,
+          statusId: getStatusIdFromStatus(volunteer.sampleData[0]?.status), // Get status from first sample
+          samples: volunteer.sampleData.map(sample => ({
+            id: parseInt(sample.id),
+            barcodeId: sample.barcodeId,
+            sampleType: sample.sampleType,
+            collectedBy: sample.sampleCollectedBy,
+            collectedOn: sample.sampleCollectedOn,
+            sentByName: sample.sampleSentBy,
+            sentOn: sample.sampleSentOn,
+            receivedByName: '', // Not provided in new format
+            receivedOn: '', // Not provided in new format
+            subjectId: volunteer.subjectId,
+            VolunteerName: volunteer.volunteerName,
+            statusId: getStatusIdFromStatus(sample.status),
+            activeFlag: 'Y',
+            modifyOn: new Date().toISOString(),
+            sentBy: sample.sampleSentBy,
+            receivedBy: '',
+            isFromExisting: '',
+            modifyBy: '',
+            timeZoneId: undefined,
+            facilityId: undefined,
+            projectNo: volunteer.subjectId,
+            study: volunteer.sampleType,
+            receiveStatus: sample.status,
+            location: '',
+            lab: '',
+            remarks: '',
+            labName: '',
+            studyProtocol: ''
+            // scrBarcodeId: undefined,
+            // sampleTypeId: undefined,
+            // noOfPrint: undefined
+          }))
+        }
+      }
+      return groups
+    },
+    {} as Record<
+      string,
+      {
+        volunteerName: string
+        projectNo: string
+        study: string
+        statusId: number | null | undefined
+        samples: SampleType[]
+      }
+    >
+  )
+}
+
+// Helper function to convert status string to statusId
+const getStatusIdFromStatus = (status: string): number | null => {
+  switch (status?.toLowerCase()) {
+    case 'pending':
+      return 3
+    case 'received':
+      return 1
+    case 'rejected':
+      return 2
+    case 'in progress':
+      return 4
+    case 'completed':
+      return 5
+    case 'outsourced':
+      return 6
+    default:
+      return null
+  }
+}
+
+const GroupedSampleReceivedTable = ({
+  sampleData = [],
+  onSampleDetails,
+  onPrintBarcode
+}: {
+  sampleData: VolunteerData[]
+  onSampleDetails: (sample: SampleType) => void
+  onPrintBarcode: (sample: SampleType) => void
+}) => {
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+  const [selectedGroups, setSelectedGroups] = useState<Record<string, boolean>>({})
+  const [selectedSamples, setSelectedSamples] = useState<Record<string, boolean>>({})
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(5)
+
+  const grouped = useMemo(() => groupSamplesByVolunteer(sampleData), [sampleData])
+  const groupKeys = Object.keys(grouped)
+  const pagedGroupKeys = groupKeys.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+
+  const handleExpand = (volunteerId: string, samples: SampleType[]) => {
+    const newExpanded = !expanded[volunteerId]
+    setExpanded(prev => ({ ...prev, [volunteerId]: newExpanded }))
+    if (newExpanded && selectedGroups[volunteerId]) {
+      const newSelectedSamples = { ...selectedSamples }
+      samples.forEach(sample => {
+        if (sample.barcodeId) newSelectedSamples[sample.barcodeId] = true
+      })
+      setSelectedSamples(newSelectedSamples)
+    }
+  }
+  const handleGroupSelect = (volunteerId: string, samples: SampleType[]) => {
+    const newSelected = !selectedGroups[volunteerId]
+    setSelectedGroups(prev => ({ ...prev, [volunteerId]: newSelected }))
+    const newSelectedSamples = { ...selectedSamples }
+    samples.forEach(sample => {
+      if (sample.barcodeId) newSelectedSamples[sample.barcodeId] = newSelected
+    })
+    setSelectedSamples(newSelectedSamples)
+  }
+  const handleSampleSelect = (barcodeId: string) => {
+    setSelectedSamples(prev => ({ ...prev, [barcodeId]: !prev[barcodeId] }))
+  }
+  const isGroupSelected = (volunteerId: string, samples: SampleType[]) => {
+    return samples.every(sample => sample.barcodeId && selectedSamples[sample.barcodeId])
+  }
+  const isGroupIndeterminate = (volunteerId: string, samples: SampleType[]) => {
+    const selectedCount = samples.filter(sample => sample.barcodeId && selectedSamples[sample.barcodeId]).length
+    return selectedCount > 0 && selectedCount < samples.length
+  }
+  const getStatusInfo = (statusId: number | null | undefined) => {
+    if (statusId === null || statusId === undefined) return statusMap.null
+    return statusMap[statusId as keyof typeof statusMap] || { label: 'Unknown', color: 'default' }
+  }
+
+  // Add missing handler functions
+  const handleSampleReceive = async (id: number) => {
+    try {
+      const response = await fetch('/api/apps/lims/Sample-received?action=status', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ ids: [id], statusId: 1 })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to receive sample')
+      }
+
+      toast.success('Sample received successfully')
+      // Refresh the data
+      const dataResponse = await fetch('/api/apps/lims/Sample-received')
+      const data = await dataResponse.json()
+      // Note: This would need to be handled by parent component
+      window.location.reload()
+    } catch (error) {
+      console.error('Error receiving sample:', error)
+      toast.error('Failed to receive sample')
+    }
+  }
+
+  const handleSampleReject = (id: number) => {
+    // Find the sample in the grouped data
+    const allSamples = Object.values(grouped).flatMap(group => group.samples)
+    const sample = allSamples.find(item => item.id === id)
+    if (sample) {
+      // Note: This would need to be handled by parent component
+      toast.info('Reject functionality needs to be implemented in parent component')
+    }
+  }
+
+  const handlePrintBarcode = async (id: number) => {
+    // Find the sample in the grouped data
+    const allSamples = Object.values(grouped).flatMap(group => group.samples)
+    const sample = allSamples.find(item => item.id === id)
+    if (!sample) {
+      toast.error('Sample not found')
+      return
+    }
+
+    if (!sample.barcodeId) {
+      toast.error('No barcode ID available for this sample')
+      return
+    }
+
+    onPrintBarcode(sample)
+  }
+
+  const handleOutsourceSample = async (id: number) => {
+    try {
+      const response = await fetch('/api/apps/lims/Sample-received?action=status', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ ids: [id], statusId: 6 })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to outsource sample')
+      }
+
+      toast.success('Sample outsourced successfully')
+      window.location.reload()
+    } catch (error) {
+      console.error('Error outsourcing sample:', error)
+      toast.error('Failed to outsource sample')
+    }
+  }
+
+  const handleRemarks = (id: number) => {
+    const allSamples = Object.values(grouped).flatMap(group => group.samples)
+    const sample = allSamples.find(item => item.id === id)
+    if (sample) {
+      // Note: This would need to be handled by parent component
+      toast.info('Remarks functionality needs to be implemented in parent component')
+    }
+  }
+
+  return (
+    <Paper
+      sx={{
+        width: '100%',
+        overflow: 'hidden',
+        boxShadow: t => t.shadows[1],
+        borderRadius: 1,
+        border: t => `1px solid ${t.palette.divider}`
+      }}
+    >
+      <TableContainer sx={{ maxHeight: 640 }}>
+        <Table stickyHeader>
+          <TableHead>
+            <TableRow>
+              <TableCell padding='checkbox' />
+              <TableCell>Volunteer Name</TableCell>
+              <TableCell>Volunteer ID</TableCell>
+              <TableCell>Barcode ID</TableCell>
+              <TableCell>Sample Type</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {pagedGroupKeys.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} align='center'>
+                  No data found
+                </TableCell>
+              </TableRow>
+            ) : (
+              pagedGroupKeys.map(volunteerId => {
+                const group = grouped[volunteerId]
+                return (
+                  <React.Fragment key={volunteerId}>
+                    <TableRow hover>
+                      <TableCell padding='checkbox'>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Checkbox
+                            checked={isGroupSelected(volunteerId, group.samples)}
+                            indeterminate={isGroupIndeterminate(volunteerId, group.samples)}
+                            onChange={() => handleGroupSelect(volunteerId, group.samples)}
+                          />
+                          <IconButton
+                            size='small'
+                            onClick={() => handleExpand(volunteerId, group.samples)}
+                            sx={{
+                              width: 28,
+                              height: 28,
+                              backgroundColor: theme =>
+                                expanded[volunteerId] ? theme.palette.primary.main : theme.palette.action.hover,
+                              color: theme =>
+                                expanded[volunteerId] ? theme.palette.primary.contrastText : theme.palette.text.primary,
+                              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                              '&:hover': {
+                                backgroundColor: theme =>
+                                  expanded[volunteerId] ? theme.palette.primary.dark : theme.palette.action.selected,
+                                transform: 'scale(1.1) rotate(180deg)'
+                              }
+                            }}
+                          >
+                            {expanded[volunteerId] ? <RemoveIcon fontSize='small' /> : <AddIcon fontSize='small' />}
+                          </IconButton>
+                        </Box>
+                      </TableCell>
+                      <TableCell>{group.volunteerName}</TableCell>
+                      <TableCell>{volunteerId}</TableCell>
+                      <TableCell>{group.projectNo}</TableCell>
+                      <TableCell>{group.study}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
+                        <Collapse in={!!expanded[volunteerId]} timeout={300} unmountOnExit>
+                          <Box margin={1}>
+                            <Table size='small'>
+                              <TableHead>
+                                <TableRow>
+                                  <TableCell padding='checkbox' />
+                                  <TableCell>Actions</TableCell>
+                                  <TableCell>Barcode ID</TableCell>
+                                  <TableCell>Sample Type</TableCell>
+                                  <TableCell>Collected By</TableCell>
+                                  <TableCell>Collected On</TableCell>
+                                  <TableCell>Sent By</TableCell>
+                                  <TableCell>Sent On</TableCell>
+                                  <TableCell>Status</TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {group.samples.map(sample => (
+                                  <TableRow key={sample.barcodeId} hover>
+                                    <TableCell padding='checkbox'>
+                                      <Checkbox
+                                        checked={!!selectedSamples[sample.barcodeId || '']}
+                                        onChange={() => sample.barcodeId && handleSampleSelect(sample.barcodeId)}
+                                      />
+                                    </TableCell>
+                                    <TableCell>
+                                      <OptionMenu
+                                        options={[
+                                          {
+                                            text: 'Receive',
+                                            icon: <i className='tabler-check' style={{ color: '#4CAF50' }} />,
+                                            menuItemProps: {
+                                              onClick: () => handleSampleReceive(sample.id)
+                                            }
+                                          },
+                                          {
+                                            text: 'Reject',
+                                            icon: <i className='tabler-x' style={{ color: '#F44336' }} />,
+                                            menuItemProps: {
+                                              onClick: () => handleSampleReject(sample.id)
+                                            }
+                                          },
+                                          {
+                                            text: 'Print Barcode',
+                                            icon: <i className='tabler-printer' style={{ color: '#3F51B5' }} />,
+                                            menuItemProps: {
+                                              onClick: () => handlePrintBarcode(sample.id)
+                                            }
+                                          },
+                                          {
+                                            text: 'Sample Detail',
+                                            icon: <i className='tabler-eye' style={{ color: '#00BCD4' }} />,
+                                            menuItemProps: {
+                                              onClick: () => onSampleDetails(sample)
+                                            }
+                                          },
+                                          {
+                                            text: 'Outsource Sample',
+                                            icon: <i className='tabler-external-link' style={{ color: '#FF9800' }} />,
+                                            menuItemProps: {
+                                              onClick: () => handleOutsourceSample(sample.id)
+                                            }
+                                          },
+                                          {
+                                            text: 'Remarks',
+                                            icon: <i className='tabler-message' style={{ color: '#E91E63' }} />,
+                                            menuItemProps: {
+                                              onClick: () => handleRemarks(sample.id)
+                                            }
+                                          }
+                                          // {
+                                          //   text: 'Audit Trail',
+                                          //   icon: <i className='tabler-list-details' style={{ color: '#00BFAE' }} />,
+                                          //   menuItemProps: {
+                                          //     onClick: () => handleAuditTrail(sample.id)
+                                          //   }
+                                          // }
+                                        ]}
+                                      />
+                                    </TableCell>
+                                    <TableCell>{sample.barcodeId}</TableCell>
+                                    <TableCell>{sample.sampleType}</TableCell>
+                                    <TableCell>{sample.collectedBy}</TableCell>
+                                    <TableCell>{formatDate(sample.collectedOn)}</TableCell>
+                                    <TableCell>{sample.sentByName}</TableCell>
+                                    <TableCell>{formatDate(sample.sentOn)}</TableCell>
+                                    <TableCell>
+                                      <Chip
+                                        label={getStatusInfo(sample.statusId).label}
+                                        color={getStatusInfo(sample.statusId).color as any}
+                                        size='small'
+                                      />
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </Box>
+                        </Collapse>
+                      </TableCell>
+                    </TableRow>
+                  </React.Fragment>
+                )
+              })
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+      <TablePagination
+        rowsPerPageOptions={[10, 25, 50, 100]}
+        component='div'
+        count={groupKeys.length}
+        rowsPerPage={rowsPerPage}
+        page={page}
+        onPageChange={(_, newPage) => setPage(newPage)}
+        onRowsPerPageChange={e => {
+          setRowsPerPage(parseInt(e.target.value, 10))
+          setPage(0)
+        }}
+      />
+    </Paper>
+  )
 }
 
 const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
@@ -212,11 +634,9 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
   const { lang: locale } = useParams()
   const [rowSelection, setRowSelection] = useState({})
   const initialData = Array.isArray(sampleData) ? sampleData : []
-  const [data, setData] = useState<SampleType[]>(initialData)
-  const [filteredData, setFilteredData] = useState<SampleType[]>(initialData)
+  const [data, setData] = useState<VolunteerData[]>(initialData)
+  const [filteredData, setFilteredData] = useState<VolunteerData[]>(initialData)
   const [globalFilter, setGlobalFilter] = useState('')
-  const [barcodeFilter, setBarcodeFilter] = useState('')
-  const [highlightedRowId, setHighlightedRowId] = useState<number | null>(null)
   const [isPdfLoading, setIsPdfLoading] = useState(false)
   const [isExcelLoading, setIsExcelLoading] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
@@ -230,6 +650,8 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
   const [showBarcodeScanDialog, setShowBarcodeScanDialog] = useState(false)
   const [barcodeInput, setBarcodeInput] = useState('')
   const [isScanning, setIsScanning] = useState(false)
+  const [highlightedSampleId, setHighlightedSampleId] = useState<number | null>(null)
+  const barcodeInputRef = useRef<HTMLInputElement>(null)
   const [showOutsourceConfirm, setShowOutsourceConfirm] = useState(false)
   const [selectedSamplesForOutsource, setSelectedSamplesForOutsource] = useState<number[]>([])
   const [showReceiveConfirm, setShowReceiveConfirm] = useState(false)
@@ -251,6 +673,15 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
   const [isBulkOperationLoading, setIsBulkOperationLoading] = useState(false)
   const [bulkOperationProgress, setBulkOperationProgress] = useState(0)
   const [isFiltersExpanded, setIsFiltersExpanded] = useState(false)
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+  const [selectedGroups, setSelectedGroups] = useState<Record<string, boolean>>({})
+  const [selectedSamples, setSelectedSamples] = useState<Record<string, boolean>>({})
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(5)
+
+  const grouped = useMemo(() => groupSamplesByVolunteer(filteredData), [filteredData])
+  const groupKeys = Object.keys(grouped)
+  const pagedGroupKeys = groupKeys.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
 
   // Add effect to update data when props change
   useEffect(() => {
@@ -271,214 +702,52 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
     fetchData()
   }, [sampleData])
 
-  // Add effect to handle filtering - only global filter affects table data
-  useEffect(() => {
-    // Only apply global filter, barcode filter doesn't affect table filtering
-    if (globalFilter.trim()) {
-      const filtered = data.filter(item => {
-        return Object.values(item).some(value => value?.toString().toLowerCase().includes(globalFilter.toLowerCase()))
-      })
-      setFilteredData(filtered)
-    } else {
-      setFilteredData(data)
-    }
-  }, [globalFilter, data])
-
   // Add effect to log when data changes
   useEffect(() => {
     console.log('Current data state:', data)
     console.log('Current filteredData state:', filteredData)
   }, [data, filteredData])
 
-  const columns = useMemo<ColumnDef<SampleWithActionsType, any>[]>(
-    () => [
-      columnHelper.accessor('actions', {
-        header: 'Actions',
-        enableHiding: false,
-        cell: ({ row }) => (
-          <div className='flex items-center'>
-            <OptionMenu
-              iconButtonProps={{ size: 'medium' }}
-              iconClassName='text-textSecondary'
-              options={[
-                {
-                  text: 'Receive',
-                  icon: 'tabler-check',
-                  menuItemProps: {
-                    onClick: () => handleManualReceive(row.original),
-                    className: 'text-success',
-                    disabled: !row.original.barcodeId // Disable if not scanned
-                  }
-                },
-                {
-                  text: 'Reject',
-                  icon: 'tabler-x',
-                  menuItemProps: {
-                    onClick: () => handleSampleReject(row.original.id),
-                    className: 'text-error'
-                  }
-                },
-                {
-                  text: 'Print Barcode',
-                  icon: 'tabler-printer',
-                  menuItemProps: {
-                    onClick: () => handlePrintBarcode(row.original.id),
-                    className: 'text-primary'
-                  }
-                },
-                {
-                  text: 'Sample Detail',
-                  icon: 'tabler-eye',
-                  menuItemProps: {
-                    onClick: () => {
-                      setSelectedSampleForDetails(row.original)
-                      setShowSampleDetails(true)
-                    },
-                    className: 'text-info'
-                  }
-                },
-                {
-                  text: 'Outsource Sample',
-                  icon: 'tabler-external-link',
-                  menuItemProps: {
-                    onClick: () => handleOutsourceSample(row.original.id),
-                    className: 'text-warning'
-                  }
-                },
-                {
-                  text: 'Remarks',
-                  icon: 'tabler-message',
-                  menuItemProps: {
-                    onClick: () => handleRemarks(row.original.id),
-                    className: `text-${row.original.remarks ? 'error' : 'secondary'}`
-                  }
-                },
-                {
-                  text: 'Audit Trail',
-                  icon: 'tabler-history',
-                  menuItemProps: {
-                    onClick: () => handleAuditTrail(row.original.id),
-                    className: 'text-info'
-                  }
-                }
-              ]}
-            />
-          </div>
-        ),
-        enableSorting: false
-      }),
-      {
-        id: 'select',
-        header: ({ table }) => (
-          <Checkbox
-            {...{
-              checked: table.getIsAllRowsSelected(),
-              indeterminate: table.getIsSomeRowsSelected(),
-              onChange: table.getToggleAllRowsSelectedHandler()
-            }}
-          />
-        ),
-        cell: ({ row }) => (
-          <Checkbox
-            {...{
-              checked: row.getIsSelected(),
-              disabled: !row.getCanSelect(),
-              indeterminate: row.getIsSomeSelected(),
-              onChange: row.getToggleSelectedHandler()
-            }}
-          />
-        ),
-        enableHiding: false
-      },
-      columnHelper.accessor('subjectId', {
-        header: 'Volunteer ID ',
-        enableHiding: true,
-        cell: ({ row }) => <Typography>{row.original.subjectId || '-'}</Typography>
-      }),
-      columnHelper.accessor('barcodeId', {
-        header: 'Barcode ID',
-        enableHiding: true,
-        cell: ({ row }: { row: { original: SampleWithActionsType } }) => (
-          <Typography>{row.original.barcodeId || '-'}</Typography>
-        )
-      }),
-      columnHelper.accessor('labName', {
-        header: 'Lab Name',
-        enableHiding: true,
-        cell: ({ row }) => <Typography>{row.original.labName || '-'}</Typography>
-      }),
-      columnHelper.accessor('statusId', {
-        header: 'Status',
-        enableHiding: true,
-        cell: ({ row }) => {
-          const statusId = row.original.statusId
-          const statusInfo = (statusId === null ? statusMap.null : statusMap[statusId as keyof StatusMapType]) || {
-            label: 'Unknown',
-            color: 'default' as const
-          }
-          return <Chip label={statusInfo.label} variant='tonal' color={statusInfo.color} size='small' />
-        }
-      }),
-      columnHelper.accessor('sampleType', {
-        header: 'Sample Type',
-        enableHiding: true,
-        cell: ({ row }) => <Typography>{row.original.sampleType || '-'}</Typography>
-      }),
-      columnHelper.accessor('collectedBy', {
-        header: 'Collected By',
-        enableHiding: true,
-        cell: ({ row }) => <Typography>{row.original.collectedBy || '-'}</Typography>
-      }),
-      columnHelper.accessor('collectedOn', {
-        header: 'Collected On',
-        enableHiding: true,
-        cell: ({ row }) => <Typography>{formatDate(row.original.collectedOn)}</Typography>
-      }),
-      columnHelper.accessor('sentBy', {
-        header: 'Sent By',
-        enableHiding: true,
-        cell: ({ row }) => <Typography>{row.original.sentBy || '-'}</Typography>
-      }),
-      columnHelper.accessor('sentOn', {
-        header: 'Sent On',
-        enableHiding: true,
-        cell: ({ row }) => <Typography>{formatDate(row.original.sentOn)}</Typography>
-      }),
-      columnHelper.accessor('receivedByName', {
-        header: 'Received By',
-        enableHiding: true,
-        cell: ({ row }) => <Typography>{row.original.receivedByName || '-'}</Typography>
-      }),
-      columnHelper.accessor('receivedOn', {
-        header: 'Received On',
-        enableHiding: true,
-        cell: ({ row }) => <Typography>{formatDate(row.original.receivedOn)}</Typography>
+  const handleExpand = (volunteerId: string, samples: SampleType[]) => {
+    const newExpanded = !expanded[volunteerId]
+    setExpanded(prev => ({ ...prev, [volunteerId]: newExpanded }))
+    // When expanding, sync sample selections with group selection
+    if (newExpanded && selectedGroups[volunteerId]) {
+      const newSelectedSamples = { ...selectedSamples }
+      samples.forEach(sample => {
+        if (sample.barcodeId) newSelectedSamples[sample.barcodeId] = true
       })
-    ],
-    []
-  )
+      setSelectedSamples(newSelectedSamples)
+    }
+  }
 
-  const table = useReactTable({
-    data: filteredData || [],
-    columns,
-    filterFns: {
-      fuzzy: fuzzyFilter
-    },
-    state: {
-      rowSelection,
-      columnVisibility
-    },
-    enableRowSelection: true,
-    onRowSelectionChange: setRowSelection,
-    onColumnVisibilityChange: setColumnVisibility,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getFacetedRowModel: getFacetedRowModel(),
-    getFacetedUniqueValues: getFacetedUniqueValues(),
-    getFacetedMinMaxValues: getFacetedMinMaxValues()
-  })
+  const handleGroupSelect = (volunteerId: string, samples: SampleType[]) => {
+    const newSelected = !selectedGroups[volunteerId]
+    setSelectedGroups(prev => ({ ...prev, [volunteerId]: newSelected }))
+    // Select/deselect all samples for this volunteer
+    const newSelectedSamples = { ...selectedSamples }
+    samples.forEach(sample => {
+      if (sample.barcodeId) newSelectedSamples[sample.barcodeId] = newSelected
+    })
+    setSelectedSamples(newSelectedSamples)
+  }
+
+  const handleSampleSelect = (barcodeId: string) => {
+    setSelectedSamples(prev => ({ ...prev, [barcodeId]: !prev[barcodeId] }))
+  }
+
+  const isGroupSelected = (volunteerId: string, samples: SampleType[]) => {
+    return samples.every(sample => sample.barcodeId && selectedSamples[sample.barcodeId])
+  }
+  const isGroupIndeterminate = (volunteerId: string, samples: SampleType[]) => {
+    const selectedCount = samples.filter(sample => sample.barcodeId && selectedSamples[sample.barcodeId]).length
+    return selectedCount > 0 && selectedCount < samples.length
+  }
+
+  const getStatusInfo = (statusId: number | null | undefined) => {
+    if (statusId === null || statusId === undefined) return statusMap.null
+    return statusMap[statusId as keyof typeof statusMap] || { label: 'Unknown', color: 'default' }
+  }
 
   const handleSampleReceive = async (id: number) => {
     try {
@@ -498,8 +767,8 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
       // Refresh the data
       const dataResponse = await fetch('/api/apps/lims/Sample-received')
       const data = await dataResponse.json()
-      setData(data)
-      setFilteredData(data)
+      setData(data.result || data)
+      setFilteredData(data.result || data)
     } catch (error) {
       console.error('Error receiving sample:', error)
       toast.error('Failed to receive sample')
@@ -507,7 +776,9 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
   }
 
   const handleSampleReject = (id: number) => {
-    const sample = data.find(item => item.id === id)
+    // Find the sample in the grouped data
+    const allSamples = Object.values(grouped).flatMap(group => group.samples)
+    const sample = allSamples.find(item => item.id === id)
     if (sample) {
       setSelectedSampleForReject(sample)
       setShowRejectConfirm(true)
@@ -541,8 +812,8 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
       toast.success('Sample rejected successfully')
       const dataResponse = await fetch('/api/apps/lims/Sample-received')
       const data = await dataResponse.json()
-      setData(data)
-      setFilteredData(data)
+      setData(data.result || data)
+      setFilteredData(data.result || data)
     } catch (error) {
       console.error('Error rejecting sample:', error)
       toast.error('Failed to reject sample')
@@ -554,43 +825,34 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
     }
   }
 
-  const handlePrintBarcode = async (id: number) => {
-    const sample = filteredData.find(item => item.id === id)
-    if (!sample) {
-      toast.error('Sample not found')
-      return
-    }
-
-    if (!sample.barcodeId) {
-      toast.error('No barcode ID available for this sample')
-      return
-    }
-
+  const handlePrintBarcode = (sample: SampleType) => {
     setSelectedSample(sample)
     setShowBarcodeDialog(true)
   }
 
-  const handleBulkPrintBarcode = async () => {
-    const selectedIds = Object.keys(rowSelection).map(key => filteredData[parseInt(key)].id)
+  const handleBulkPrintBarcode = () => {
+    const selectedIds = Object.entries(selectedSamples)
+      .filter(([_, checked]) => checked)
+      .map(([barcodeId]) => {
+        const allSamples = Object.values(grouped).flatMap(group => group.samples)
+        return allSamples.find(sample => sample.barcodeId === barcodeId)
+      })
+      .filter(Boolean)
+
     if (selectedIds.length === 0) {
       toast.error('No samples selected')
       return
     }
 
-    const selectedSamples = filteredData.filter(item => selectedIds.includes(item.id))
-    if (selectedSamples.length === 0) {
-      toast.error('Selected samples not found')
-      return
-    }
-
     // Check if any sample is missing barcode ID
-    const sampleWithoutBarcode = selectedSamples.find(sample => !sample.barcodeId)
+    const sampleWithoutBarcode = selectedIds.find(sample => !sample?.barcodeId)
     if (sampleWithoutBarcode) {
       toast.error(`Sample ${sampleWithoutBarcode.id} has no barcode ID`)
       return
     }
 
-    setSelectedSample(selectedSamples[0]) // Keep first sample for backward compatibility
+    // Set the first sample for backward compatibility with BarcodePrintDialog
+    setSelectedSample(selectedIds[0] as SampleType)
     setShowBarcodeDialog(true)
   }
 
@@ -600,8 +862,14 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
   }
 
   const handleBulkOutsource = () => {
-    const selectedIds = Object.keys(rowSelection).map(key => filteredData[parseInt(key)].id)
-    setSelectedSamplesForOutsource(selectedIds)
+    const selectedIds = Object.entries(selectedSamples)
+      .filter(([_, checked]) => checked)
+      .map(([barcodeId]) => {
+        const allSamples = Object.values(grouped).flatMap(group => group.samples)
+        return allSamples.find(sample => sample.barcodeId === barcodeId)?.id
+      })
+      .filter(Boolean)
+    setSelectedSamplesForOutsource(selectedIds as number[])
     setShowOutsourceConfirm(true)
   }
 
@@ -639,8 +907,8 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
       toast.success('Samples outsourced successfully')
       const response = await fetch('/api/apps/lims/Sample-received')
       const newData = await response.json()
-      setData(newData)
-      setFilteredData(newData)
+      setData(newData.result || newData)
+      setFilteredData(newData.result || newData)
     } catch (error) {
       console.error('Error outsourcing samples:', error)
       toast.error('Failed to outsource some samples. Please check the audit trail for details.')
@@ -653,7 +921,8 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
   }
 
   const handleRemarks = (id: number) => {
-    const sample = data.find(item => item.id === id)
+    const allSamples = Object.values(grouped).flatMap(group => group.samples)
+    const sample = allSamples.find(item => item.id === id)
     if (sample) {
       setSelectedSampleForRemark(sample)
       setShowRemarkDialog(true)
@@ -664,8 +933,8 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
     // Refresh the data
     const response = await fetch('/api/apps/lims/Sample-received')
     const data = await response.json()
-    setData(data)
-    setFilteredData(data)
+    setData(data.result || data)
+    setFilteredData(data.result || data)
   }
 
   const handleExport = async () => {
@@ -715,8 +984,9 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
       doc.setFontSize(10)
       doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22)
 
-      // Prepare table data
-      const tableData = data.map(sample => [
+      // Prepare table data from the new structure
+      const allSamples = Object.values(grouped).flatMap(group => group.samples)
+      const tableData = allSamples.map(sample => [
         sample.subjectId || '-',
         sample.barcodeId || '-',
         sample.labName || '-',
@@ -724,7 +994,7 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
         sample.sampleType || '-',
         sample.collectedBy || '-',
         formatDate(sample.collectedOn),
-        sample.sentBy || '-',
+        sample.sentByName || '-',
         formatDate(sample.sentOn),
         sample.receivedByName || '-',
         sample.receivedOn ? formatDate(sample.receivedOn) : '-',
@@ -820,30 +1090,21 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
     setFilters(prev => ({ ...prev, [field]: value }))
   }
 
-  // Add filter apply handler
+  // Add filter apply handler - updated for new data structure
   const handleApplyFilters = () => {
     let filtered = [...data]
 
     if (filters.projectNo) {
-      filtered = filtered.filter(item => item.projectNo?.includes(filters.projectNo))
+      filtered = filtered.filter(item => item.subjectId?.includes(filters.projectNo))
     }
     if (filters.study) {
-      filtered = filtered.filter(item => item.study?.includes(filters.study))
-    }
-    if (filters.receiveStatus) {
-      filtered = filtered.filter(item => item.receiveStatus === filters.receiveStatus)
+      filtered = filtered.filter(item => item.sampleType?.includes(filters.study))
     }
     if (filters.sampleType) {
       filtered = filtered.filter(item => item.sampleType === filters.sampleType)
     }
-    if (filters.location) {
-      filtered = filtered.filter(item => item.location?.includes(filters.location))
-    }
-    if (filters.referenceId) {
-      filtered = filtered.filter(item => item.referenceId?.includes(filters.referenceId))
-    }
-    if (filters.lab) {
-      filtered = filtered.filter(item => item.lab?.includes(filters.lab))
+    if (filters.receiveStatus) {
+      filtered = filtered.filter(item => item.sampleData.some(sample => sample.status === filters.receiveStatus))
     }
 
     setFilteredData(filtered)
@@ -851,13 +1112,10 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
 
   // Add row highlighting styles
   const getRowStyle = (row: any) => {
-    const baseStyle = { transition: 'background-color 0.3s ease' }
-
-    if (row.original.id === highlightedRowId) {
-      console.log('Highlighting row with ID:', row.original.id, 'Subject ID:', row.original.subjectId)
-      return { ...baseStyle, backgroundColor: '#fff3cd' } // Light yellow for barcode search highlight
+    if (row.original.id === highlightedSampleId) {
+      return { backgroundColor: '#e8f5e9' } // Light green for highlighted
     }
-    return baseStyle
+    return {}
   }
 
   const handleManualReceive = (sample: SampleType) => {
@@ -894,12 +1152,12 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
         throw new TypeError("Oops, we haven't got JSON!")
       }
       const data = await response.json()
-      if (!data || !Array.isArray(data)) {
+      if (!data) {
         throw new Error('Invalid data format received')
       }
 
-      setData(data)
-      setFilteredData(data)
+      setData(data.result || data)
+      setFilteredData(data.result || data)
       onDataChange?.() // Call the onDataChange callback
       // Scroll to the top of the table
       const tableContainer = document.querySelector('.overflow-x-auto')
@@ -917,9 +1175,16 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
   }
 
   const handleBulkReceive = () => {
-    const selectedIds = Object.keys(rowSelection).map(key => filteredData[parseInt(key)].id)
+    const selectedIds = Object.entries(selectedSamples)
+      .filter(([_, checked]) => checked)
+      .map(([barcodeId]) => {
+        const allSamples = Object.values(grouped).flatMap(group => group.samples)
+        return allSamples.find(sample => sample.barcodeId === barcodeId)?.id
+      })
+      .filter(Boolean)
+
     if (selectedIds.length > 0) {
-      setSelectedSamplesForReceive(selectedIds)
+      setSelectedSamplesForReceive(selectedIds as number[])
       setShowBulkReceiveConfirm(true)
     }
   }
@@ -958,8 +1223,8 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
       toast.success('Selected samples received successfully')
       const response = await fetch('/api/apps/lims/Sample-received')
       const newData = await response.json()
-      setData(newData)
-      setFilteredData(newData)
+      setData(newData.result || newData)
+      setFilteredData(newData.result || newData)
       onDataChange?.()
     } catch (error) {
       console.error('Error receiving samples:', error)
@@ -973,9 +1238,16 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
   }
 
   const handleBulkReject = () => {
-    const selectedIds = Object.keys(rowSelection).map(key => filteredData[parseInt(key)].id)
+    const selectedIds = Object.entries(selectedSamples)
+      .filter(([_, checked]) => checked)
+      .map(([barcodeId]) => {
+        const allSamples = Object.values(grouped).flatMap(group => group.samples)
+        return allSamples.find(sample => sample.barcodeId === barcodeId)?.id
+      })
+      .filter(Boolean)
+
     if (selectedIds.length > 0) {
-      setSelectedSamplesForReject(selectedIds)
+      setSelectedSamplesForReject(selectedIds as number[])
       setShowBulkRejectConfirm(true)
     }
   }
@@ -1023,8 +1295,8 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
       toast.success('Selected samples rejected successfully')
       const response = await fetch('/api/apps/lims/Sample-received')
       const newData = await response.json()
-      setData(newData)
-      setFilteredData(newData)
+      setData(newData.result || newData)
+      setFilteredData(newData.result || newData)
     } catch (error) {
       console.error('Error rejecting samples:', error)
       toast.error('Failed to reject some samples. Please check the audit trail for details.')
@@ -1038,9 +1310,16 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
   }
 
   const handleBulkCentrifuge = () => {
-    const selectedIds = Object.keys(rowSelection).map(key => filteredData[parseInt(key)].id)
+    const selectedIds = Object.entries(selectedSamples)
+      .filter(([_, checked]) => checked)
+      .map(([barcodeId]) => {
+        const allSamples = Object.values(grouped).flatMap(group => group.samples)
+        return allSamples.find(sample => sample.barcodeId === barcodeId)?.id
+      })
+      .filter(Boolean)
+
     if (selectedIds.length > 0) {
-      setSelectedSamplesForCentrifuge(selectedIds)
+      setSelectedSamplesForCentrifuge(selectedIds as number[])
       setShowBulkCentrifugeConfirm(true)
     }
   }
@@ -1079,8 +1358,8 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
       toast.success('Selected samples sent for centrifugation successfully')
       const response = await fetch('/api/apps/lims/Sample-received')
       const newData = await response.json()
-      setData(newData)
-      setFilteredData(newData)
+      setData(newData.result || newData)
+      setFilteredData(newData.result || newData)
       onDataChange?.()
     } catch (error) {
       console.error('Error centrifuging samples:', error)
@@ -1202,6 +1481,12 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
     setShowAuditTrail(true)
   }
 
+  // Add sample details handler
+  const handleSampleDetails = (sample: SampleType) => {
+    setSelectedSampleForDetails(sample)
+    setShowSampleDetails(true)
+  }
+
   // Add progress indicator component
   const BulkOperationProgress = () => (
     <Box sx={{ width: '100%', mt: 2 }}>
@@ -1212,396 +1497,129 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
     </Box>
   )
 
-  // Handle Enter key press in barcode search
-  const handleBarcodeKeyPress = (event: React.KeyboardEvent) => {
-    if (event.key === 'Enter') {
-      const searchValue = barcodeFilter.trim()
-      if (searchValue) {
-        console.log('Current highlightedRowId before search:', highlightedRowId)
+  // Create a wrapper function for TableFilters compatibility
+  const handleFilterDataChange = (sampleData: SampleType[]) => {
+    // Convert SampleType[] back to VolunteerData[] format
+    const volunteerDataMap = new Map<string, VolunteerData>()
 
-        // Find exact match in full data (not filtered data)
-        const exactMatch = data.find(item => item.subjectId?.toLowerCase() === searchValue.toLowerCase())
-
-        console.log('Searching for:', searchValue)
-        console.log('Found match:', exactMatch)
-        console.log(
-          'All items with this subjectId:',
-          data.filter(item => item.subjectId?.toLowerCase() === searchValue.toLowerCase())
-        )
-
-        if (exactMatch) {
-          console.log('Setting highlightedRowId to:', exactMatch.id)
-
-          // Check if there are multiple rows with the same subject ID
-          const allMatches = data.filter(item => item.subjectId?.toLowerCase() === searchValue.toLowerCase())
-
-          if (allMatches.length > 1) {
-            console.warn(`Multiple rows found with Subject ID "${searchValue}":`, allMatches)
-            toast.warning(`Multiple rows found with Subject ID "${searchValue}". Only the first match is highlighted.`)
-          }
-
-          setHighlightedRowId(exactMatch.id)
-          toast.success(`Subject ID "${searchValue}" found`)
-          // Scroll to the row
-          setTimeout(() => {
-            const rowElement = document.getElementById(`sample-row-${exactMatch.id}`)
-            if (rowElement) {
-              rowElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
-            }
-          }, 100)
-        } else {
-          console.log('No match found, clearing highlight')
-          setHighlightedRowId(null)
-          toast.warning(`Subject ID "${searchValue}" not found`)
-        }
+    sampleData.forEach(sample => {
+      const volunteerId = sample.subjectId || 'unknown'
+      if (!volunteerDataMap.has(volunteerId)) {
+        volunteerDataMap.set(volunteerId, {
+          subjectId: volunteerId,
+          barcodeId: sample.barcodeId || '',
+          sampleType: sample.sampleType || '',
+          volunteerName: typeof sample.VolunteerName === 'string' ? sample.VolunteerName : '',
+          sampleData: []
+        })
       }
-    }
+
+      const volunteer = volunteerDataMap.get(volunteerId)!
+      volunteer.sampleData.push({
+        id: sample.id?.toString() || '',
+        barcodeId: sample.barcodeId || '',
+        sampleType: sample.sampleType || '',
+        sampleCollectedBy: sample.collectedBy || '',
+        sampleCollectedOn: sample.collectedOn || '',
+        sampleSentBy: typeof sample.sentByName === 'string' ? sample.sentByName : '',
+        sampleSentOn: sample.sentOn || '',
+        status: sample.receiveStatus || 'Pending'
+      })
+    })
+
+    setFilteredData(Array.from(volunteerDataMap.values()))
   }
 
+  // Get selected sample IDs
+  const selectedSampleIds = Object.entries(selectedSamples)
+    .filter(([_, checked]) => checked)
+    .map(([barcodeId]) => {
+      const allSamples = Object.values(grouped).flatMap(group => group.samples)
+      return allSamples.find(sample => sample.barcodeId === barcodeId)?.id
+    })
+    .filter(Boolean)
+
   return (
-    <Card>
-      <CardHeader
-        title='Sample Receive'
-        action={
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button
-              variant='outlined'
-              startIcon={
-                isExporting ? <i className='tabler-loader animate-spin' /> : <i className='tabler-file-spreadsheet' />
-              }
-              onClick={handleExport}
-              disabled={isExporting}
-            >
-              {isExporting ? 'Exporting...' : 'Excel'}
-            </Button>
-            <Button
-              variant='outlined'
-              startIcon={
-                isPdfLoading ? <i className='tabler-loader animate-spin' /> : <i className='tabler-file-text' />
-              }
-              onClick={handlePdfExport}
-              disabled={isPdfLoading}
-            >
-              {isPdfLoading ? 'Exporting...' : 'PDF'}
-            </Button>
-          </Box>
-        }
-      />
-      <Divider />
-
-      <div className='flex flex-wrap justify-between gap-4 p-6'>
-        {/* Search Box */}
-        <div className='flex flex-col gap-1'>
-          <div className='flex items-center gap-2'>
-            <DebouncedInput
-              value={barcodeFilter ?? ''}
-              onChange={value => setBarcodeFilter(String(value))}
-              placeholder='Scan Barcode (Press Enter to search)'
-              className='max-sm:is-full'
-              sx={{ minWidth: '300px' }}
-              onKeyDown={handleBarcodeKeyPress}
-            />
-            {highlightedRowId !== null && (
-              <Chip label='Found' color='success' size='small' icon={<i className='tabler-check' />} />
-            )}
-            {barcodeFilter && (
-              <IconButton
-                size='small'
-                onClick={() => {
-                  setBarcodeFilter('')
-                  setHighlightedRowId(null)
-                }}
-                title='Clear barcode search'
-              >
-                <i className='tabler-x' />
-              </IconButton>
-            )}
-          </div>
-          <Typography variant='caption' color='text.secondary'>
-            Type Volunteer ID and press Enter to highlight the row
-          </Typography>
-        </div>
-
-        {/* Search and other controls */}
-        <div className='flex flex-wrap items-center max-sm:flex-col gap-4 max-sm:is-full is-auto'>
-          <div className='flex items-center gap-2'>
-            <DebouncedInput
-              value={globalFilter ?? ''}
-              onChange={value => setGlobalFilter(String(value))}
-              placeholder='Search Sample'
-              className='max-sm:is-full'
-            />
-            {globalFilter && (
-              <IconButton size='small' onClick={() => setGlobalFilter('')} title='Clear search'>
-                <i className='tabler-x' />
-              </IconButton>
-            )}
-          </div>
-          <div className='flex items-center gap-2'>
-            <IconButton
-              size='small'
-              onClick={e => setColumnMenuAnchor(e.currentTarget)}
-              title='Toggle columns'
-              sx={{
-                backgroundColor: 'primary.main',
-                color: 'white',
-                '&:hover': {
-                  backgroundColor: 'primary.dark'
-                },
-                marginRight: 1
-              }}
-            >
-              <i className='tabler-columns' />
-            </IconButton>
-            <Menu
-              anchorEl={columnMenuAnchor}
-              open={Boolean(columnMenuAnchor)}
-              onClose={() => setColumnMenuAnchor(null)}
-              PaperProps={{
-                style: {
-                  maxHeight: 300,
-                  width: 250
-                }
-              }}
-            >
-              <Box sx={{ p: 1 }}>
-                <Typography variant='subtitle2' sx={{ mb: 1 }}>
-                  Toggle Columns
-                </Typography>
-                {table
-                  .getAllColumns()
-                  .filter(column => column.getCanHide())
-                  .map(column => (
-                    <MenuItem key={column.id} onClick={e => e.stopPropagation()}>
-                      <Checkbox checked={column.getIsVisible()} onChange={column.getToggleVisibilityHandler()} />
-                      <Typography variant='body2'>{column.columnDef.header as string}</Typography>
-                    </MenuItem>
-                  ))}
-              </Box>
-            </Menu>
-          </div>
-        </div>
-      </div>
-
-      <TableFilters setData={setFilteredData} sampleData={data} />
-      <div className='overflow-x-auto'>
-        {isLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
-            <CircularProgress />
-          </Box>
-        ) : (
-          <table className={tableStyles.table}>
-            <thead>
-              {table.getHeaderGroups().map(headerGroup => (
-                <tr key={headerGroup.id}>
-                  {headerGroup.headers.map(header => (
-                    <th key={header.id}>
-                      {header.isPlaceholder ? null : (
-                        <div
-                          className={classnames({
-                            'flex items-center': header.column.getIsSorted(),
-                            'cursor-pointer select-none': header.column.getCanSort()
-                          })}
-                          onClick={header.column.getToggleSortingHandler()}
-                        >
-                          {flexRender(header.column.columnDef.header, header.getContext())}
-                          {{
-                            asc: <i className='tabler-chevron-up text-xl' />,
-                            desc: <i className='tabler-chevron-down text-xl' />
-                          }[header.column.getIsSorted() as string] ?? null}
-                        </div>
-                      )}
-                    </th>
-                  ))}
-                </tr>
-              ))}
-            </thead>
-            <tbody>
-              {table.getFilteredRowModel().rows.length === 0 ? (
-                <tr>
-                  <td colSpan={table.getVisibleFlatColumns().length} className='text-center'>
-                    No data available
-                  </td>
-                </tr>
-              ) : (
-                table
-                  .getRowModel()
-                  .rows.slice(0, table.getState().pagination.pageSize)
-                  .map(row => (
-                    <tr
-                      key={row.id}
-                      id={`sample-row-${row.original.id}`}
-                      className={classnames({ selected: row.getIsSelected() })}
-                      style={getRowStyle(row)}
-                    >
-                      {row.getVisibleCells().map(cell => (
-                        <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-                      ))}
-                    </tr>
-                  ))
-              )}
-            </tbody>
-          </table>
-        )}
-      </div>
-      <TablePagination
-        component={() => <TablePaginationComponent table={table} />}
-        count={table.getFilteredRowModel().rows.length}
-        rowsPerPage={table.getState().pagination.pageSize}
-        page={table.getState().pagination.pageIndex}
-        onPageChange={(_, page) => {
-          table.setPageIndex(page)
-        }}
-      />
-      <div className='flex items-center justify-center gap-4 p-4 border-t'>
-        <Button
-          variant='contained'
-          color='success'
-          startIcon={<i className='tabler-check' />}
-          disabled={Object.keys(rowSelection).length === 0}
-          onClick={handleBulkReceive}
-        >
-          Receive
-        </Button>
-        <Button
-          variant='contained'
-          color='error'
-          startIcon={<i className='tabler-x' />}
-          disabled={Object.keys(rowSelection).length === 0}
-          onClick={handleBulkReject}
-        >
-          Reject
-        </Button>
-        <Button
-          variant='contained'
-          color='warning'
-          startIcon={<i className='tabler-external-link' />}
-          disabled={Object.keys(rowSelection).length === 0}
-          onClick={handleBulkOutsource}
-        >
-          Outsource
-        </Button>
-        <Button
-          variant='contained'
-          color='info'
-          startIcon={<i className='tabler-printer' />}
-          disabled={Object.keys(rowSelection).length === 0}
-          onClick={handleBulkPrintBarcode}
-        >
-          Print Barcode
-        </Button>
-        <Button
-          variant='contained'
-          color='secondary'
-          startIcon={<i className='tabler-rotate' />}
-          disabled={Object.keys(rowSelection).length === 0}
-          onClick={handleBulkCentrifuge}
-        >
-          Centrifuge Selected
-        </Button>
-      </div>
-
+    <>
       <BarcodePrintDialog
         open={showBarcodeDialog}
         setOpen={setShowBarcodeDialog}
-        sampleId={selectedSample?.id || 0}
-        barcodeId={selectedSample?.barcodeId}
-        samples={Object.keys(rowSelection).map(key => {
-          const sample = filteredData[parseInt(key)]
-          return {
-            id: sample.id,
-            barcodeId: sample.barcodeId || '',
-            subjectId: sample.subjectId,
-            sampleType: sample.sampleType,
-            collectedOn: sample.collectedOn
-          }
-        })}
-        sampleDetails={{
-          subjectId: selectedSample?.subjectId,
-          sampleType: selectedSample?.sampleType,
-          collectedOn: selectedSample?.collectedOn
-        }}
+        sampleId={selectedSample?.id ?? 0}
+        barcodeId={selectedSample?.barcodeId || ''}
+        samples={
+          selectedSample
+            ? [
+                {
+                  id: selectedSample.id,
+                  barcodeId: selectedSample.barcodeId || '',
+                  subjectId: selectedSample.subjectId,
+                  sampleType: selectedSample.sampleType,
+                  collectedOn: selectedSample.collectedOn
+                }
+              ]
+            : undefined
+        }
+        sampleDetails={
+          selectedSample
+            ? {
+                subjectId: selectedSample.subjectId,
+                sampleType: selectedSample.sampleType,
+                collectedOn: selectedSample.collectedOn
+              }
+            : undefined
+        }
       />
+      <SampleDetailsDialog open={showSampleDetails} setOpen={setShowSampleDetails} sample={selectedSampleForDetails} />
       <RemarkDialog
         open={showRemarkDialog}
         setOpen={setShowRemarkDialog}
         sampleId={selectedSampleForRemark?.id || 0}
-        currentRemark={selectedSampleForRemark?.remarks}
         onSuccess={handleRemarkSuccess}
       />
       <ConfirmDialog
-        open={showOutsourceConfirm}
-        title='Confirm Outsource'
+        open={showReceiveConfirm}
+        title='Confirm Sample Receive'
+        description='Are you sure you want to receive this sample?'
+        handleClose={() => setShowReceiveConfirm(false)}
+        handleConfirm={handleReceiveConfirm}
+        disabled={isLoading}
+      />
+      <ConfirmDialog
+        open={showRejectConfirm}
+        title='Confirm Sample Reject'
         description={
-          <div className='flex flex-col gap-4'>
-            <Typography>Do you want to outsource {selectedSamplesForOutsource.length} samples?</Typography>
-            {isBulkOperationLoading && <BulkOperationProgress />}
-          </div>
+          <Box>
+            <Typography variant='body2' sx={{ mb: 2 }}>
+              Are you sure you want to reject this sample?
+            </Typography>
+            <CustomTextField
+              fullWidth
+              label='Rejection Reason'
+              value={rejectReason}
+              onChange={e => setRejectReason(e.target.value)}
+              multiline
+              rows={3}
+              required
+            />
+          </Box>
         }
-        okText='Yes'
-        cancelText='No'
-        handleClose={() => {
-          setShowOutsourceConfirm(false)
-          setSelectedSamplesForOutsource([])
-        }}
+        handleClose={() => setShowRejectConfirm(false)}
+        handleConfirm={handleRejectConfirm}
+        disabled={isLoading}
+      />
+      <ConfirmDialog
+        open={showOutsourceConfirm}
+        title='Confirm Sample Outsource'
+        description={`Are you sure you want to outsource ${selectedSamplesForOutsource.length} sample(s)?`}
+        handleClose={() => setShowOutsourceConfirm(false)}
         handleConfirm={handleOutsourceConfirm}
         disabled={isBulkOperationLoading}
       />
       <ConfirmDialog
-        open={showReceiveConfirm}
-        title='Confirm Receive'
-        description={`Do you want to mark sample ${selectedSampleForReceive?.barcodeId} as received?`}
-        okText='Yes'
-        cancelText='No'
-        handleClose={() => {
-          setShowReceiveConfirm(false)
-          setSelectedSampleForReceive(null)
-        }}
-        handleConfirm={handleReceiveConfirm}
-      />
-      <ConfirmDialog
-        open={showRejectConfirm}
-        title='Confirm Rejection'
-        description={
-          <div className='flex flex-col gap-4'>
-            <Typography>Do you want to reject sample {selectedSampleForReject?.barcodeId}?</Typography>
-            <CustomTextField
-              fullWidth
-              multiline
-              rows={3}
-              label='Reason for Rejection'
-              value={rejectReason}
-              onChange={e => setRejectReason(e.target.value)}
-              required
-              error={!rejectReason.trim()}
-              helperText={!rejectReason.trim() ? 'Please provide a reason for rejection' : ''}
-            />
-          </div>
-        }
-        okText='Yes'
-        cancelText='No'
-        handleClose={() => {
-          setShowRejectConfirm(false)
-          setSelectedSampleForReject(null)
-          setRejectReason('')
-        }}
-        handleConfirm={handleRejectConfirm}
-      />
-      <ConfirmDialog
         open={showBulkReceiveConfirm}
         title='Confirm Bulk Receive'
-        description={
-          <div className='flex flex-col gap-4'>
-            <Typography>Do you want to mark {selectedSamplesForReceive.length} samples as received?</Typography>
-            {isBulkOperationLoading && <BulkOperationProgress />}
-          </div>
-        }
-        okText='Yes'
-        cancelText='No'
-        handleClose={() => {
-          setShowBulkReceiveConfirm(false)
-          setSelectedSamplesForReceive([])
-        }}
+        description={`Are you sure you want to receive ${selectedSamplesForReceive.length} sample(s)?`}
+        handleClose={() => setShowBulkReceiveConfirm(false)}
         handleConfirm={handleBulkReceiveConfirm}
         disabled={isBulkOperationLoading}
       />
@@ -1609,57 +1627,138 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
         open={showBulkRejectConfirm}
         title='Confirm Bulk Reject'
         description={
-          <div className='flex flex-col gap-4'>
-            <Typography>Do you want to reject {selectedSamplesForReject.length} samples?</Typography>
+          <Box>
+            <Typography variant='body2' sx={{ mb: 2 }}>
+              Are you sure you want to reject {selectedSamplesForReject.length} sample(s)?
+            </Typography>
             <CustomTextField
               fullWidth
-              multiline
-              rows={3}
-              label='Reason for Rejection'
+              label='Rejection Reason'
               value={bulkRejectReason}
               onChange={e => setBulkRejectReason(e.target.value)}
+              multiline
+              rows={3}
               required
-              error={!bulkRejectReason.trim()}
-              helperText={!bulkRejectReason.trim() ? 'Please provide a reason for rejection' : ''}
-              disabled={isBulkOperationLoading}
             />
-            {isBulkOperationLoading && <BulkOperationProgress />}
-          </div>
+          </Box>
         }
-        okText='Yes'
-        cancelText='No'
-        handleClose={() => {
-          setShowBulkRejectConfirm(false)
-          setSelectedSamplesForReject([])
-          setBulkRejectReason('')
-        }}
+        handleClose={() => setShowBulkRejectConfirm(false)}
         handleConfirm={handleBulkRejectConfirm}
-        disabled={isBulkOperationLoading || !bulkRejectReason.trim()}
+        disabled={isBulkOperationLoading}
       />
       <ConfirmDialog
         open={showBulkCentrifugeConfirm}
-        title='Confirm Centrifugation'
-        description={
-          <div className='flex flex-col gap-4'>
-            <Typography>
-              Do you want to send {selectedSamplesForCentrifuge.length} samples for centrifugation?
-            </Typography>
-            {isBulkOperationLoading && <BulkOperationProgress />}
-          </div>
-        }
-        okText='Yes'
-        cancelText='No'
-        handleClose={() => {
-          setShowBulkCentrifugeConfirm(false)
-          setSelectedSamplesForCentrifuge([])
-        }}
+        title='Confirm Bulk Centrifuge'
+        description={`Are you sure you want to send ${selectedSamplesForCentrifuge.length} sample(s) for centrifugation?`}
+        handleClose={() => setShowBulkCentrifugeConfirm(false)}
         handleConfirm={handleBulkCentrifugeConfirm}
         disabled={isBulkOperationLoading}
       />
-      <SampleDetailsDialog open={showSampleDetails} setOpen={setShowSampleDetails} sample={selectedSampleForDetails} />
       <AuditTrailDialog open={showAuditTrail} setOpen={setShowAuditTrail} sampleId={selectedSampleForAudit || 0} />
-    </Card>
+      {isBulkOperationLoading && <BulkOperationProgress />}
+      <Paper
+        sx={{
+          width: '100%',
+          overflow: 'hidden',
+          boxShadow: theme => theme.shadows[1],
+          borderRadius: 1,
+          border: theme => `1px solid ${theme.palette.divider}`,
+          transition: 'all 0.3s ease-in-out',
+          mb: 4
+        }}
+      >
+        {/* Top section: Title and actions */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 4, pb: 2 }}>
+          <Typography variant='h4'>Sample Received</Typography>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <Button
+              variant='outlined'
+              startIcon={<i className='tabler-printer' />}
+              onClick={handlePdfExport}
+              disabled={isPdfLoading}
+            >
+              {isPdfLoading ? 'Exporting...' : 'Print'}
+            </Button>
+            <Button
+              variant='outlined'
+              startIcon={<i className='tabler-file-spreadsheet' />}
+              onClick={handleExport}
+              disabled={isExporting}
+            >
+              {isExporting ? 'Exporting...' : 'Export'}
+            </Button>
+            {/* Placeholder for future bulk actions */}
+          </Box>
+        </Box>
+        {/* Divider line between title/actions and filters/table */}
+        <Divider sx={{ mb: 2 }} />
+        {/* Filters */}
+        <Box sx={{ px: 4 }}>
+          <TableFilters
+            setData={handleFilterDataChange}
+            sampleData={Object.values(grouped).flatMap(group => group.samples)}
+          />
+        </Box>
+        {/* Grouped Table (filtered) */}
+        <Box sx={{ px: 4, pb: 4 }}>
+          <GroupedSampleReceivedTable
+            sampleData={filteredData}
+            onSampleDetails={handleSampleDetails}
+            onPrintBarcode={sample => {
+              setSelectedSample(sample)
+              setShowBarcodeDialog(true)
+            }}
+          />
+          <div className='flex items-center justify-center gap-4 p-4 border-t'>
+            <Button
+              variant='contained'
+              color='success'
+              startIcon={<i className='tabler-check' />}
+              disabled={Object.keys(rowSelection).length === 0}
+              onClick={handleBulkReceive}
+            >
+              Receive
+            </Button>
+            <Button
+              variant='contained'
+              color='error'
+              startIcon={<i className='tabler-x' />}
+              disabled={Object.keys(rowSelection).length === 0}
+              onClick={handleBulkReject}
+            >
+              Reject
+            </Button>
+            <Button
+              variant='contained'
+              color='warning'
+              startIcon={<i className='tabler-external-link' />}
+              disabled={Object.keys(rowSelection).length === 0}
+              onClick={handleBulkOutsource}
+            >
+              Outsource
+            </Button>
+            <Button
+              variant='contained'
+              color='info'
+              startIcon={<i className='tabler-printer' />}
+              disabled={Object.keys(rowSelection).length === 0}
+              onClick={handleBulkPrintBarcode}
+            >
+              Print Barcode
+            </Button>
+            <Button
+              variant='contained'
+              color='secondary'
+              startIcon={<i className='tabler-rotate' />}
+              disabled={Object.keys(rowSelection).length === 0}
+              onClick={handleBulkCentrifuge}
+            >
+              Centrifuge Selected
+            </Button>
+          </div>
+        </Box>
+      </Paper>
+    </>
   )
 }
-
 export default SampleReceivedTable

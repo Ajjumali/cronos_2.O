@@ -55,6 +55,7 @@ type FormValidateType = {
   nameToBePrinted: string
   remarks: string
   autoValidate: boolean
+  manufactured_by: string // Added new field
 }
 
 const AddInstrumentDrawer = (props: Props) => {
@@ -80,7 +81,8 @@ const AddInstrumentDrawer = (props: Props) => {
       instrumentSerialNumber: '',
       nameToBePrinted: '',
       remarks: '',
-      autoValidate: false
+      autoValidate: false,
+      manufactured_by: '' // Added new field
     }
   })
 
@@ -97,7 +99,8 @@ const AddInstrumentDrawer = (props: Props) => {
           instrumentSerialNumber: selectedInstrument.instrumentSerialNumber || '',
           nameToBePrinted: selectedInstrument.nameToBePrinted || '',
           remarks: selectedInstrument.remarks || '',
-          autoValidate: selectedInstrument.autoValidate
+          autoValidate: selectedInstrument.autoValidate,
+          manufactured_by: selectedInstrument.manufactured_by || '' // Added new field
         })
         setIsActive(selectedInstrument.isActive)
       } else {
@@ -110,7 +113,8 @@ const AddInstrumentDrawer = (props: Props) => {
           instrumentSerialNumber: '',
           nameToBePrinted: '',
           remarks: '',
-          autoValidate: false
+          autoValidate: false,
+          manufactured_by: '' // Added new field
         })
         setIsActive(true)
       }
@@ -155,9 +159,14 @@ const AddInstrumentDrawer = (props: Props) => {
   }, [open])
 
   const onSubmit = async (formData: FormValidateType) => {
-    // Show reason dialog for both add and edit operations
-    setPendingFormData(formData)
-    setIsReasonDialogOpen(true)
+    if (selectedInstrument && selectedInstrument.instrumentId && selectedInstrument.instrumentId !== 0) {
+      // Show reason dialog only for edit operations
+      setPendingFormData(formData)
+      setIsReasonDialogOpen(true)
+    } else {
+      // Directly submit form for add operations
+      submitForm(formData)
+    }
   }
 
   const submitForm = async (formData: FormValidateType, reason?: string) => {
@@ -179,6 +188,7 @@ const AddInstrumentDrawer = (props: Props) => {
         nameToBePrinted: formData.nameToBePrinted,
         port: formData.port,
         remarks: formData.remarks,
+        manufactured_by: formData.manufactured_by, // Added new field
         updatedBy: 'System',
         updatedOn: new Date().toISOString()
       }
@@ -349,6 +359,26 @@ const AddInstrumentDrawer = (props: Props) => {
                 />
 
                 <Controller
+                  name='manufactured_by'
+                  control={control}
+                  rules={{ required: 'Manufactured by is required' }}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      label='Manufactured By'
+                      size='small'
+                      placeholder='e.g., Agilent Technologies'
+                      error={!!errors.manufactured_by}
+                      helperText={errors.manufactured_by?.message}
+                      required
+                    />
+                  )}
+                />
+              </div>
+
+              <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+                <Controller
                   name='nameToBePrinted'
                   control={control}
                   rules={{ required: 'Print name is required' }}
@@ -365,8 +395,30 @@ const AddInstrumentDrawer = (props: Props) => {
                     />
                   )}
                 />
+                {/* Active Status Toggle */}
+                <div className='flex items-center space-x-2 pl-2 pt-2'>
+                  <Switch checked={isActive} onChange={e => setIsActive(e.target.checked)} color='primary' />
+                  <Typography>Active Status</Typography>
+                </div>
               </div>
-
+              <div>
+                <Controller
+                  name='autoValidate'
+                  control={control}
+                  rules={{ required: 'Auto validate is required' }}
+                  render={({ field }) => (
+                    <div className='flex items-center space-x-2'>
+                      <Switch
+                        {...field}
+                        checked={field.value}
+                        onChange={e => field.onChange(e.target.checked)}
+                        color='primary'
+                      />
+                      <Typography>Auto Validate</Typography>
+                    </div>
+                  )}
+                />
+              </div>
               <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
                 <Controller
                   name='ipAddress'

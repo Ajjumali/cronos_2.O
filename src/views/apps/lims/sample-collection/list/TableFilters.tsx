@@ -85,29 +85,40 @@ const TableFilters = ({
   const [labs, setLabs] = useState<LabDto[]>([])
   const [locations, setLocations] = useState<LocationDto[]>([])
   const [employees, setEmployees] = useState<EmployeeDto[]>([])
+  const [projectNo, setProjectNo] = useState<number>(0)
+  const [study, setStudy] = useState<string>('')
+  const [receiveStatus, setReceiveStatus] = useState<string>('')
+  const [projects, setProjects] = useState<any[]>([])
+  const [studySites, setStudySites] = useState<any[]>([])
 
   // Fetch sample types, labs, locations, and employees on component mount
   useEffect(() => {
-    const fetchSampleTypes = async () => {
-      try {
-        const response = await fetch('/api/apps/lims/sample-type-master')
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch sample types')
-        }
-
-        const data = await response.json()
-
-        if (data.result) {
-          setSampleTypes(data.result)
-        } else {
-          setSampleTypes([])
-        }
-      } catch (error) {
-        console.error('Error fetching sample types:', error)
-        setSampleTypes([])
-      }
+   const fetchSampleTypes = async () => {
+  try {
+    const response = await fetch('/api/apps/lims/sample-type-master');
+    if (!response.ok) {
+      // Optionally log the response text for debugging
+      const text = await response.text();
+      console.error('Server error:', text);
+      throw new Error('Failed to fetch sample types');
     }
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error('Non-JSON response:', text);
+      throw new Error('Invalid response format');
+    }
+    const data = await response.json();
+    if (data.result) {
+      setSampleTypes(data.result);
+    } else {
+      setSampleTypes([]);
+    }
+  } catch (error) {
+    console.error('Error fetching sample types:', error);
+    setSampleTypes([]);
+  }
+};
 
     const fetchLabs = async () => {
       try {
@@ -172,10 +183,37 @@ const TableFilters = ({
       }
     }
 
+    const fetchProjects = async () => {
+      try {
+        const response = await fetch('/api/apps/lims/project-master')
+        if (!response.ok) throw new Error('Failed to fetch projects')
+        const data = await response.json()
+        setProjects(data.result || [])
+      } catch (error) {
+        setProjects([])
+      }
+    }
+
+    const fetchStudySites = async () => {
+      if (!projectNo) {
+        setStudySites([])
+        return
+      }
+      try {
+        const response = await fetch(`/api/apps/lims/study-site-master?id=${projectNo}`)
+        const data = await response.json()
+        setStudySites(data.result || [])
+      } catch (error) {
+        setStudySites([])
+      }
+    }
+
     fetchSampleTypes()
     fetchLabs()
     fetchLocations()
     fetchEmployees()
+    fetchProjects()
+    fetchStudySites()
   }, [])
 
   // Function to clear all filters
@@ -185,21 +223,25 @@ const TableFilters = ({
     setLocation('')
     setEmployeeId('')
     setLab('')
+    setProjectNo(0)
+    setStudy('')
+    setReceiveStatus('')
     setData(sampleData || [])
   }
 
   // Function to apply filters
   const handleApplyFilters = () => {
     const filteredData = sampleData?.filter(sample => {
+      if (projectNo && sample.projectNo !== projectNo.toString()) return false
+      if (study && sample.study !== study) return false
+      if (receiveStatus && sample.receiveStatus !== receiveStatus) return false
       if (collectionStatus && sample.collectionStatus !== collectionStatus) return false
       if (sampleType && sample.sampleType !== sampleType) return false
       if (location && sample.location !== location) return false
       if (employeeId && sample.employeeId !== employeeId) return false
       if (lab && sample.laboratory !== lab) return false
-
       return true
     })
-
     setData(filteredData ?? [])
   }
 
@@ -215,6 +257,7 @@ const TableFilters = ({
             </div>
           }
         >
+          
           Filters
         </Button>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
@@ -224,7 +267,7 @@ const TableFilters = ({
             onClick={clearFilters}
             startIcon={<i className="tabler-refresh text-sm" />}
           >
-            Reset Filters
+            Clear
           </Button>
         </Box>
       </Box>
@@ -330,6 +373,59 @@ const TableFilters = ({
                   {lab.labName}
                 </MenuItem>
               ))}
+            </CustomTextField>
+          </Grid>
+
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <Autocomplete
+              fullWidth
+              id='project-no'
+              options={projects}
+              getOptionLabel={option => option.studyProtocolNumber + ' - ' + option.studyTitle}
+              value={projects.find(project => project.id === projectNo) || null}
+              onChange={(_, newValue) => setProjectNo(newValue?.id || 0)}
+              renderInput={params => <CustomTextField {...params} placeholder='Search Project' />}
+              isOptionEqualToValue={(option, value) => option.studyProtocolNumber === value.studyProtocolNumber}
+              renderOption={(props, option) => (
+                <li {...props} key={option.id}>
+                  {option.studyProtocolNumber} - {option.studyTitle}
+                </li>
+              )}
+            />
+          </Grid>
+
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <Autocomplete
+              fullWidth
+              id='study'
+              options={studySites}
+              getOptionLabel={option => `${option.siteProtocolNumber} - ${option.siteGroupName}`}
+              value={studySites.find(site => site.siteNumber === study) || null}
+              onChange={(_, newValue) => setStudy(newValue?.siteNumber || '')}
+              renderInput={params => <CustomTextField {...params} placeholder='Search Study Site' />}
+              isOptionEqualToValue={(option, value) => option.siteNumber === value.siteNumber}
+              renderOption={(props, option) => (
+                <li {...props} key={option.id}>
+                  {option.siteProtocolNumber} - {option.siteGroupName}
+                </li>
+              )}
+              disabled={!projectNo}
+            />
+          </Grid>
+
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <CustomTextField
+              select
+              fullWidth
+              id='receive-status'
+              value={receiveStatus}
+              onChange={e => setReceiveStatus(e.target.value)}
+              slotProps={{ select: { displayEmpty: true } }}
+              placeholder='Select Receive Status'
+            >
+              <MenuItem value=''>Select Receive Status</MenuItem>
+              <MenuItem value='3'>Pending</MenuItem>
+              <MenuItem value='5'>Completed</MenuItem>
             </CustomTextField>
           </Grid>
 

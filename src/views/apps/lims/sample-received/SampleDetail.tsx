@@ -49,7 +49,9 @@ const DetailItem = ({ label, value }: { label: string; value: string | number | 
       <Typography variant='subtitle2' color='text.secondary' sx={{ mb: 0.25, fontSize: '0.75rem' }}>
         {label}
       </Typography>
-      <Typography variant='body2' sx={{ fontWeight: 500 }}>{value || '-'}</Typography>
+      <Typography variant='body2' sx={{ fontWeight: 500 }}>
+        {value || '-'}
+      </Typography>
     </Box>
   </Grid>
 )
@@ -63,23 +65,23 @@ const SampleDetail = () => {
   useEffect(() => {
     const fetchSampleDetails = async () => {
       try {
-        const response = await fetch(`/api/apps/lims/Sample-received?id=${params.id}`);
+        const response = await fetch(`/api/apps/lims/Sample-received?id=${params.id}`)
         if (!response.ok) {
-          throw new Error('Failed to fetch sample details');
+          throw new Error('Failed to fetch sample details')
         }
-        const data = await response.json();
-        setSample(data.result);
+        const data = await response.json()
+        setSample(data.result)
       } catch (error) {
-        console.error('Error fetching sample details:', error);
+        console.error('Error fetching sample details:', error)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
     }
 
     if (params.id) {
-      fetchSampleDetails();
+      fetchSampleDetails()
     }
-  }, [params.id]);
+  }, [params.id])
 
   if (loading) {
     return (
@@ -101,7 +103,9 @@ const SampleDetail = () => {
     )
   }
 
-  const statusInfo = (sample.statusId === null ? statusMap.null : statusMap[sample.statusId as keyof typeof statusMap]) || { label: 'Unknown', color: 'default' }
+  const statusInfo = (sample.statusId === null
+    ? statusMap.null
+    : statusMap[sample.statusId as keyof typeof statusMap]) || { label: 'Unknown', color: 'default' }
 
   return (
     <Card>
@@ -123,13 +127,10 @@ const SampleDetail = () => {
         <Grid container spacing={2}>
           <Grid item xs={12}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <Typography variant='subtitle1' sx={{ fontWeight: 600 }}>Status:</Typography>
-              <Chip
-                label={statusInfo.label}
-                color={statusInfo.color as any}
-                variant='tonal'
-                size='small'
-              />
+              <Typography variant='subtitle1' sx={{ fontWeight: 600 }}>
+                Status:
+              </Typography>
+              <Chip label={statusInfo.label} color={statusInfo.color as any} variant='tonal' size='small' />
             </Box>
           </Grid>
 
@@ -158,7 +159,7 @@ const SampleDetail = () => {
             <Divider sx={{ mb: 2 }} />
           </Grid>
 
-          <DetailItem label='Collected By' value={sample.collectedByName} />
+          <DetailItem label='Collected By' value={sample.collectedBy} />
           <DetailItem label='Collected On' value={formatDate(sample.collectedOn)} />
           <DetailItem label='Sent By' value={sample.sentByName} />
           <DetailItem label='Sent On' value={formatDate(sample.sentOn)} />
@@ -189,7 +190,9 @@ const SampleDetail = () => {
                   <Typography variant='subtitle2' color='text.secondary' sx={{ mb: 0.25, fontSize: '0.75rem' }}>
                     Remarks
                   </Typography>
-                  <Typography variant='body2' sx={{ fontWeight: 500 }}>{sample.remarks}</Typography>
+                  <Typography variant='body2' sx={{ fontWeight: 500 }}>
+                    {sample.remarks}
+                  </Typography>
                 </Box>
               </Grid>
             </>
@@ -200,4 +203,4 @@ const SampleDetail = () => {
   )
 }
 
-export default SampleDetail 
+export default SampleDetail

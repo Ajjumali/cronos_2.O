@@ -12,6 +12,7 @@ export type InstrumentType = {
   nameToBePrinted: string
   port: string
   remarks: string
+  manufactured_by: string // Added field
   updatedBy: string
   updatedOn: string
   reason?: string
