@@ -255,7 +255,6 @@ export type QcCheckType = {
   genderName: string
   parameter: string
 }
-
 export type ReasonType = {
   reasonId: number
   reasonName: string
