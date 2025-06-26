@@ -255,14 +255,3 @@ export type QcCheckType = {
   genderName: string
   parameter: string
 }
-export type ReasonType = {
-  reasonId: number
-  reasonName: string
-  isActive: string
-  timezoneId: number
-  operationId: number
-  createOn: string
-  createdBy: string
-  updatedOn: string
-  updatedBy: string
-}
