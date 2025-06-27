@@ -311,6 +311,25 @@ const GroupedSampleReceivedTable = ({
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(5)
 
+  // Add bulk operation states
+  const [showOutsourceConfirm, setShowOutsourceConfirm] = useState(false)
+  const [selectedSamplesForOutsource, setSelectedSamplesForOutsource] = useState<number[]>([])
+  const [showReceiveConfirm, setShowReceiveConfirm] = useState(false)
+  const [selectedSampleForReceive, setSelectedSampleForReceive] = useState<SampleType | null>(null)
+  const [showRejectConfirm, setShowRejectConfirm] = useState(false)
+  const [selectedSampleForReject, setSelectedSampleForReject] = useState<SampleType | null>(null)
+  const [rejectReason, setRejectReason] = useState('')
+  const [showBulkReceiveConfirm, setShowBulkReceiveConfirm] = useState(false)
+  const [selectedSamplesForReceive, setSelectedSamplesForReceive] = useState<number[]>([])
+  const [showBulkRejectConfirm, setShowBulkRejectConfirm] = useState(false)
+  const [selectedSamplesForReject, setSelectedSamplesForReject] = useState<number[]>([])
+  const [bulkRejectReason, setBulkRejectReason] = useState('')
+  const [showBulkCentrifugeConfirm, setShowBulkCentrifugeConfirm] = useState(false)
+  const [selectedSamplesForCentrifuge, setSelectedSamplesForCentrifuge] = useState<number[]>([])
+  const [isBulkOperationLoading, setIsBulkOperationLoading] = useState(false)
+  const [bulkOperationProgress, setBulkOperationProgress] = useState(0)
+  const [isLoading, setIsLoading] = useState(false)
+
   const grouped = useMemo(() => groupSamplesByVolunteer(sampleData), [sampleData])
   const groupKeys = Object.keys(grouped)
   const pagedGroupKeys = groupKeys.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
@@ -382,8 +401,45 @@ const GroupedSampleReceivedTable = ({
     const allSamples = Object.values(grouped).flatMap(group => group.samples)
     const sample = allSamples.find(item => item.id === id)
     if (sample) {
-      // Note: This would need to be handled by parent component
-      toast.info('Reject functionality needs to be implemented in parent component')
+      setSelectedSampleForReject(sample)
+      setShowRejectConfirm(true)
+    }
+  }
+
+  const handleRejectConfirm = async () => {
+    if (!selectedSampleForReject || !rejectReason.trim()) {
+      toast.error('Please provide a reason for rejection')
+      return
+    }
+
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/apps/lims/Sample-received?action=status', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ids: [selectedSampleForReject.id],
+          statusId: 2,
+          reason: rejectReason
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to reject sample')
+      }
+
+      toast.success('Sample rejected successfully')
+      window.location.reload()
+    } catch (error) {
+      console.error('Error rejecting sample:', error)
+      toast.error('Failed to reject sample')
+    } finally {
+      setShowRejectConfirm(false)
+      setSelectedSampleForReject(null)
+      setRejectReason('')
+      setIsLoading(false)
     }
   }
 
@@ -405,24 +461,51 @@ const GroupedSampleReceivedTable = ({
   }
 
   const handleOutsourceSample = async (id: number) => {
+    setSelectedSamplesForOutsource([id])
+    setShowOutsourceConfirm(true)
+  }
+
+  const handleOutsourceConfirm = async () => {
     try {
-      const response = await fetch('/api/apps/lims/Sample-received?action=status', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ ids: [id], statusId: 6 })
-      })
+      setIsBulkOperationLoading(true)
+      setBulkOperationProgress(0)
 
-      if (!response.ok) {
-        throw new Error('Failed to outsource sample')
-      }
+      const totalSamples = selectedSamplesForOutsource.length
+      let processedSamples = 0
 
-      toast.success('Sample outsourced successfully')
+      await Promise.all(
+        selectedSamplesForOutsource.map(async id => {
+          try {
+            const response = await fetch('/api/apps/lims/Sample-received?action=status', {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ ids: [id], statusId: 6 })
+            })
+
+            if (!response.ok) {
+              throw new Error('Failed to outsource sample')
+            }
+
+            processedSamples++
+            setBulkOperationProgress((processedSamples / totalSamples) * 100)
+          } catch (error) {
+            console.error(`Error outsourcing sample ${id}:`, error)
+          }
+        })
+      )
+
+      toast.success('Samples outsourced successfully')
       window.location.reload()
     } catch (error) {
-      console.error('Error outsourcing sample:', error)
-      toast.error('Failed to outsource sample')
+      console.error('Error outsourcing samples:', error)
+      toast.error('Failed to outsource some samples. Please check the audit trail for details.')
+    } finally {
+      setShowOutsourceConfirm(false)
+      setSelectedSamplesForOutsource([])
+      setIsBulkOperationLoading(false)
+      setBulkOperationProgress(0)
     }
   }
 
@@ -435,197 +518,569 @@ const GroupedSampleReceivedTable = ({
     }
   }
 
-  return (
-    <Paper
-      sx={{
-        width: '100%',
-        overflow: 'hidden',
-        boxShadow: t => t.shadows[1],
-        borderRadius: 1,
-        border: t => `1px solid ${t.palette.divider}`
-      }}
-    >
-      <TableContainer sx={{ maxHeight: 640 }}>
-        <Table stickyHeader>
-          <TableHead>
-            <TableRow>
-              <TableCell padding='checkbox' />
-              <TableCell>Volunteer Name</TableCell>
-              <TableCell>Volunteer ID</TableCell>
-              <TableCell>Barcode ID</TableCell>
-              <TableCell>Sample Type</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {pagedGroupKeys.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} align='center'>
-                  No data found
-                </TableCell>
-              </TableRow>
-            ) : (
-              pagedGroupKeys.map(volunteerId => {
-                const group = grouped[volunteerId]
-                return (
-                  <React.Fragment key={volunteerId}>
-                    <TableRow hover>
-                      <TableCell padding='checkbox'>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Checkbox
-                            checked={isGroupSelected(volunteerId, group.samples)}
-                            indeterminate={isGroupIndeterminate(volunteerId, group.samples)}
-                            onChange={() => handleGroupSelect(volunteerId, group.samples)}
-                          />
-                          <IconButton
-                            size='small'
-                            onClick={() => handleExpand(volunteerId, group.samples)}
-                            sx={{
-                              width: 28,
-                              height: 28,
-                              backgroundColor: theme =>
-                                expanded[volunteerId] ? theme.palette.primary.main : theme.palette.action.hover,
-                              color: theme =>
-                                expanded[volunteerId] ? theme.palette.primary.contrastText : theme.palette.text.primary,
-                              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                              '&:hover': {
-                                backgroundColor: theme =>
-                                  expanded[volunteerId] ? theme.palette.primary.dark : theme.palette.action.selected,
-                                transform: 'scale(1.1) rotate(180deg)'
-                              }
-                            }}
-                          >
-                            {expanded[volunteerId] ? <RemoveIcon fontSize='small' /> : <AddIcon fontSize='small' />}
-                          </IconButton>
-                        </Box>
-                      </TableCell>
-                      <TableCell>{group.volunteerName}</TableCell>
-                      <TableCell>{volunteerId}</TableCell>
-                      <TableCell>{group.projectNo}</TableCell>
-                      <TableCell>{group.study}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
-                        <Collapse in={!!expanded[volunteerId]} timeout={300} unmountOnExit>
-                          <Box margin={1}>
-                            <Table size='small'>
-                              <TableHead>
-                                <TableRow>
-                                  <TableCell padding='checkbox' />
-                                  <TableCell>Actions</TableCell>
-                                  <TableCell>Barcode ID</TableCell>
-                                  <TableCell>Sample Type</TableCell>
-                                  <TableCell>Collected By</TableCell>
-                                  <TableCell>Collected On</TableCell>
-                                  <TableCell>Sent By</TableCell>
-                                  <TableCell>Sent On</TableCell>
-                                  <TableCell>Status</TableCell>
-                                </TableRow>
-                              </TableHead>
-                              <TableBody>
-                                {group.samples.map(sample => (
-                                  <TableRow key={sample.barcodeId} hover>
-                                    <TableCell padding='checkbox'>
-                                      <Checkbox
-                                        checked={!!selectedSamples[sample.barcodeId || '']}
-                                        onChange={() => sample.barcodeId && handleSampleSelect(sample.barcodeId)}
-                                      />
-                                    </TableCell>
-                                    <TableCell>
-                                      <OptionMenu
-                                        options={[
-                                          {
-                                            text: 'Receive',
-                                            icon: <i className='tabler-check' style={{ color: '#4CAF50' }} />,
-                                            menuItemProps: {
-                                              onClick: () => handleSampleReceive(sample.id)
-                                            }
-                                          },
-                                          {
-                                            text: 'Reject',
-                                            icon: <i className='tabler-x' style={{ color: '#F44336' }} />,
-                                            menuItemProps: {
-                                              onClick: () => handleSampleReject(sample.id)
-                                            }
-                                          },
-                                          {
-                                            text: 'Print Barcode',
-                                            icon: <i className='tabler-printer' style={{ color: '#3F51B5' }} />,
-                                            menuItemProps: {
-                                              onClick: () => handlePrintBarcode(sample.id)
-                                            }
-                                          },
-                                          {
-                                            text: 'Sample Detail',
-                                            icon: <i className='tabler-eye' style={{ color: '#00BCD4' }} />,
-                                            menuItemProps: {
-                                              onClick: () => onSampleDetails(sample)
-                                            }
-                                          },
-                                          {
-                                            text: 'Outsource Sample',
-                                            icon: <i className='tabler-external-link' style={{ color: '#FF9800' }} />,
-                                            menuItemProps: {
-                                              onClick: () => handleOutsourceSample(sample.id)
-                                            }
-                                          },
-                                          {
-                                            text: 'Remarks',
-                                            icon: <i className='tabler-message' style={{ color: '#E91E63' }} />,
-                                            menuItemProps: {
-                                              onClick: () => handleRemarks(sample.id)
-                                            }
-                                          }
-                                          // {
-                                          //   text: 'Audit Trail',
-                                          //   icon: <i className='tabler-list-details' style={{ color: '#00BFAE' }} />,
-                                          //   menuItemProps: {
-                                          //     onClick: () => handleAuditTrail(sample.id)
-                                          //   }
-                                          // }
-                                        ]}
-                                      />
-                                    </TableCell>
-                                    <TableCell>{sample.barcodeId}</TableCell>
-                                    <TableCell>{sample.sampleType}</TableCell>
-                                    <TableCell>{sample.collectedBy}</TableCell>
-                                    <TableCell>{formatDate(sample.collectedOn)}</TableCell>
-                                    <TableCell>{sample.sentByName}</TableCell>
-                                    <TableCell>{formatDate(sample.sentOn)}</TableCell>
-                                    <TableCell>
-                                      <Chip
-                                        label={getStatusInfo(sample.statusId).label}
-                                        color={getStatusInfo(sample.statusId).color as any}
-                                        size='small'
-                                      />
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </Box>
-                        </Collapse>
-                      </TableCell>
-                    </TableRow>
-                  </React.Fragment>
-                )
+  // Add bulk operation handlers
+  const handleBulkReceive = () => {
+    const selectedIds = Object.entries(selectedSamples)
+      .filter(([_, checked]) => checked)
+      .map(([barcodeId]) => {
+        const allSamples = Object.values(grouped).flatMap(group => group.samples)
+        return allSamples.find(sample => sample.barcodeId === barcodeId)?.id
+      })
+      .filter(Boolean)
+
+    if (selectedIds.length > 0) {
+      setSelectedSamplesForReceive(selectedIds as number[])
+      setShowBulkReceiveConfirm(true)
+    }
+  }
+
+  const handleBulkReceiveConfirm = async () => {
+    try {
+      setIsBulkOperationLoading(true)
+      setBulkOperationProgress(0)
+
+      const totalSamples = selectedSamplesForReceive.length
+      let processedSamples = 0
+
+      await Promise.all(
+        selectedSamplesForReceive.map(async id => {
+          try {
+            const response = await fetch('/api/apps/lims/Sample-received?action=status', {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ ids: [id], statusId: 1 })
+            })
+
+            if (!response.ok) {
+              throw new Error('Failed to receive sample')
+            }
+
+            processedSamples++
+            setBulkOperationProgress((processedSamples / totalSamples) * 100)
+          } catch (error) {
+            console.error(`Error receiving sample ${id}:`, error)
+          }
+        })
+      )
+
+      toast.success('Selected samples received successfully')
+      window.location.reload()
+    } catch (error) {
+      console.error('Error receiving samples:', error)
+      toast.error('Failed to receive some samples. Please check the audit trail for details.')
+    } finally {
+      setShowBulkReceiveConfirm(false)
+      setSelectedSamplesForReceive([])
+      setIsBulkOperationLoading(false)
+      setBulkOperationProgress(0)
+    }
+  }
+
+  const handleBulkReject = () => {
+    const selectedIds = Object.entries(selectedSamples)
+      .filter(([_, checked]) => checked)
+      .map(([barcodeId]) => {
+        const allSamples = Object.values(grouped).flatMap(group => group.samples)
+        return allSamples.find(sample => sample.barcodeId === barcodeId)?.id
+      })
+      .filter(Boolean)
+
+    if (selectedIds.length > 0) {
+      setSelectedSamplesForReject(selectedIds as number[])
+      setShowBulkRejectConfirm(true)
+    }
+  }
+
+  const handleBulkRejectConfirm = async () => {
+    if (!bulkRejectReason.trim()) {
+      toast.error('Please provide a reason for rejection')
+      return
+    }
+
+    try {
+      setIsBulkOperationLoading(true)
+      setBulkOperationProgress(0)
+
+      const totalSamples = selectedSamplesForReject.length
+      let processedSamples = 0
+
+      await Promise.all(
+        selectedSamplesForReject.map(async id => {
+          try {
+            const response = await fetch('/api/apps/lims/Sample-received?action=status', {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                ids: [id],
+                statusId: 2,
+                reason: bulkRejectReason
               })
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      <TablePagination
-        rowsPerPageOptions={[10, 25, 50, 100]}
-        component='div'
-        count={groupKeys.length}
-        rowsPerPage={rowsPerPage}
-        page={page}
-        onPageChange={(_, newPage) => setPage(newPage)}
-        onRowsPerPageChange={e => {
-          setRowsPerPage(parseInt(e.target.value, 10))
-          setPage(0)
+            })
+
+            if (!response.ok) {
+              throw new Error('Failed to reject sample')
+            }
+
+            processedSamples++
+            setBulkOperationProgress((processedSamples / totalSamples) * 100)
+          } catch (error) {
+            console.error(`Error rejecting sample ${id}:`, error)
+          }
+        })
+      )
+
+      toast.success('Selected samples rejected successfully')
+      window.location.reload()
+    } catch (error) {
+      console.error('Error rejecting samples:', error)
+      toast.error('Failed to reject some samples. Please check the audit trail for details.')
+    } finally {
+      setShowBulkRejectConfirm(false)
+      setSelectedSamplesForReject([])
+      setBulkRejectReason('')
+      setIsBulkOperationLoading(false)
+      setBulkOperationProgress(0)
+    }
+  }
+
+  const handleBulkOutsource = () => {
+    const selectedIds = Object.entries(selectedSamples)
+      .filter(([_, checked]) => checked)
+      .map(([barcodeId]) => {
+        const allSamples = Object.values(grouped).flatMap(group => group.samples)
+        return allSamples.find(sample => sample.barcodeId === barcodeId)?.id
+      })
+      .filter(Boolean)
+    setSelectedSamplesForOutsource(selectedIds as number[])
+    setShowOutsourceConfirm(true)
+  }
+
+  const handleBulkPrintBarcode = () => {
+    const selectedIds = Object.entries(selectedSamples)
+      .filter(([_, checked]) => checked)
+      .map(([barcodeId]) => {
+        const allSamples = Object.values(grouped).flatMap(group => group.samples)
+        return allSamples.find(sample => sample.barcodeId === barcodeId)
+      })
+      .filter(Boolean)
+
+    if (selectedIds.length === 0) {
+      toast.error('No samples selected')
+      return
+    }
+
+    // Check if any sample is missing barcode ID
+    const sampleWithoutBarcode = selectedIds.find(sample => !sample?.barcodeId)
+    if (sampleWithoutBarcode) {
+      toast.error(`Sample ${sampleWithoutBarcode.id} has no barcode ID`)
+      return
+    }
+
+    // Set the first sample for backward compatibility with BarcodePrintDialog
+    onPrintBarcode(selectedIds[0] as SampleType)
+  }
+
+  const handleBulkCentrifuge = () => {
+    const selectedIds = Object.entries(selectedSamples)
+      .filter(([_, checked]) => checked)
+      .map(([barcodeId]) => {
+        const allSamples = Object.values(grouped).flatMap(group => group.samples)
+        return allSamples.find(sample => sample.barcodeId === barcodeId)?.id
+      })
+      .filter(Boolean)
+
+    if (selectedIds.length > 0) {
+      setSelectedSamplesForCentrifuge(selectedIds as number[])
+      setShowBulkCentrifugeConfirm(true)
+    }
+  }
+
+  const handleBulkCentrifugeConfirm = async () => {
+    try {
+      setIsBulkOperationLoading(true)
+      setBulkOperationProgress(0)
+
+      const totalSamples = selectedSamplesForCentrifuge.length
+      let processedSamples = 0
+
+      await Promise.all(
+        selectedSamplesForCentrifuge.map(async id => {
+          try {
+            const response = await fetch('/api/apps/lims/Sample-received?action=centrifuge', {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ ids: [id] })
+            })
+
+            if (!response.ok) {
+              throw new Error('Failed to centrifuge sample')
+            }
+
+            processedSamples++
+            setBulkOperationProgress((processedSamples / totalSamples) * 100)
+          } catch (error) {
+            console.error(`Error centrifuging sample ${id}:`, error)
+          }
+        })
+      )
+
+      toast.success('Selected samples sent for centrifugation successfully')
+      window.location.reload()
+    } catch (error) {
+      console.error('Error centrifuging samples:', error)
+      toast.error('Failed to centrifuge some samples. Please check the audit trail for details.')
+    } finally {
+      setShowBulkCentrifugeConfirm(false)
+      setSelectedSamplesForCentrifuge([])
+      setIsBulkOperationLoading(false)
+      setBulkOperationProgress(0)
+    }
+  }
+
+  // Get selected sample IDs
+  const selectedSampleIds = Object.entries(selectedSamples)
+    .filter(([_, checked]) => checked)
+    .map(([barcodeId]) => {
+      const allSamples = Object.values(grouped).flatMap(group => group.samples)
+      return allSamples.find(sample => sample.barcodeId === barcodeId)?.id
+    })
+    .filter(Boolean)
+
+  return (
+    <>
+      {/* Confirmation Dialogs */}
+      <ConfirmDialog
+        open={showReceiveConfirm}
+        title='Confirm Sample Receive'
+        description='Are you sure you want to receive this sample?'
+        handleClose={() => setShowReceiveConfirm(false)}
+        handleConfirm={async () => {
+          if (selectedSampleForReceive) await handleSampleReceive(selectedSampleForReceive.id)
         }}
+        disabled={isLoading}
       />
-    </Paper>
+      <ConfirmDialog
+        open={showRejectConfirm}
+        title='Confirm Sample Reject'
+        description={
+          <Box>
+            <Typography variant='body2' sx={{ mb: 2 }}>
+              Are you sure you want to reject this sample?
+            </Typography>
+            <CustomTextField
+              fullWidth
+              label='Rejection Reason'
+              value={rejectReason}
+              onChange={e => setRejectReason(e.target.value)}
+              multiline
+              rows={3}
+              required
+            />
+          </Box>
+        }
+        handleClose={() => setShowRejectConfirm(false)}
+        handleConfirm={handleRejectConfirm}
+        disabled={isLoading}
+      />
+      <ConfirmDialog
+        open={showOutsourceConfirm}
+        title='Confirm Sample Outsource'
+        description={`Are you sure you want to outsource ${selectedSamplesForOutsource.length} sample(s)?`}
+        handleClose={() => setShowOutsourceConfirm(false)}
+        handleConfirm={handleOutsourceConfirm}
+        disabled={isBulkOperationLoading}
+      />
+      <ConfirmDialog
+        open={showBulkReceiveConfirm}
+        title='Confirm Bulk Receive'
+        description={`Are you sure you want to receive ${selectedSamplesForReceive.length} sample(s)?`}
+        handleClose={() => setShowBulkReceiveConfirm(false)}
+        handleConfirm={handleBulkReceiveConfirm}
+        disabled={isBulkOperationLoading}
+      />
+      <ConfirmDialog
+        open={showBulkRejectConfirm}
+        title='Confirm Bulk Reject'
+        description={
+          <Box>
+            <Typography variant='body2' sx={{ mb: 2 }}>
+              Are you sure you want to reject {selectedSamplesForReject.length} sample(s)?
+            </Typography>
+            <CustomTextField
+              fullWidth
+              label='Rejection Reason'
+              value={bulkRejectReason}
+              onChange={e => setBulkRejectReason(e.target.value)}
+              multiline
+              rows={3}
+              required
+            />
+          </Box>
+        }
+        handleClose={() => setShowBulkRejectConfirm(false)}
+        handleConfirm={handleBulkRejectConfirm}
+        disabled={isBulkOperationLoading}
+      />
+      <ConfirmDialog
+        open={showBulkCentrifugeConfirm}
+        title='Confirm Bulk Centrifuge'
+        description={`Are you sure you want to send ${selectedSamplesForCentrifuge.length} sample(s) for centrifugation?`}
+        handleClose={() => setShowBulkCentrifugeConfirm(false)}
+        handleConfirm={handleBulkCentrifugeConfirm}
+        disabled={isBulkOperationLoading}
+      />
+
+      {/* Progress Indicator */}
+      {isBulkOperationLoading && (
+        <Box sx={{ width: '100%', mt: 2 }}>
+          <LinearProgress variant='determinate' value={bulkOperationProgress} />
+          <Typography variant='body2' color='text.secondary' align='center' sx={{ mt: 1 }}>
+            Processing {Math.round(bulkOperationProgress)}% complete
+          </Typography>
+        </Box>
+      )}
+
+      <Paper
+        sx={{
+          width: '100%',
+          overflow: 'hidden',
+          boxShadow: t => t.shadows[1],
+          borderRadius: 1,
+          border: t => `1px solid ${t.palette.divider}`
+        }}
+      >
+        <TableContainer sx={{ maxHeight: 640 }}>
+          <Table stickyHeader>
+            <TableHead>
+              <TableRow>
+                <TableCell padding='checkbox' />
+                <TableCell>Volunteer Name</TableCell>
+                <TableCell>Volunteer ID</TableCell>
+                <TableCell>Barcode ID</TableCell>
+                <TableCell>Sample Type</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {pagedGroupKeys.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} align='center'>
+                    No data found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                pagedGroupKeys.map(volunteerId => {
+                  const group = grouped[volunteerId]
+                  return (
+                    <React.Fragment key={volunteerId}>
+                      <TableRow hover>
+                        <TableCell padding='checkbox'>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Checkbox
+                              checked={isGroupSelected(volunteerId, group.samples)}
+                              indeterminate={isGroupIndeterminate(volunteerId, group.samples)}
+                              onChange={() => handleGroupSelect(volunteerId, group.samples)}
+                            />
+                            <IconButton
+                              size='small'
+                              onClick={() => handleExpand(volunteerId, group.samples)}
+                              sx={{
+                                width: 28,
+                                height: 28,
+                                backgroundColor: theme =>
+                                  expanded[volunteerId] ? theme.palette.primary.main : theme.palette.action.hover,
+                                color: theme =>
+                                  expanded[volunteerId]
+                                    ? theme.palette.primary.contrastText
+                                    : theme.palette.text.primary,
+                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                '&:hover': {
+                                  backgroundColor: theme =>
+                                    expanded[volunteerId] ? theme.palette.primary.dark : theme.palette.action.selected,
+                                  transform: 'scale(1.1) rotate(180deg)'
+                                }
+                              }}
+                            >
+                              {expanded[volunteerId] ? <RemoveIcon fontSize='small' /> : <AddIcon fontSize='small' />}
+                            </IconButton>
+                          </Box>
+                        </TableCell>
+                        <TableCell>{group.volunteerName}</TableCell>
+                        <TableCell>{volunteerId}</TableCell>
+                        <TableCell>{group.projectNo}</TableCell>
+                        <TableCell>{group.study}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
+                          <Collapse in={!!expanded[volunteerId]} timeout={300} unmountOnExit>
+                            <Box margin={1}>
+                              <Table size='small'>
+                                <TableHead>
+                                  <TableRow>
+                                    <TableCell padding='checkbox' />
+                                    <TableCell>Actions</TableCell>
+                                    <TableCell>Barcode ID</TableCell>
+                                    <TableCell>Sample Type</TableCell>
+                                    <TableCell>Collected By</TableCell>
+                                    <TableCell>Collected On</TableCell>
+                                    <TableCell>Sent By</TableCell>
+                                    <TableCell>Sent On</TableCell>
+                                    <TableCell>Status</TableCell>
+                                  </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                  {group.samples.map(sample => (
+                                    <TableRow key={sample.barcodeId} hover>
+                                      <TableCell padding='checkbox'>
+                                        <Checkbox
+                                          checked={!!selectedSamples[sample.barcodeId || '']}
+                                          onChange={() => sample.barcodeId && handleSampleSelect(sample.barcodeId)}
+                                        />
+                                      </TableCell>
+                                      <TableCell>
+                                        <OptionMenu
+                                          options={[
+                                            {
+                                              text: 'Receive',
+                                              icon: <i className='tabler-check' style={{ color: '#4CAF50' }} />,
+                                              menuItemProps: {
+                                                onClick: () => handleSampleReceive(sample.id)
+                                              }
+                                            },
+                                            {
+                                              text: 'Reject',
+                                              icon: <i className='tabler-x' style={{ color: '#F44336' }} />,
+                                              menuItemProps: {
+                                                onClick: () => handleSampleReject(sample.id)
+                                              }
+                                            },
+                                            {
+                                              text: 'Print Barcode',
+                                              icon: <i className='tabler-printer' style={{ color: '#3F51B5' }} />,
+                                              menuItemProps: {
+                                                onClick: () => handlePrintBarcode(sample.id)
+                                              }
+                                            },
+                                            {
+                                              text: 'Sample Detail',
+                                              icon: <i className='tabler-eye' style={{ color: '#00BCD4' }} />,
+                                              menuItemProps: {
+                                                onClick: () => onSampleDetails(sample)
+                                              }
+                                            },
+                                            {
+                                              text: 'Outsource Sample',
+                                              icon: <i className='tabler-external-link' style={{ color: '#FF9800' }} />,
+                                              menuItemProps: {
+                                                onClick: () => handleOutsourceSample(sample.id)
+                                              }
+                                            },
+                                            {
+                                              text: 'Remarks',
+                                              icon: <i className='tabler-message' style={{ color: '#E91E63' }} />,
+                                              menuItemProps: {
+                                                onClick: () => handleRemarks(sample.id)
+                                              }
+                                            }
+                                          ]}
+                                        />
+                                      </TableCell>
+                                      <TableCell>{sample.barcodeId}</TableCell>
+                                      <TableCell>{sample.sampleType}</TableCell>
+                                      <TableCell>{sample.collectedBy}</TableCell>
+                                      <TableCell>{formatDate(sample.collectedOn)}</TableCell>
+                                      <TableCell>{sample.sentByName}</TableCell>
+                                      <TableCell>{formatDate(sample.sentOn)}</TableCell>
+                                      <TableCell>
+                                        <Chip
+                                          label={getStatusInfo(sample.statusId).label}
+                                          color={getStatusInfo(sample.statusId).color as any}
+                                          size='small'
+                                        />
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </Box>
+                          </Collapse>
+                        </TableCell>
+                      </TableRow>
+                    </React.Fragment>
+                  )
+                })
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        <TablePagination
+          rowsPerPageOptions={[10, 25, 50, 100]}
+          component='div'
+          count={groupKeys.length}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={(_, newPage) => setPage(newPage)}
+          onRowsPerPageChange={e => {
+            setRowsPerPage(parseInt(e.target.value, 10))
+            setPage(0)
+          }}
+        />
+      </Paper>
+
+      {/* Bulk Action Buttons */}
+      <div className='flex items-center justify-center gap-4 p-4 border-t'>
+        <Button
+          variant='contained'
+          color='success'
+          startIcon={<i className='tabler-check' />}
+          disabled={selectedSampleIds.length === 0}
+          onClick={handleBulkReceive}
+        >
+          Receive
+        </Button>
+        <Button
+          variant='contained'
+          color='error'
+          startIcon={<i className='tabler-x' />}
+          disabled={selectedSampleIds.length === 0}
+          onClick={handleBulkReject}
+        >
+          Reject
+        </Button>
+        <Button
+          variant='contained'
+          color='warning'
+          startIcon={<i className='tabler-external-link' />}
+          disabled={selectedSampleIds.length === 0}
+          onClick={handleBulkOutsource}
+        >
+          Outsource
+        </Button>
+        <Button
+          variant='contained'
+          color='info'
+          startIcon={<i className='tabler-printer' />}
+          disabled={selectedSampleIds.length === 0}
+          onClick={handleBulkPrintBarcode}
+        >
+          Print Barcode
+        </Button>
+        <Button
+          variant='contained'
+          color='secondary'
+          startIcon={<i className='tabler-rotate' />}
+          disabled={selectedSampleIds.length === 0}
+          onClick={handleBulkCentrifuge}
+        >
+          Centrifuge Selected
+        </Button>
+      </div>
+    </>
   )
 }
 
@@ -858,18 +1313,6 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
 
   const handleOutsourceSample = async (id: number) => {
     setSelectedSamplesForOutsource([id])
-    setShowOutsourceConfirm(true)
-  }
-
-  const handleBulkOutsource = () => {
-    const selectedIds = Object.entries(selectedSamples)
-      .filter(([_, checked]) => checked)
-      .map(([barcodeId]) => {
-        const allSamples = Object.values(grouped).flatMap(group => group.samples)
-        return allSamples.find(sample => sample.barcodeId === barcodeId)?.id
-      })
-      .filter(Boolean)
-    setSelectedSamplesForOutsource(selectedIds as number[])
     setShowOutsourceConfirm(true)
   }
 
@@ -1581,7 +2024,9 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
         title='Confirm Sample Receive'
         description='Are you sure you want to receive this sample?'
         handleClose={() => setShowReceiveConfirm(false)}
-        handleConfirm={handleReceiveConfirm}
+        handleConfirm={async () => {
+          if (selectedSampleForReceive) await handleSampleReceive(selectedSampleForReceive.id)
+        }}
         disabled={isLoading}
       />
       <ConfirmDialog
@@ -1709,53 +2154,6 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
               setShowBarcodeDialog(true)
             }}
           />
-          <div className='flex items-center justify-center gap-4 p-4 border-t'>
-            <Button
-              variant='contained'
-              color='success'
-              startIcon={<i className='tabler-check' />}
-              disabled={Object.keys(rowSelection).length === 0}
-              onClick={handleBulkReceive}
-            >
-              Receive
-            </Button>
-            <Button
-              variant='contained'
-              color='error'
-              startIcon={<i className='tabler-x' />}
-              disabled={Object.keys(rowSelection).length === 0}
-              onClick={handleBulkReject}
-            >
-              Reject
-            </Button>
-            <Button
-              variant='contained'
-              color='warning'
-              startIcon={<i className='tabler-external-link' />}
-              disabled={Object.keys(rowSelection).length === 0}
-              onClick={handleBulkOutsource}
-            >
-              Outsource
-            </Button>
-            <Button
-              variant='contained'
-              color='info'
-              startIcon={<i className='tabler-printer' />}
-              disabled={Object.keys(rowSelection).length === 0}
-              onClick={handleBulkPrintBarcode}
-            >
-              Print Barcode
-            </Button>
-            <Button
-              variant='contained'
-              color='secondary'
-              startIcon={<i className='tabler-rotate' />}
-              disabled={Object.keys(rowSelection).length === 0}
-              onClick={handleBulkCentrifuge}
-            >
-              Centrifuge Selected
-            </Button>
-          </div>
         </Box>
       </Paper>
     </>
