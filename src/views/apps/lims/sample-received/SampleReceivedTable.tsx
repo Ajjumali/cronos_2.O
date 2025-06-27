@@ -223,8 +223,8 @@ const groupSamplesByVolunteer = (volunteerData: VolunteerData[]) => {
       if (!groups[volunteerId]) {
         groups[volunteerId] = {
           volunteerName: volunteer.volunteerName,
-          projectNo: volunteer.subjectId, // Using subjectId as projectNo for now
-          study: volunteer.sampleType,
+          barcodeId: volunteer.barcodeId, // Using subjectId as projectNo for now
+          //sampleType: volunteer.sampleType,
           statusId: getStatusIdFromStatus(volunteer.sampleData[0]?.status), // Get status from first sample
           samples: volunteer.sampleData.map(sample => ({
             id: parseInt(sample.id),
@@ -267,8 +267,8 @@ const groupSamplesByVolunteer = (volunteerData: VolunteerData[]) => {
       string,
       {
         volunteerName: string
-        projectNo: string
-        study: string
+        barcodeId: string
+        //sampleType: string
         statusId: number | null | undefined
         samples: SampleType[]
       }
@@ -863,7 +863,7 @@ const GroupedSampleReceivedTable = ({
                 <TableCell>Volunteer Name</TableCell>
                 <TableCell>Volunteer ID</TableCell>
                 <TableCell>Barcode ID</TableCell>
-                <TableCell>Sample Type</TableCell>
+                {/* <TableCell>Sample Type</TableCell> */}
               </TableRow>
             </TableHead>
             <TableBody>
@@ -912,8 +912,8 @@ const GroupedSampleReceivedTable = ({
                         </TableCell>
                         <TableCell>{group.volunteerName}</TableCell>
                         <TableCell>{volunteerId}</TableCell>
-                        <TableCell>{group.projectNo}</TableCell>
-                        <TableCell>{group.study}</TableCell>
+                        <TableCell>{group.barcodeId}</TableCell>
+                        {/* <TableCell>{group.study}</TableCell> */}
                       </TableRow>
                       <TableRow>
                         <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
