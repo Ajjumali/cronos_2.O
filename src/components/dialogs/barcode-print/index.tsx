@@ -102,7 +102,7 @@ const BarcodePrintDialog = ({
     try {
       setIsLoading(true)
       setError(null)
-      const response = await fetch('/api/apps/lims/Sample-received?action=print-barcode', {
+      const response = await fetch('/api/apps/lims/print-barcode', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

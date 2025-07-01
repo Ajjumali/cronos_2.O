@@ -329,9 +329,13 @@ const TableFilters = ({
                 select: { displayEmpty: true }
               }}
             >
-              <MenuItem value=''>Select Receive Status</MenuItem>
+              <MenuItem value=''>Select Status</MenuItem>
+              <MenuItem value='1'>Received</MenuItem>
+              <MenuItem value='2'>Rejected</MenuItem>
               <MenuItem value='3'>Pending</MenuItem>
+              <MenuItem value='4'>In Progress</MenuItem>
               <MenuItem value='5'>Completed</MenuItem>
+              <MenuItem value='6'>Outsource</MenuItem>
             </CustomTextField>
           </Grid>
           <Grid size={{ xs: 12, sm: 4 }}>

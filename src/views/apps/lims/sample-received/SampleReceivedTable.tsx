@@ -309,7 +309,7 @@ const GroupedSampleReceivedTable = ({
   const [selectedGroups, setSelectedGroups] = useState<Record<string, boolean>>({})
   const [selectedSamples, setSelectedSamples] = useState<Record<string, boolean>>({})
   const [page, setPage] = useState(0)
-  const [rowsPerPage, setRowsPerPage] = useState(5)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
 
   // Add bulk operation states
   const [showOutsourceConfirm, setShowOutsourceConfirm] = useState(false)
@@ -1132,7 +1132,7 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
   const [selectedGroups, setSelectedGroups] = useState<Record<string, boolean>>({})
   const [selectedSamples, setSelectedSamples] = useState<Record<string, boolean>>({})
   const [page, setPage] = useState(0)
-  const [rowsPerPage, setRowsPerPage] = useState(5)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
 
   const grouped = useMemo(() => groupSamplesByVolunteer(filteredData), [filteredData])
   const groupKeys = Object.keys(grouped)
