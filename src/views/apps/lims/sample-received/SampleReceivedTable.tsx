@@ -2122,7 +2122,7 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
               onClick={handlePdfExport}
               disabled={isPdfLoading}
             >
-              {isPdfLoading ? 'Exporting...' : 'Print'}
+              {isPdfLoading ? 'Exporting...' : 'PDF'}
             </Button>
             <Button
               variant='outlined'
