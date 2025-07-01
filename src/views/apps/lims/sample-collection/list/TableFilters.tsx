@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react'
 
 // MUI Imports
-import Grid from '@mui/material/Grid2'
+import Grid from '@mui/material/Grid'
 import CardContent from '@mui/material/CardContent'
 import MenuItem from '@mui/material/MenuItem'
 import Button from '@mui/material/Button'
@@ -90,6 +90,8 @@ const TableFilters = ({
   const [receiveStatus, setReceiveStatus] = useState<string>('')
   const [projects, setProjects] = useState<any[]>([])
   const [studySites, setStudySites] = useState<any[]>([])
+  const [fromDate, setFromDate] = useState<string>('')
+  const [toDate, setToDate] = useState<string>('')
 
   // Fetch sample types, labs, locations, and employees on component mount
   useEffect(() => {
@@ -218,23 +220,21 @@ const TableFilters = ({
 
   // Function to clear all filters
   const clearFilters = () => {
+    setFromDate('')
+    setToDate('')
     setCollectionStatus('')
     setSampleType('')
     setLocation('')
     setEmployeeId('')
     setLab('')
-    setProjectNo(0)
-    setStudy('')
-    setReceiveStatus('')
     setData(sampleData || [])
   }
 
   // Function to apply filters
   const handleApplyFilters = () => {
     const filteredData = sampleData?.filter(sample => {
-      if (projectNo && sample.projectNo !== projectNo.toString()) return false
-      if (study && sample.study !== study) return false
-      if (receiveStatus && sample.receiveStatus !== receiveStatus) return false
+      if (fromDate && new Date(sample.collectedOn) < new Date(fromDate)) return false
+      if (toDate && new Date(sample.collectedOn) > new Date(toDate)) return false
       if (collectionStatus && sample.collectionStatus !== collectionStatus) return false
       if (sampleType && sample.sampleType !== sampleType) return false
       if (location && sample.location !== location) return false
@@ -274,7 +274,29 @@ const TableFilters = ({
       
       <Collapse in={isFiltersExpanded}>
         <Grid container spacing={6}>
-          <Grid size={{ xs: 12, sm: 4 }}>
+          <Grid item xs={12} sm={4}>
+            <CustomTextField
+              fullWidth
+              type='date'
+              id='from-date'
+              value={fromDate}
+              onChange={e => setFromDate(e.target.value)}
+              placeholder='From Date'
+              InputLabelProps={{ shrink: false }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <CustomTextField
+              fullWidth
+              type='date'
+              id='to-date'
+              value={toDate}
+              onChange={e => setToDate(e.target.value)}
+              placeholder='To Date'
+              InputLabelProps={{ shrink: false }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={4}>
             <CustomTextField
               select
               fullWidth
@@ -293,7 +315,7 @@ const TableFilters = ({
             </CustomTextField>
           </Grid>
           
-          <Grid size={{ xs: 12, sm: 4 }}>
+          <Grid item xs={12} sm={4}>
             <CustomTextField
               select
               fullWidth
@@ -313,7 +335,7 @@ const TableFilters = ({
             </CustomTextField>
           </Grid>
 
-          <Grid size={{ xs: 12, sm: 4 }}>
+          <Grid item xs={12} sm={4}>
             <CustomTextField
               select
               fullWidth
@@ -333,7 +355,7 @@ const TableFilters = ({
             </CustomTextField>
           </Grid>
 
-          <Grid size={{ xs: 12, sm: 4 }}>
+          <Grid item xs={12} sm={4}>
             <Autocomplete
               fullWidth
               id='employee-id'
@@ -356,7 +378,7 @@ const TableFilters = ({
             />
           </Grid>
 
-          <Grid size={{ xs: 12, sm: 4 }}>
+          <Grid item xs={12} sm={4}>
             <CustomTextField
               select
               fullWidth
@@ -376,7 +398,7 @@ const TableFilters = ({
             </CustomTextField>
           </Grid>
 
-          <Grid size={{ xs: 12, sm: 4 }}>
+          <Grid item xs={12} sm={4}>
             <Autocomplete
               fullWidth
               id='project-no'
@@ -394,7 +416,7 @@ const TableFilters = ({
             />
           </Grid>
 
-          <Grid size={{ xs: 12, sm: 4 }}>
+          <Grid item xs={12} sm={4}>
             <Autocomplete
               fullWidth
               id='study'
@@ -413,7 +435,7 @@ const TableFilters = ({
             />
           </Grid>
 
-          <Grid size={{ xs: 12, sm: 4 }}>
+          <Grid item xs={12} sm={4}>
             <CustomTextField
               select
               fullWidth
@@ -429,7 +451,7 @@ const TableFilters = ({
             </CustomTextField>
           </Grid>
 
-          <Grid size={{ xs: 12, sm: 4 }}>
+          <Grid item xs={12} sm={4}>
             <Button
               variant='contained'
               color='primary'

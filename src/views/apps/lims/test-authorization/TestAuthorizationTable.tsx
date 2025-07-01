@@ -486,6 +486,16 @@ const TestAuthorizationTable = ({ testData }: { testData?: TestAuthorizationType
         }
       />
       <Divider />
+      <Box sx={{ px: 3, pb: 2, pt: 3 }}>
+        <CustomTextField
+          value={globalFilter ?? ''}
+          onChange={e => setGlobalFilter(String(e.target.value))}
+          placeholder='Search Test Authorization'
+          variant='outlined'
+          size='small'
+          sx={{ width: '220px', '& .MuiOutlinedInput-root': { height: '40px' } }}
+        />
+      </Box>
       <TableFilters setData={setFilteredData} testData={data} />
       <div className={tableStyles.tableContainer}>
         {isLoading ? (

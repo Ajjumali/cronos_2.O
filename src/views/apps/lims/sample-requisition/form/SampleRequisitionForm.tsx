@@ -397,6 +397,41 @@ const SampleRequisitionForm = () => {
                           )}
                         />
                       </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Controller
+                          name='age'
+                          control={form.control}
+                          render={({ field, fieldState: { error } }) => (
+                            <TextField
+                              {...field}
+                              type='number'
+                              label='Age'
+                              error={!!error}
+                              helperText={error?.message}
+                              fullWidth
+                              size='small'
+                              sx={fieldStyle}
+                            />
+                          )}
+                        />
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Controller
+                          name='mobileNumber'
+                          control={form.control}
+                          render={({ field, fieldState: { error } }) => (
+                            <TextField
+                              {...field}
+                              label='Mobile Number'
+                              error={!!error}
+                              helperText={error?.message}
+                              fullWidth
+                              size='small'
+                              sx={fieldStyle}
+                            />
+                          )}
+                        />
+                      </Grid>
                     </Grid>
                   </Collapse>
                 </Grid>

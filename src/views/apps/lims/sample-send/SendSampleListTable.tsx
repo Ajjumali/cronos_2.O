@@ -239,8 +239,8 @@ export default function SampleSendTable({ columns = [], data = [] }: SampleSendT
   ]
 
   const dummyColumns: Column[] = [
-    { key: 'patient_name', mLabel: 'Employee Name', isVisible: true },
-    { key: 'patient_id', mLabel: 'Employee ID', isVisible: true },
+    { key: 'patient_name', mLabel: 'Employee Name/Animal Name', isVisible: true },
+    { key: 'patient_id', mLabel: 'Employee ID/Animal ID', isVisible: true },
     { key: 'test_type', mLabel: 'Test Type', isVisible: true },
     { key: 'status', mLabel: 'Status', isVisible: true }
   ]
@@ -446,7 +446,11 @@ export default function SampleSendTable({ columns = [], data = [] }: SampleSendT
                                 }}
                               />
                             ) : (
-                              item[col.key]
+                              col.key === 'patient_name'
+                                ? item.patient_name || item.animal_name || '-'
+                                : col.key === 'patient_id'
+                                ? item.patient_id || item.animal_id || '-'
+                                : item[col.key]
                             )}
                           </TableCell>
                         )

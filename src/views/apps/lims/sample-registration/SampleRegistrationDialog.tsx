@@ -10,7 +10,7 @@ import HistoryIcon from '@mui/icons-material/History'
 interface SampleRegistrationDialogProps {
   open: boolean
   onClose: () => void
-  sampleId?: number
+  sampleId?: number 
   // Add other props as needed
 }
 

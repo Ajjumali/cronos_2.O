@@ -30,7 +30,10 @@ const humanSchema = z.object({
   employeeId: z.string().min(1, 'Employee ID is required'),
   employeeLocation: z.string().min(1, 'Location is required'),
   gender: z.string().min(1, 'Gender is required'),
+  firstName: z.string().min(1, 'First Name is required'),
+  lastName: z.string().min(1, 'Last Name is required'),
   age: z.string().min(1, 'Age is required'),
+  middleName: z.string().optional(),
   sampleType: z.enum(['fasting', 'random']),
   panels: z.array(z.string()).min(1, 'At least one panel is required'),
   tests: z.array(z.string()).min(1, 'At least one test is required'),
@@ -44,7 +47,7 @@ const animalSchema = z.object({
   species: z.string().min(1, 'Species is required'),
   requestedBy: z.string().min(1, 'Requested By is required'),
   strain: z.string().min(1, 'Strain is required'),
-  age: z.string().min(1, 'Age is required'),
+  remarks: z.string().optional(),
   panels: z.array(z.string()).min(1, 'At least one panel is required'),
   tests: z.array(z.string()).min(1, 'At least one test is required'),
   sampleId: z.string(),
@@ -96,10 +99,13 @@ const SampleRegistrationForm = ({ initialData, mode = 'create', onClose }: Sampl
             employeeId: initialData.employeeId || '',
             employeeLocation: initialData.employeeLocation || '',
             gender: initialData.gender || '',
+            firstName: initialData.firstName || '',
+            lastName: initialData.lastName || '',
             age: initialData.age || '',
+            middleName: initialData.middleName || '',
             sampleType: initialData.sampleType || 'fasting',
-            panels: initialData.panels || [],
-            tests: initialData.tests || [],
+            panels: Array.isArray(initialData.panels) ? initialData.panels : [],
+            tests: Array.isArray(initialData.tests) ? initialData.tests : [],
             sampleId: initialData.sampleId || '',
             name: initialData.name || ''
           }
@@ -107,7 +113,10 @@ const SampleRegistrationForm = ({ initialData, mode = 'create', onClose }: Sampl
             employeeId: '',
             employeeLocation: '',
             gender: '',
+            firstName: '',
+            lastName: '',
             age: '',
+            middleName: '',
             sampleType: 'fasting',
             panels: [],
             tests: []
@@ -124,9 +133,9 @@ const SampleRegistrationForm = ({ initialData, mode = 'create', onClose }: Sampl
             species: initialData.species || '',
             requestedBy: initialData.requestedBy || '',
             strain: initialData.strain || '',
-            age: initialData.age || '',
-            panels: initialData.panels || [],
-            tests: initialData.tests || [],
+            remarks: initialData.remarks || '',
+            panels: Array.isArray(initialData.panels) ? initialData.panels : [],
+            tests: Array.isArray(initialData.tests) ? initialData.tests : [],
             sampleId: initialData.sampleId || '',
             animalName: initialData.animalName || ''
           }
@@ -136,7 +145,7 @@ const SampleRegistrationForm = ({ initialData, mode = 'create', onClose }: Sampl
             species: '',
             requestedBy: '',
             strain: '',
-            age: '',
+            remarks: '',
             panels: [],
             tests: []
           }
@@ -365,6 +374,27 @@ const SampleRegistrationForm = ({ initialData, mode = 'create', onClose }: Sampl
                   </FormControl>
                 )}
               />
+              <Controller
+                name='firstName'
+                control={humanForm.control}
+                render={({ field, fieldState: { error } }) => (
+                  <TextField {...field} label='First Name' error={!!error} helperText={error?.message} fullWidth />
+                )}
+              />
+              <Controller
+                name='middleName'
+                control={humanForm.control}
+                render={({ field, fieldState: { error } }) => (
+                  <TextField {...field} label='Middle Name' error={!!error} helperText={error?.message} fullWidth />
+                )}
+              />
+              <Controller
+                name='lastName'
+                control={humanForm.control}
+                render={({ field, fieldState: { error } }) => (
+                  <TextField {...field} label='Last Name' error={!!error} helperText={error?.message} fullWidth />
+                )}
+              />
 
               <Controller
                 name='age'
@@ -403,8 +433,8 @@ const SampleRegistrationForm = ({ initialData, mode = 'create', onClose }: Sampl
                 control={humanForm.control}
                 render={({ field }) => (
                   <PanelTestSelection
-                    selectedPanels={field.value}
-                    selectedTests={humanForm.watch('tests')}
+                    selectedPanels={Array.isArray(field.value) ? field.value : []}
+                    selectedTests={Array.isArray(humanForm.watch('tests')) ? humanForm.watch('tests') : []}
                     onPanelsChange={field.onChange}
                     onTestsChange={tests => humanForm.setValue('tests', tests)}
                   />
@@ -478,13 +508,12 @@ const SampleRegistrationForm = ({ initialData, mode = 'create', onClose }: Sampl
               />
 
               <Controller
-                name='age'
+                name='remarks'
                 control={animalForm.control}
                 render={({ field, fieldState: { error } }) => (
                   <TextField
                     {...field}
-                    label='Age'
-                    type='number'
+                    label='Remarks'
                     error={!!error}
                     helperText={error?.message}
                     fullWidth
@@ -497,8 +526,8 @@ const SampleRegistrationForm = ({ initialData, mode = 'create', onClose }: Sampl
                 control={animalForm.control}
                 render={({ field }) => (
                   <PanelTestSelection
-                    selectedPanels={field.value}
-                    selectedTests={animalForm.watch('tests')}
+                    selectedPanels={Array.isArray(field.value) ? field.value : []}
+                    selectedTests={Array.isArray(animalForm.watch('tests')) ? animalForm.watch('tests') : []}
                     onPanelsChange={field.onChange}
                     onTestsChange={tests => animalForm.setValue('tests', tests)}
                   />

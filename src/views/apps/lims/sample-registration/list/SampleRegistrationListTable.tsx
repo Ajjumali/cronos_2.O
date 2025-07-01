@@ -30,7 +30,8 @@ import {
   DialogActions,
   Grid,
   Backdrop,
-  CircularProgress
+  CircularProgress,
+  Divider
 } from '@mui/material'
 import {
   createColumnHelper,
@@ -488,6 +489,22 @@ const SampleRegistrationListTable = ({ sampleData = [] }: Props) => {
             </div>
           }
         />
+        <Divider sx={{ borderColor: 'divider', borderBottomWidth: 1 }} />
+        <Box sx={{ px: 3, pb: 2, pt: 3 }}>
+          <TextField
+            label='Search Registration'
+            value={globalFilter}
+            onChange={e => setGlobalFilter(e.target.value)}
+            variant='outlined'
+            size='small'
+            sx={{
+              width: '220px',
+              '& .MuiOutlinedInput-root': {
+                height: '40px'
+              }
+            }}
+          />
+        </Box>
         <TableFilters setData={newData => setData(newData as SampleRegistrationType[])} sampleData={sampleData} />
         <div className='overflow-x-auto'>
           {isLoading ? (

@@ -100,12 +100,16 @@ const TableFilters = ({
   const [sampleType, setSampleType] = useState<string>('')
   const [location, setLocation] = useState<string>('')
   const [lab, setLab] = useState<string>('')
+  const [sendSampleStatus, setSendSampleStatus] = useState<string>('')
   const [isFiltersExpanded, setIsFiltersExpanded] = useState(false)
   const [sampleTypes, setSampleTypes] = useState<SampleTypeDto[]>([])
   const [labs, setLabs] = useState<LabDto[]>([])
   const [locations, setLocations] = useState<LocationDto[]>([])
   const [projects, setProjects] = useState<ProjectDto[]>([])
   const [studySites, setStudySites] = useState<StudySiteDto[]>([])
+  const [fromDate, setFromDate] = useState<string>('')
+  const [toDate, setToDate] = useState<string>('')
+  const [search, setSearch] = useState<string>('')
 
   // Fetch sample types, labs, locations, and projects on component mount
   useEffect(() => {
@@ -214,12 +218,16 @@ const TableFilters = ({
 
   // Function to clear all filters
   const clearFilters = () => {
+    setSearch('')
+    setFromDate('')
+    setToDate('')
     setProjectNo(0)
     setStudy('')
     setReceiveStatus('')
     setSampleType('')
     setLocation('')
     setLab('')
+    setSendSampleStatus('')
     setStudySites([])
     setData(sampleData)
   }
@@ -227,12 +235,22 @@ const TableFilters = ({
   // Function to apply filters
   const handleApplyFilters = () => {
     const filteredData = sampleData.filter(sample => {
+      if (search &&
+        !(
+          sample.volunteerName?.toLowerCase().includes(search.toLowerCase()) ||
+          sample.volunteerId?.toLowerCase().includes(search.toLowerCase()) ||
+          sample.barcodeId?.toLowerCase().includes(search.toLowerCase())
+        )
+      ) return false
+      if (fromDate && new Date(sample.collectedOn) < new Date(fromDate)) return false
+      if (toDate && new Date(sample.collectedOn) > new Date(toDate)) return false
       if (projectNo && sample.projectNo !== projectNo.toString()) return false
       if (receiveStatus && sample.statusId !== receiveStatus) return false
       if (sampleType && sample.sampleType !== sampleType) return false
       if (location && sample.location !== location) return false
       if (lab && sample.screeningFacility !== lab) return false
       if (study && sample.study !== study) return false
+      if (sendSampleStatus && sample.status !== sendSampleStatus) return false
 
       return true
     })
@@ -242,16 +260,14 @@ const TableFilters = ({
 
   return (
     <Box>
-      {/* Top row with action buttons */}
+      {/* Top row with title and action buttons */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant='h4'>Sample Send</Typography>
+        <Typography variant='h4' sx={{ mb: 0 }}>
+          Sample Send
+        </Typography>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <Button variant='outlined' startIcon={<Print />}>
-            Print
-          </Button>
-          <Button variant='outlined' startIcon={<FileDownload />}>
-            Export
-          </Button>
+          <Button variant='outlined' startIcon={<Print />}>Print</Button>
+          <Button variant='outlined' startIcon={<FileDownload />}>Export</Button>
           <Grid item xs={12} md={4}>
             <CustomTextField
               select
@@ -259,9 +275,7 @@ const TableFilters = ({
               id='lab'
               value={lab}
               onChange={e => setLab(e.target.value)}
-              slotProps={{
-                select: { displayEmpty: true }
-              }}
+              slotProps={{ select: { displayEmpty: true } }}
             >
               <MenuItem value=''>Select Lab</MenuItem>
               {labs.map(lab => (
@@ -276,9 +290,18 @@ const TableFilters = ({
           </Button>
         </Box>
       </Box>
-
       {/* Divider line */}
       <Divider sx={{ mb: 2 }} />
+      {/* Search Box Row (below divider) */}
+      <Box sx={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', mb: 2 }}>
+        <CustomTextField
+          placeholder='Search Send Sample'
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          size='small'
+          sx={{ width: 240 }}
+        />
+      </Box>
 
       {/* Filters section */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -294,7 +317,7 @@ const TableFilters = ({
           Filters
         </Button>
         <Button variant='text' onClick={clearFilters} startIcon={<i className='tabler-refresh text-sm' />}>
-          Reset Filters
+          Clear
         </Button>
       </Box>
 
@@ -398,20 +421,40 @@ const TableFilters = ({
             <CustomTextField
               select
               fullWidth
-              id='lab'
-              value={lab}
-              onChange={e => setLab(e.target.value)}
-              slotProps={{
-                select: { displayEmpty: true }
-              }}
+              id='send-sample-status'
+              value={sendSampleStatus}
+              onChange={e => setSendSampleStatus(e.target.value)}
+              slotProps={{ select: { displayEmpty: true } }}
             >
-              <MenuItem value=''>Select Lab</MenuItem>
-              {labs.map(lab => (
-                <MenuItem key={lab.id} value={lab.labName}>
-                  {lab.labName}
-                </MenuItem>
-              ))}
+              <MenuItem value=''>Select Send Sample Status</MenuItem>
+              <MenuItem value='pending'>Pending</MenuItem>
+              <MenuItem value='sent'>Sent</MenuItem>
+              <MenuItem value='received'>Received</MenuItem>
             </CustomTextField>
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <CustomTextField
+              fullWidth
+              type='date'
+              id='from-date'
+              value={fromDate}
+              onChange={e => setFromDate(e.target.value)}
+              placeholder='From Date'
+              InputLabelProps={{ shrink: false }}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <CustomTextField
+              fullWidth
+              type='date'
+              id='to-date'
+              value={toDate}
+              onChange={e => setToDate(e.target.value)}
+              placeholder='To Date'
+              InputLabelProps={{ shrink: false }}
+            />
           </Grid>
 
           <Grid item xs={12} md={4}>

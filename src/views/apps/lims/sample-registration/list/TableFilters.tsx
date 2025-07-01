@@ -117,6 +117,13 @@ const TableFilters = ({ setData, sampleData }: TableFiltersProps) => {
   const [subjects, setSubjects] = useState<SubjectDto[]>([])
   const [tests, setTests] = useState<TestDto[]>([])
   const [panels, setPanels] = useState<PanelDto[]>([])
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState('')
+  const [department, setDepartment] = useState('')
+  const [employeeAnimalId, setEmployeeAnimalId] = useState('')
+
+  // Get unique subject IDs from sampleData
+  const employeeAnimalIdOptions = Array.from(new Set((sampleData || []).map(s => s.subjectId)))
 
   // Fetch data on component mount
   useEffect(() => {
@@ -190,6 +197,10 @@ const TableFilters = ({ setData, sampleData }: TableFiltersProps) => {
   // Function to apply filters
   const handleApplyFilters = () => {
     const filteredData = sampleData?.filter(sample => {
+      if (fromDate && new Date(sample.registrationDateTime) < new Date(fromDate)) return false
+      if (toDate && new Date(sample.registrationDateTime) > new Date(toDate)) return false
+      if (department && sample.department !== department) return false
+      if (employeeAnimalId && sample.subjectId !== employeeAnimalId) return false
       if (location && sample.location !== location) return false
       if (subjectId && sample.subjectId !== subjectId) return false
       if (lab && sample.laboratory !== lab) return false
@@ -207,6 +218,10 @@ const TableFilters = ({ setData, sampleData }: TableFiltersProps) => {
     setLab('')
     setTest('')
     setPanel('')
+    setFromDate('')
+    setToDate('')
+    setDepartment('')
+    setEmployeeAnimalId('')
     setData(sampleData || [])
   }
 
@@ -226,7 +241,7 @@ const TableFilters = ({ setData, sampleData }: TableFiltersProps) => {
             onClick={clearFilters}
             startIcon={<CloseIcon />}
           >
-            Reset Filters
+            Clear
           </Button>
         </Box>
       </Box>
@@ -234,6 +249,28 @@ const TableFilters = ({ setData, sampleData }: TableFiltersProps) => {
       <Grid container spacing={6}>
          
           
+          <Grid item xs={12} sm={4}>
+            <CustomTextField
+              fullWidth
+              type='date'
+              id='from-date'
+              value={fromDate}
+              onChange={e => setFromDate(e.target.value)}
+              placeholder='From Date'
+              InputLabelProps={{ shrink: false }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <CustomTextField
+              fullWidth
+              type='date'
+              id='to-date'
+              value={toDate}
+              onChange={e => setToDate(e.target.value)}
+              placeholder='To Date'
+              InputLabelProps={{ shrink: false }}
+            />
+          </Grid>
           <Grid item xs={12} sm={4}>
             <CustomTextField
               select
@@ -329,6 +366,36 @@ const TableFilters = ({ setData, sampleData }: TableFiltersProps) => {
                 <MenuItem key={panel.id} value={panel.panelName}>
                   {panel.panelName} 
                 </MenuItem>
+              ))}
+            </CustomTextField>
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <CustomTextField
+              select
+              fullWidth
+              id='department'
+              value={department}
+              onChange={e => setDepartment(e.target.value)}
+              slotProps={{ select: { displayEmpty: true } }}
+            >
+              <MenuItem value=''>Select Department</MenuItem>
+              <MenuItem value='Cardiology'>Cardiology</MenuItem>
+              <MenuItem value='Neurology'>Neurology</MenuItem>
+              <MenuItem value='Orthopedics'>Orthopedics</MenuItem>
+            </CustomTextField>
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <CustomTextField
+              select
+              fullWidth
+              id='employee-animal-id'
+              value={employeeAnimalId}
+              onChange={e => setEmployeeAnimalId(e.target.value)}
+              slotProps={{ select: { displayEmpty: true } }}
+            >
+              <MenuItem value=''>Select Employee/Animal ID</MenuItem>
+              {employeeAnimalIdOptions.map(option => (
+                <MenuItem key={option} value={option}>{option}</MenuItem>
               ))}
             </CustomTextField>
           </Grid>

@@ -35,6 +35,7 @@ import {
 } from '@mui/material'
 import { Add as AddIcon, CheckCircle as CheckCircleIcon, History as HistoryIcon, Remove as RemoveIcon } from '@mui/icons-material'
 import Collapse from '@mui/material/Collapse'
+import TextField from '@mui/material/TextField'
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -94,6 +95,7 @@ declare module '@tanstack/table-core' {
 type SampleWithActionsType = SampleCollectionType & {
   actions?: string
   barcodeId?: string
+  ml?: string
 }
 
 type collectionStatusType = {
@@ -542,6 +544,10 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
         header: 'Employee ID',
         cell: info => info.getValue()
       }),
+      columnHelper.accessor('age', {
+        header: 'Age',
+        cell: info => info.getValue()
+      }),
       columnHelper.accessor('collectedBy', {
         header: 'Collected By',
         cell: info => info.getValue()
@@ -810,6 +816,14 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
         }
       />
       <Divider />
+      <div className='flex flex-wrap justify-between gap-4 p-6'>
+        <CustomTextField
+          value={globalFilter ?? ''}
+          onChange={e => setGlobalFilter(String(e.target.value))}
+          placeholder='Search Sample'
+          className='max-sm:is-full'
+        />
+      </div>
       <TableFilters setData={setData} sampleData={sampleData} />
       <Box sx={{ px: 4, pb: 4 }}>
         <Paper sx={{ width: '100%', overflow: 'hidden', boxShadow: t => t.shadows[1], borderRadius: 1, border: t => `1px solid ${t.palette.divider}` }}>
@@ -820,6 +834,7 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
                   <TableCell padding='checkbox' />
                   <TableCell>Employee Name</TableCell>
                   <TableCell>Employee ID</TableCell>
+                  <TableCell>Age</TableCell>
                   <TableCell>Status</TableCell>
                 </TableRow>
               </TableHead>
@@ -862,6 +877,7 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
                           </TableCell>
                           <TableCell>{group.employeeName}</TableCell>
                           <TableCell>{employeeId}</TableCell>
+                          <TableCell>{group.samples[0]?.age ?? '-'}</TableCell>
                           <TableCell>
                             <Chip label={collectionStatusObj[group.collectionStatus]?.title} color={collectionStatusObj[group.collectionStatus]?.color} size='small' />
                           </TableCell>
@@ -878,6 +894,7 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
                                       <TableCell>Sample ID</TableCell>
                                       <TableCell>Barcode ID</TableCell>
                                       <TableCell>Sample Type</TableCell>
+                                      <TableCell>ML</TableCell>
                                       <TableCell>Collected By</TableCell>
                                       <TableCell>Collected On</TableCell>
                                       <TableCell>Location</TableCell>
@@ -937,6 +954,24 @@ const SampleCollectionListTable = ({ sampleData = [], onDataChange }: Props): JS
                                         <TableCell>{sample.sampleId}</TableCell>
                                         <TableCell>{sample.barcodeId}</TableCell>
                                         <TableCell>{sample.sampleType}</TableCell>
+                                        <TableCell>
+                                          <TextField
+                                            size="medium"
+                                            type="text"
+                                            placeholder="ML"
+                                            multiline={false}
+                                            value={sample.ml || ''}
+                                            sx={{ minWidth: 36, maxWidth: 50, height: 24 }}
+                                            inputProps={{ style: { fontSize: 12, padding: '2px 4px', height: 24 } }}
+                                            variant="outlined"
+                                            onChange={e => {
+                                              const newValue = e.target.value;
+                                              setData(prevData => prevData.map(s =>
+                                                (s.id === sample.id ? { ...s, ml: newValue } : s)
+                                              ));
+                                            }}
+                                          />
+                                        </TableCell>
                                         <TableCell>{sample.collectedBy}</TableCell>
                                         <TableCell>{formatDate(sample.collectedOn)}</TableCell>
                                         <TableCell>{sample.location}</TableCell>

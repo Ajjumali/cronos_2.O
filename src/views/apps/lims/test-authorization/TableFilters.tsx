@@ -85,6 +85,11 @@ interface StudySiteDto {
   siteProtocolNumber: string
 }
 
+interface SampleTypeDto {
+  sampleId: number;
+  sampleType: string;
+}
+
 const TableFilters = ({
   setData,
   testData
@@ -112,6 +117,8 @@ const TableFilters = ({
   const [subjects, setSubjects] = useState<SubjectDto[]>([])
   const [projects, setProjects] = useState<ProjectDto[]>([])
   const [studySites, setStudySites] = useState<StudySiteDto[]>([])
+  const [sampleType, setSampleType] = useState('')
+  const [sampleTypes, setSampleTypes] = useState<SampleTypeDto[]>([])
 
   // Fetch tests, panels, labs, locations, and subjects on component mount
   useEffect(() => {
@@ -223,12 +230,24 @@ const TableFilters = ({
       }
     }
 
+    const fetchSampleTypes = async () => {
+      try {
+        const response = await fetch('/api/apps/lims/sample-type-master')
+        if (!response.ok) throw new Error('Failed to fetch sample types')
+        const data = await response.json()
+        setSampleTypes(data.result || [])
+      } catch (error) {
+        setSampleTypes([])
+      }
+    }
+
     fetchTests()
     fetchPanels()
     fetchLabs()
     fetchLocations()
     fetchSubjects()
     fetchProjects()
+    fetchSampleTypes()
   }, [])
 
   // Fetch study sites when project changes
@@ -269,6 +288,7 @@ const TableFilters = ({
     setFromDate('')
     setToDate('')
     setPeriod('')
+    setSampleType('')
     setStudySites([])
     setData(testData || [])
   }
@@ -286,6 +306,7 @@ const TableFilters = ({
       if (study && testResult.study !== study) return false
       if (fromDate && new Date(testResult.registrationDateTime) < new Date(fromDate)) return false
       if (toDate && new Date(testResult.registrationDateTime) > new Date(toDate)) return false
+      if (sampleType && testResult.sampleType !== sampleType) return false
 
       return true
     })
@@ -310,7 +331,7 @@ const TableFilters = ({
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
           <ColorLegend />
           <Button variant='text' onClick={clearFilters} startIcon={<i className='tabler-refresh text-sm' />}>
-            Reset Filters
+            Clear
           </Button>
         </Box>
       </Box>
@@ -464,7 +485,7 @@ const TableFilters = ({
               ))}
             </CustomTextField>
           </Grid>
-          <Grid size={{ xs: 12, sm: 4 }}>
+          <Grid size={{ xs: 12, sm: 4 }}> 
             <CustomTextField
               fullWidth
               type='date'
@@ -503,6 +524,23 @@ const TableFilters = ({
               <MenuItem value='3'>Period 3</MenuItem>
               <MenuItem value='4'>Period 4</MenuItem>
               <MenuItem value='5'>Period 5</MenuItem>
+            </CustomTextField>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <CustomTextField
+              select
+              fullWidth
+              id='sample-type'
+              value={sampleType}
+              onChange={e => setSampleType(e.target.value)}
+              slotProps={{ select: { displayEmpty: true } }}
+            >
+              <MenuItem value=''>Select Sample Type</MenuItem>
+              {sampleTypes.map((type) => (
+                <MenuItem key={type.sampleId} value={type.sampleType}>
+                  {type.sampleType}
+                </MenuItem>
+              ))}
             </CustomTextField>
           </Grid>
           <Grid size={{ xs: 12, sm: 4 }}>
