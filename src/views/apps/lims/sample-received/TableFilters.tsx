@@ -96,6 +96,8 @@ const TableFilters = ({
   const [location, setLocation] = useState<string>('')
   const [subjectId, setSubjectId] = useState<string>('')
   const [lab, setLab] = useState<string>('')
+  const [fromDate, setFromDate] = useState<string>('')
+  const [toDate, setToDate] = useState<string>('')
   const [isFiltersExpanded, setIsFiltersExpanded] = useState(false)
   const [sampleTypes, setSampleTypes] = useState<SampleTypeDto[]>([])
   const [labs, setLabs] = useState<LabDto[]>([])
@@ -237,6 +239,8 @@ const TableFilters = ({
     setLocation('')
     setSubjectId('')
     setLab('')
+    setFromDate('')
+    setToDate('')
     setStudySites([])
     setData(sampleData || [])
   }
@@ -251,6 +255,13 @@ const TableFilters = ({
       if (subjectId && sample.referenceId !== subjectId) return false
       if (lab && sample.lab !== lab) return false
       if (study && sample.study !== study) return false
+
+      // Date range filtering
+      if (fromDate || toDate) {
+        const sampleDate = new Date(sample.collectedOn || sample.collectedOn || '')
+        if (fromDate && sampleDate < new Date(fromDate)) return false
+        if (toDate && sampleDate > new Date(toDate)) return false
+      }
 
       return true
     })
@@ -411,6 +422,28 @@ const TableFilters = ({
                 </MenuItem>
               ))}
             </CustomTextField>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <CustomTextField
+              fullWidth
+              type='date'
+              id='from-date'
+              value={fromDate}
+              onChange={e => setFromDate(e.target.value)}
+              placeholder='From Date'
+              InputLabelProps={{ shrink: false }}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <CustomTextField
+              fullWidth
+              type='date'
+              id='to-date'
+              value={toDate}
+              onChange={e => setToDate(e.target.value)}
+              placeholder='To Date'
+              InputLabelProps={{ shrink: false }}
+            />
           </Grid>
           <Grid size={{ xs: 12, sm: 4 }}>
             <Button
