@@ -22,7 +22,7 @@ import {
 } from '@mui/material'
 import { DatePicker } from '@mui/x-date-pickers'
 import { Delete, DragIndicator } from '@mui/icons-material'
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd'
+import { DragDropContext, Droppable, Draggable, DroppableProvided, DraggableProvided } from '@hello-pangea/dnd'
 
 interface Test {
   id: number
@@ -43,13 +43,23 @@ const AccreditationForm = ({ open, onClose, onSave, initialData, availableTests 
     fromDate: initialData?.fromDate || new Date(),
     toDate: initialData?.toDate || new Date(),
     accreditationType: initialData?.accreditationType || 'NABL',
-    selectedTests: initialData?.tests || []
+    selectedTests:
+      initialData?.tests ||
+      ([] as Array<{
+        id: number
+        testName: string
+        addedBy: string
+        addedOn: Date
+        modifiedBy: string
+        modifiedOn: Date
+        remarks: string
+      }>)
   })
 
   const [selectedTest, setSelectedTest] = useState<Test | null>(null)
 
   const handleTestSelect = (test: Test) => {
-    if (!formData.selectedTests.find(t => t.id === test.id)) {
+    if (!formData.selectedTests.find((t: { id: number }) => t.id === test.id)) {
       setFormData({
         ...formData,
         selectedTests: [
@@ -71,7 +81,7 @@ const AccreditationForm = ({ open, onClose, onSave, initialData, availableTests 
   const handleRemoveTest = (testId: number) => {
     setFormData({
       ...formData,
-      selectedTests: formData.selectedTests.filter(test => test.id !== testId)
+      selectedTests: formData.selectedTests.filter((test: { id: number }) => test.id !== testId)
     })
   }
 
@@ -96,26 +106,24 @@ const AccreditationForm = ({ open, onClose, onSave, initialData, availableTests 
   }
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>
-        {initialData ? 'Edit Accreditation' : 'Add Accreditation'}
-      </DialogTitle>
+    <Dialog open={open} onClose={onClose} maxWidth='md' fullWidth>
+      <DialogTitle>{initialData ? 'Edit Accreditation' : 'Add Accreditation'}</DialogTitle>
       <DialogContent>
         <Grid container spacing={3} sx={{ mt: 1 }}>
           <Grid item xs={12} sm={6}>
             <DatePicker
-              label="From Date"
+              label='From Date'
               value={formData.fromDate}
-              onChange={(newValue) => setFormData({ ...formData, fromDate: newValue })}
-              renderInput={(params) => <TextField {...params} fullWidth />}
+              onChange={(newValue: Date | null) => setFormData({ ...formData, fromDate: newValue })}
+              slotProps={{ textField: { fullWidth: true } }}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
             <DatePicker
-              label="To Date"
+              label='To Date'
               value={formData.toDate}
-              onChange={(newValue) => setFormData({ ...formData, toDate: newValue })}
-              renderInput={(params) => <TextField {...params} fullWidth />}
+              onChange={(newValue: Date | null) => setFormData({ ...formData, toDate: newValue })}
+              slotProps={{ textField: { fullWidth: true } }}
             />
           </Grid>
           <Grid item xs={12}>
@@ -123,32 +131,29 @@ const AccreditationForm = ({ open, onClose, onSave, initialData, availableTests 
               <InputLabel>Accreditation Type</InputLabel>
               <Select
                 value={formData.accreditationType}
-                onChange={(e) => setFormData({ ...formData, accreditationType: e.target.value })}
-                label="Accreditation Type"
+                onChange={e => setFormData({ ...formData, accreditationType: e.target.value })}
+                label='Accreditation Type'
               >
-                <MenuItem value="NABL">NABL</MenuItem>
-                <MenuItem value="CAP">CAP</MenuItem>
+                <MenuItem value='NABL'>NABL</MenuItem>
+                <MenuItem value='CAP'>CAP</MenuItem>
               </Select>
             </FormControl>
           </Grid>
 
           <Grid item xs={12} md={6}>
-            <Typography variant="h6" gutterBottom>
+            <Typography variant='h6' gutterBottom>
               Available Tests
             </Typography>
             <Paper sx={{ maxHeight: 400, overflow: 'auto' }}>
               <List>
-                {availableTests.map((test) => (
+                {availableTests.map((test: Test) => (
                   <ListItem
                     key={test.id}
-                    button
+                    component='button'
                     onClick={() => handleTestSelect(test)}
-                    disabled={formData.selectedTests.some(t => t.id === test.id)}
+                    disabled={formData.selectedTests.some((t: { id: number }) => t.id === test.id)}
                   >
-                    <ListItemText
-                      primary={test.name}
-                      secondary={test.code}
-                    />
+                    <ListItemText primary={test.name} secondary={test.code} />
                   </ListItem>
                 ))}
               </List>
@@ -156,17 +161,17 @@ const AccreditationForm = ({ open, onClose, onSave, initialData, availableTests 
           </Grid>
 
           <Grid item xs={12} md={6}>
-            <Typography variant="h6" gutterBottom>
+            <Typography variant='h6' gutterBottom>
               Selected Tests
             </Typography>
             <Paper sx={{ maxHeight: 400, overflow: 'auto' }}>
               <DragDropContext onDragEnd={handleDragEnd}>
-                <Droppable droppableId="selectedTests">
-                  {(provided) => (
+                <Droppable droppableId='selectedTests'>
+                  {(provided: DroppableProvided) => (
                     <List {...provided.droppableProps} ref={provided.innerRef}>
-                      {formData.selectedTests.map((test, index) => (
+                      {formData.selectedTests.map((test: any, index: number) => (
                         <Draggable key={test.id} draggableId={test.id.toString()} index={index}>
-                          {(provided) => (
+                          {(provided: DraggableProvided) => (
                             <ListItem
                               ref={provided.innerRef}
                               {...provided.draggableProps}
@@ -178,11 +183,7 @@ const AccreditationForm = ({ open, onClose, onSave, initialData, availableTests 
                                 secondary={`Added by: ${test.addedBy} on ${new Date(test.addedOn).toLocaleDateString()}`}
                               />
                               <ListItemSecondaryAction>
-                                <IconButton
-                                  edge="end"
-                                  aria-label="delete"
-                                  onClick={() => handleRemoveTest(test.id)}
-                                >
+                                <IconButton edge='end' aria-label='delete' onClick={() => handleRemoveTest(test.id)}>
                                   <Delete />
                                 </IconButton>
                               </ListItemSecondaryAction>
@@ -201,7 +202,7 @@ const AccreditationForm = ({ open, onClose, onSave, initialData, availableTests 
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSave} variant="contained" color="primary">
+        <Button onClick={handleSave} variant='contained' color='primary'>
           Save
         </Button>
       </DialogActions>
@@ -209,4 +210,4 @@ const AccreditationForm = ({ open, onClose, onSave, initialData, availableTests 
   )
 }
 
-export default AccreditationForm 
+export default AccreditationForm

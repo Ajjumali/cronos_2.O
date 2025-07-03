@@ -175,11 +175,13 @@ const DebouncedInput = ({
   value: initialValue,
   onChange,
   debounce = 500,
+  onEnter,
   ...props
 }: {
   value: string | number
   onChange: (value: string | number) => void
   debounce?: number
+  onEnter?: () => void
 } & Omit<TextFieldProps, 'onChange'>) => {
   const [value, setValue] = useState(initialValue)
 
@@ -195,7 +197,16 @@ const DebouncedInput = ({
     return () => clearTimeout(timeout)
   }, [value])
 
-  return <CustomTextField {...props} value={value} onChange={e => setValue(e.target.value)} />
+  return (
+    <CustomTextField
+      {...props}
+      value={value}
+      onChange={e => setValue(e.target.value)}
+      onKeyDown={e => {
+        if (e.key === 'Enter' && onEnter) onEnter()
+      }}
+    />
+  )
 }
 
 const statusMap: StatusMapType = {
@@ -299,11 +310,13 @@ const getStatusIdFromStatus = (status: string): number | null => {
 const GroupedSampleReceivedTable = ({
   sampleData = [],
   onSampleDetails,
-  onPrintBarcode
+  onPrintBarcode,
+  highlightedSubjectId
 }: {
   sampleData: VolunteerData[]
   onSampleDetails: (sample: SampleType) => void
   onPrintBarcode: (sample: SampleType) => void
+  highlightedSubjectId?: string | null
 }) => {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [selectedGroups, setSelectedGroups] = useState<Record<string, boolean>>({})
@@ -878,7 +891,14 @@ const GroupedSampleReceivedTable = ({
                   const group = grouped[volunteerId]
                   return (
                     <React.Fragment key={volunteerId}>
-                      <TableRow hover>
+                      <TableRow
+                        hover
+                        style={
+                          highlightedSubjectId === volunteerId
+                            ? { backgroundColor: '#fff9c4' } // Light yellow
+                            : undefined
+                        }
+                      >
                         <TableCell padding='checkbox'>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Checkbox
@@ -1134,6 +1154,7 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [searchText, setSearchText] = useState('')
+  const [highlightedSubjectId, setHighlightedSubjectId] = useState<string | null>(null)
 
   const grouped = useMemo(() => groupSamplesByVolunteer(filteredData), [filteredData])
   const groupKeys = Object.keys(grouped)
@@ -1999,6 +2020,21 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchText])
 
+  const handleBarcodeEnter = () => {
+    const entered = searchText.trim()
+    if (!entered) {
+      setHighlightedSubjectId(null)
+      return
+    }
+    const found = Object.keys(grouped).find(subjectId => subjectId === entered)
+    if (found) {
+      setHighlightedSubjectId(found)
+      setExpanded(prev => ({ ...prev, [found]: true }))
+    } else {
+      setHighlightedSubjectId(null)
+    }
+  }
+
   return (
     <>
       <BarcodePrintDialog
@@ -2137,6 +2173,7 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
               placeholder='Scan barcode'
               value={searchText}
               onChange={val => setSearchText(val as string)}
+              onEnter={handleBarcodeEnter}
               sx={{ minWidth: 260 }}
             />
             <Button
@@ -2176,6 +2213,7 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
               setSelectedSample(sample)
               setShowBarcodeDialog(true)
             }}
+            highlightedSubjectId={highlightedSubjectId}
           />
         </Box>
       </Paper>

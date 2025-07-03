@@ -86,8 +86,9 @@ interface StudySiteDto {
 }
 
 interface SampleTypeDto {
-  sampleId: number;
-  sampleType: string;
+  sampleId: number
+  sampleType: string
+  activeFlag: string
 }
 
 const TableFilters = ({
@@ -117,7 +118,7 @@ const TableFilters = ({
   const [subjects, setSubjects] = useState<SubjectDto[]>([])
   const [projects, setProjects] = useState<ProjectDto[]>([])
   const [studySites, setStudySites] = useState<StudySiteDto[]>([])
-  const [sampleType, setSampleType] = useState('')
+  const [sampleType, setSampleType] = useState<string>('')
   const [sampleTypes, setSampleTypes] = useState<SampleTypeDto[]>([])
 
   // Fetch tests, panels, labs, locations, and subjects on component mount
@@ -233,10 +234,17 @@ const TableFilters = ({
     const fetchSampleTypes = async () => {
       try {
         const response = await fetch('/api/apps/lims/sample-type-master')
-        if (!response.ok) throw new Error('Failed to fetch sample types')
+        if (!response.ok) {
+          throw new Error('Failed to fetch sample types')
+        }
         const data = await response.json()
-        setSampleTypes(data.result || [])
+        if (data.result) {
+          setSampleTypes(data.result)
+        } else {
+          setSampleTypes([])
+        }
       } catch (error) {
+        console.error('Error fetching sample types:', error)
         setSampleTypes([])
       }
     }
@@ -288,8 +296,8 @@ const TableFilters = ({
     setFromDate('')
     setToDate('')
     setPeriod('')
-    setSampleType('')
     setStudySites([])
+    setSampleType('')
     setData(testData || [])
   }
 
@@ -485,7 +493,7 @@ const TableFilters = ({
               ))}
             </CustomTextField>
           </Grid>
-          <Grid size={{ xs: 12, sm: 4 }}> 
+          <Grid size={{ xs: 12, sm: 4 }}>
             <CustomTextField
               fullWidth
               type='date'
@@ -533,10 +541,12 @@ const TableFilters = ({
               id='sample-type'
               value={sampleType}
               onChange={e => setSampleType(e.target.value)}
-              slotProps={{ select: { displayEmpty: true } }}
+              slotProps={{
+                select: { displayEmpty: true }
+              }}
             >
               <MenuItem value=''>Select Sample Type</MenuItem>
-              {sampleTypes.map((type) => (
+              {sampleTypes.map(type => (
                 <MenuItem key={type.sampleId} value={type.sampleType}>
                   {type.sampleType}
                 </MenuItem>

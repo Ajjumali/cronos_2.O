@@ -283,10 +283,10 @@ const AuthorizeSample = () => {
     dummyTestRows.map(row => ({
       ...row,
       remarks: row.remark || '',
-      actionRemarks: [],
-      qcAcceptance: row.qcAcceptance || false // Initialize individual QC acceptance
+      actionRemarks: []
     }))
   )
+  const [qcAcceptance, setQcAcceptance] = useState(dummySample.qcAcceptance)
   const [loading, setLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [isReasonModalOpen, setIsReasonModalOpen] = useState(false)
@@ -341,8 +341,6 @@ const AuthorizeSample = () => {
   const [editValue, setEditValue] = useState('')
   const [isOutOfRangeDialogOpen, setIsOutOfRangeDialogOpen] = useState(false)
   const [outOfRangeTestNames, setOutOfRangeTestNames] = useState<string[]>([])
-  const [authorizeAll, setAuthorizeAll] = useState(false)
-  const [isRejecting, setIsRejecting] = useState(false)
 
   const columns = useMemo<ColumnDef<any, any>[]>(
     () => [
@@ -453,7 +451,7 @@ const AuthorizeSample = () => {
       columnHelper.accessor('result', {
         header: 'Test Result',
         cell: ({ row }) => {
-          const isEditable = row.original.qcAcceptance
+          const isEditable = !qcAcceptance
           return (
             <Box
               sx={{
@@ -469,7 +467,7 @@ const AuthorizeSample = () => {
                 fullWidth
                 value={row.original.result}
                 onChange={e => {
-                  if (row.original.qcAcceptance) {
+                  if (qcAcceptance) {
                     const newTestRows = [...testRows]
                     const index = newTestRows.findIndex(item => item.testName === row.original.testName)
                     if (index !== -1) {
@@ -481,7 +479,7 @@ const AuthorizeSample = () => {
                     }
                   }
                 }}
-                disabled={!row.original.qcAcceptance}
+                disabled={!qcAcceptance}
               />
             </Box>
           )
@@ -490,14 +488,15 @@ const AuthorizeSample = () => {
       columnHelper.accessor('referenceRange', {
         header: 'Reference Range',
         cell: ({ row }) => {
+          const isEditable = !qcAcceptance
           return (
             <Box
               sx={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 1,
-                cursor: row.original.qcAcceptance ? 'pointer' : 'not-allowed',
-                opacity: row.original.qcAcceptance ? 1 : 0.7
+                cursor: isEditable ? 'pointer' : 'not-allowed',
+                opacity: isEditable ? 1 : 0.7
               }}
             >
               <CustomTextField
@@ -505,7 +504,7 @@ const AuthorizeSample = () => {
                 fullWidth
                 value={row.original.referenceRange}
                 onChange={e => {
-                  if (row.original.qcAcceptance) {
+                  if (isEditable) {
                     const newTestRows = [...testRows]
                     const index = newTestRows.findIndex(item => item.testName === row.original.testName)
                     if (index !== -1) {
@@ -517,7 +516,7 @@ const AuthorizeSample = () => {
                     }
                   }
                 }}
-                disabled={!row.original.qcAcceptance}
+                disabled={!isEditable}
               />
             </Box>
           )
@@ -530,16 +529,14 @@ const AuthorizeSample = () => {
           const [value, setValue] = useState(row.original.remark)
 
           const handleSave = () => {
-            if (row.original.qcAcceptance) {
-              const updatedRows = testRows.map(testRow => {
-                if (testRow.testName === row.original.testName) {
-                  return { ...testRow, remark: value }
-                }
-                return testRow
-              })
-              setTestRows(updatedRows)
-              setIsEditing(false)
-            }
+            const updatedRows = testRows.map(testRow => {
+              if (testRow.testName === row.original.testName) {
+                return { ...testRow, remark: value }
+              }
+              return testRow
+            })
+            setTestRows(updatedRows)
+            setIsEditing(false)
           }
 
           return isEditing ? (
@@ -555,7 +552,6 @@ const AuthorizeSample = () => {
                   }
                 }}
                 autoFocus
-                disabled={!row.original.qcAcceptance}
               />
             </Box>
           ) : (
@@ -564,27 +560,24 @@ const AuthorizeSample = () => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 1,
-                cursor: row.original.qcAcceptance ? 'pointer' : 'not-allowed',
-                opacity: row.original.qcAcceptance ? 1 : 0.7,
-                '&:hover': { bgcolor: row.original.qcAcceptance ? 'action.hover' : 'transparent' }
+                cursor: 'pointer',
+                '&:hover': { bgcolor: 'action.hover' }
               }}
               onClick={() => {
-                if (row.original.qcAcceptance) {
-                  const newValue = prompt('Enter new remark:', row.original.remark)
-                  if (newValue !== null) {
-                    const updatedRows = testRows.map(testRow => {
-                      if (testRow.testName === row.original.testName) {
-                        return { ...testRow, remark: newValue }
-                      }
-                      return testRow
-                    })
-                    setTestRows(updatedRows)
-                  }
+                const newValue = prompt('Enter new remark:', row.original.remark)
+                if (newValue !== null) {
+                  const updatedRows = testRows.map(testRow => {
+                    if (testRow.testName === row.original.testName) {
+                      return { ...testRow, remark: newValue }
+                    }
+                    return testRow
+                  })
+                  setTestRows(updatedRows)
                 }
               }}
             >
               <Typography>{row.original.remark}</Typography>
-              {row.original.qcAcceptance && <i className='tabler-edit' style={{ fontSize: '1rem', opacity: 0.5 }} />}
+              <i className='tabler-edit' style={{ fontSize: '1rem', opacity: 0.5 }} />
             </Box>
           )
         }
@@ -614,16 +607,11 @@ const AuthorizeSample = () => {
         header: 'QC Acceptance',
         cell: ({ row }) => (
           <Switch
-            checked={row.original.qcAcceptance}
+            checked={qcAcceptance}
             onChange={e => {
-              // Update only the specific test's QC acceptance
-              const newTestRows = testRows.map(testRow => {
-                if (testRow.testName === row.original.testName) {
-                  return { ...testRow, qcAcceptance: e.target.checked }
-                }
-                return testRow
-              })
-              setTestRows(newTestRows)
+              setQcAcceptance(e.target.checked)
+              // Update all testRows' qcAcceptance values
+              setTestRows(prev => prev.map(row => ({ ...row, qcAcceptance: e.target.checked })))
             }}
             color='primary'
           />
@@ -720,6 +708,13 @@ const AuthorizeSample = () => {
   const isAlphanumeric = (val: string) => /^[a-zA-Z0-9]+$/.test(val)
 
   // Handlers for field changes (for demonstration, not saving changes)
+  const handleSwitch = () => {
+    setQcAcceptance(val => !val)
+    // Reset any in-progress edits when QC status changes
+    setEditingCell(null)
+    setEditValue('')
+  }
+
   const handleBulkAction = (action: string) => {
     const selectedRows = table.getSelectedRowModel().rows
     if (selectedRows.length === 0) {
@@ -1063,14 +1058,9 @@ const AuthorizeSample = () => {
     }
   }
 
-  const handleApprove = async () => {
-    if (!isAcknowledged) {
-      toast.error('Please acknowledge the declaration before approving')
-      return
-    }
-
-    if (!username.trim() || !password.trim()) {
-      toast.error('Please provide both username and password')
+  const handleApprovalSubmit = async () => {
+    if (!signatureData) {
+      setShowSignatureError(true)
       return
     }
 
@@ -1084,7 +1074,8 @@ const AuthorizeSample = () => {
       // await testResultsService.approveTestResults(sampleId, {
       //   testNames: selectedTestNames,
       //   comment: approvalComment,
-      //   signedBy: username,
+      //   signature: signatureData,
+      //   signedBy: 'Current User', // Replace with actual user info
       //   signedAt: new Date().toISOString()
       // })
 
@@ -1258,14 +1249,7 @@ const AuthorizeSample = () => {
   }
 
   function handleReject(): void {
-    setIsRejecting(true)
-    const selectedRows = table.getSelectedRowModel().rows
-    const selectedTestNames = selectedRows.map(row => row.original.testName)
-    setTimeout(() => {
-      toast.success(`Successfully rejected ${selectedTestNames.length} test(s)`)
-      setIsRejecting(false)
-      handleCloseApprovalModal()
-    }, 1000)
+    throw new Error('Function not implemented.')
   }
 
   const handleViewDetails = (testName: string) => {
@@ -1692,7 +1676,7 @@ const AuthorizeSample = () => {
                           fullWidth
                           value={row.original.result}
                           onChange={e => {
-                            if (row.original.qcAcceptance) {
+                            if (qcAcceptance) {
                               const newTestRows = [...testRows]
                               const index = newTestRows.findIndex(item => item.testName === row.original.testName)
                               if (index !== -1) {
@@ -1716,7 +1700,7 @@ const AuthorizeSample = () => {
                               fontWeight: isOutOfRange ? 'bold' : 'normal'
                             }
                           }}
-                          disabled={!row.original.qcAcceptance}
+                          disabled={!qcAcceptance}
                         />
                         {isOutOfRange && (
                           <Tooltip title='Result is out of reference range'>
@@ -1734,7 +1718,7 @@ const AuthorizeSample = () => {
                         fullWidth
                         value={row.original.remark}
                         onChange={e => {
-                          if (row.original.qcAcceptance) {
+                          if (qcAcceptance) {
                             const newTestRows = [...testRows]
                             const index = newTestRows.findIndex(item => item.testName === row.original.testName)
                             if (index !== -1) {
@@ -1746,21 +1730,16 @@ const AuthorizeSample = () => {
                             }
                           }
                         }}
-                        disabled={!row.original.qcAcceptance}
+                        disabled={!qcAcceptance}
                       />
                     </Grid>
                     <Grid size={{ xs: 1 }}>
                       <Switch
-                        checked={row.original.qcAcceptance}
+                        checked={qcAcceptance}
                         onChange={e => {
-                          // Update only the specific test's QC acceptance
-                          const newTestRows = testRows.map(testRow => {
-                            if (testRow.testName === row.original.testName) {
-                              return { ...testRow, qcAcceptance: e.target.checked }
-                            }
-                            return testRow
-                          })
-                          setTestRows(newTestRows)
+                          setQcAcceptance(e.target.checked)
+                          // Update all testRows' qcAcceptance values
+                          setTestRows(prev => prev.map(row => ({ ...row, qcAcceptance: e.target.checked })))
                         }}
                         color='primary'
                       />
@@ -1780,31 +1759,10 @@ const AuthorizeSample = () => {
             flexWrap: 'wrap',
             justifyContent: 'center',
             mt: 4,
-            opacity: table.getSelectedRowModel().rows.length > 0 || authorizeAll ? 1 : 0.5,
-            pointerEvents: table.getSelectedRowModel().rows.length > 0 || authorizeAll ? 'auto' : 'none'
+            opacity: table.getSelectedRowModel().rows.length > 0 ? 1 : 0.5,
+            pointerEvents: table.getSelectedRowModel().rows.length > 0 ? 'auto' : 'none'
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, width: '100%', justifyContent: 'center' }}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={authorizeAll}
-                  onChange={e => {
-                    setAuthorizeAll(e.target.checked)
-                    if (e.target.checked) {
-                      // Select all rows when toggle is turned on
-                      table.toggleAllRowsSelected(true)
-                    } else {
-                      // Deselect all rows when toggle is turned off
-                      table.toggleAllRowsSelected(false)
-                    }
-                  }}
-                  color='primary'
-                />
-              }
-              label='Authorize all test results'
-            />
-          </Box>
           <Button
             variant='outlined'
             color='primary'
@@ -2238,30 +2196,25 @@ const AuthorizeSample = () => {
             />
           </Box>
 
+          <Box display='flex' justifyContent='center' mb={2}>
+            <img
+              src='/images/tick-ico-image.png' // Ensure this path is correct
+              alt='Digital Signature'
+              height={50}
+            />
+          </Box>
+
           <Typography variant='caption' color='text.secondary' sx={{ textAlign: 'center' }}>
-            Please provide your credentials to authorize the result.
+            Please provide your credentials to authorize the result. Your signature will be recorded digitally.
           </Typography>
         </DialogContent>
 
         <DialogActions sx={{ justifyContent: 'center' }}>
-          <Button
-            variant='contained'
-            color='error'
-            onClick={handleReject}
-            sx={{ marginRight: 2 }}
-            disabled={isApproving || isRejecting}
-            startIcon={isRejecting ? <i className='tabler-loader animate-spin' /> : undefined}
-          >
-            {isRejecting ? 'Rejecting...' : 'Reject'}
+          <Button variant='contained' color='error' onClick={handleReject} sx={{ marginRight: 2 }}>
+            Reject
           </Button>
-          <Button
-            variant='contained'
-            color='success'
-            onClick={handleApprove}
-            disabled={isApproving || isRejecting}
-            startIcon={isApproving ? <i className='tabler-loader animate-spin' /> : undefined}
-          >
-            {isApproving ? 'Approving...' : 'Approve'}
+          <Button variant='contained' color='success' onClick={handleCloseApprovalModal}>
+            Close
           </Button>
         </DialogActions>
       </Dialog>
@@ -2393,11 +2346,7 @@ const AuthorizeSample = () => {
             variant='contained'
             disabled={isProcessingAction}
             startIcon={
-              isProcessingAction ? (
-                <i className='tabler-loader animate-spin' />
-              ) : (
-                <i className={selectedAction?.icon || ''} />
-              )
+              isProcessingAction ? <i className='tabler-loader animate-spin' /> : <i className={selectedAction?.icon} />
             }
           >
             {isProcessingAction ? 'Processing...' : 'Confirm Action'}
