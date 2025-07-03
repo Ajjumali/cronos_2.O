@@ -1133,6 +1133,7 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
   const [selectedSamples, setSelectedSamples] = useState<Record<string, boolean>>({})
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
+  const [searchText, setSearchText] = useState('')
 
   const grouped = useMemo(() => groupSamplesByVolunteer(filteredData), [filteredData])
   const groupKeys = Object.keys(grouped)
@@ -1942,10 +1943,20 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
 
   // Create a wrapper function for TableFilters compatibility
   const handleFilterDataChange = (sampleData: SampleType[]) => {
+    let filtered = sampleData
+    if (searchText.trim()) {
+      const lower = searchText.trim().toLowerCase()
+      filtered = filtered.filter(
+        sample =>
+          (sample.id?.toString() || '').toLowerCase().includes(lower) ||
+          (sample.barcodeId?.toLowerCase() || '').includes(lower) ||
+          (sample.subjectId?.toLowerCase() || '').includes(lower)
+      )
+    }
     // Convert SampleType[] back to VolunteerData[] format
     const volunteerDataMap = new Map<string, VolunteerData>()
 
-    sampleData.forEach(sample => {
+    filtered.forEach(sample => {
       const volunteerId = sample.subjectId || 'unknown'
       if (!volunteerDataMap.has(volunteerId)) {
         volunteerDataMap.set(volunteerId, {
@@ -1981,6 +1992,12 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
       return allSamples.find(sample => sample.barcodeId === barcodeId)?.id
     })
     .filter(Boolean)
+
+  // Add useEffect to re-apply search filter when searchText changes
+  useEffect(() => {
+    handleFilterDataChange(Object.values(grouped).flatMap(group => group.samples))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchText])
 
   return (
     <>
@@ -2116,6 +2133,12 @@ const SampleReceivedTable = ({ sampleData = [], onDataChange }: Props) => {
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 4, pb: 2 }}>
           <Typography variant='h4'>Sample Received</Typography>
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <DebouncedInput
+              placeholder='Scan barcode'
+              value={searchText}
+              onChange={val => setSearchText(val as string)}
+              sx={{ minWidth: 260 }}
+            />
             <Button
               variant='outlined'
               startIcon={<i className='tabler-printer' />}
