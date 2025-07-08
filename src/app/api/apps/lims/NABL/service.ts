@@ -12,14 +12,23 @@ export const nablService = {
     return response.json()
   },
 
+  // Get accreditation by ID
+  getAccreditationById: async (id: number): Promise<AccreditationDetail> => {
+    const response = await fetch(`${API_BASE_URL}?id=${id}`)
+    if (!response.ok) {
+      throw new Error('Failed to fetch accreditation')
+    }
+    return response.json()
+  },
+
   // Create new accreditation
   createAccreditation: async (data: Omit<AccreditationDetail, 'id'>): Promise<AccreditationDetail> => {
     const response = await fetch(API_BASE_URL, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify(data)
     })
     if (!response.ok) {
       throw new Error('Failed to create accreditation')
@@ -32,9 +41,9 @@ export const nablService = {
     const response = await fetch(API_BASE_URL, {
       method: 'PUT',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify(data)
     })
     if (!response.ok) {
       throw new Error('Failed to update accreditation')
@@ -45,10 +54,10 @@ export const nablService = {
   // Delete accreditation
   deleteAccreditation: async (id: number): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}?id=${id}`, {
-      method: 'DELETE',
+      method: 'DELETE'
     })
     if (!response.ok) {
       throw new Error('Failed to delete accreditation')
     }
   }
-} 
+}

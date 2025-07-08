@@ -7,10 +7,6 @@ import {
   MenuItem,
   Typography,
   Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   TextField,
   Grid,
   Chip,
@@ -39,6 +35,7 @@ const InfoIcon = () => <span>ℹ</span>
 interface Props {
   accreditationData: AccreditationDetail[]
   onDataChange: () => void
+  onNavigateToForm: (params: { id?: string; copyData?: string; isEdit?: boolean; isCopy?: boolean }) => void
 }
 
 interface TableColumn {
@@ -50,18 +47,9 @@ interface TableColumn {
   valueGetter?: (row: AccreditationDetail) => string | number
 }
 
-const NablListTable = ({ accreditationData, onDataChange }: Props) => {
+const NablListTable = ({ accreditationData, onDataChange, onNavigateToForm }: Props) => {
   const [selectedRow, setSelectedRow] = useState<AccreditationDetail | null>(null)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
-  const [openDialog, setOpenDialog] = useState(false)
-  const [openTestDetailsDialog, setOpenTestDetailsDialog] = useState(false)
-  const [dialogMode, setDialogMode] = useState<'add' | 'edit' | 'copy'>('add')
-  const [formData, setFormData] = useState<Partial<AccreditationDetail>>({
-    fromDate: new Date().toISOString(),
-    toDate: new Date().toISOString(),
-    accreditationType: 'NABL',
-    tests: []
-  })
   const [page, setPage] = useState(1)
   const rowsPerPage = 5
   const [search, setSearch] = useState('')
@@ -78,9 +66,7 @@ const NablListTable = ({ accreditationData, onDataChange }: Props) => {
 
   const handleEdit = () => {
     if (selectedRow) {
-      setFormData(selectedRow)
-      setDialogMode('edit')
-      setOpenDialog(true)
+      onNavigateToForm({ id: selectedRow.id.toString(), isEdit: true })
     }
     handleMenuClose()
   }
@@ -99,41 +85,19 @@ const NablListTable = ({ accreditationData, onDataChange }: Props) => {
 
   const handleCopy = () => {
     if (selectedRow) {
-      setFormData({
+      // Navigate to form with copy data
+      const copyData = {
         ...selectedRow,
         id: undefined,
         fromDate: new Date().toISOString(),
         toDate: new Date().toISOString()
-      })
-      setDialogMode('copy')
-      setOpenDialog(true)
-    }
-    handleMenuClose()
-  }
-
-  const handleViewTestDetails = () => {
-    setOpenTestDetailsDialog(true)
-    handleMenuClose()
-  }
-
-  const handleSave = async () => {
-    try {
-      if (dialogMode === 'add' || dialogMode === 'copy') {
-        await nablService.createAccreditation(formData as Omit<AccreditationDetail, 'id'>)
-      } else if (dialogMode === 'edit' && selectedRow) {
-        await nablService.updateAccreditation({ ...formData, id: selectedRow.id } as AccreditationDetail)
       }
-      onDataChange()
-      setOpenDialog(false)
-      setFormData({
-        fromDate: new Date().toISOString(),
-        toDate: new Date().toISOString(),
-        accreditationType: 'NABL',
-        tests: []
+      onNavigateToForm({
+        copyData: encodeURIComponent(JSON.stringify(copyData)),
+        isCopy: true
       })
-    } catch (error) {
-      console.error('Error saving accreditation:', error)
     }
+    handleMenuClose()
   }
 
   const columns: TableColumn[] = [
@@ -189,20 +153,7 @@ const NablListTable = ({ accreditationData, onDataChange }: Props) => {
       <CardHeader
         title='NABL Accreditation'
         action={
-          <Button
-            variant='contained'
-            color='primary'
-            onClick={() => {
-              setDialogMode('add')
-              setFormData({
-                fromDate: new Date().toISOString(),
-                toDate: new Date().toISOString(),
-                accreditationType: 'NABL',
-                tests: []
-              })
-              setOpenDialog(true)
-            }}
-          >
+          <Button variant='contained' color='primary' onClick={() => onNavigateToForm({})}>
             Add NABL
           </Button>
         }
@@ -237,7 +188,12 @@ const NablListTable = ({ accreditationData, onDataChange }: Props) => {
               </TableRow>
             ) : (
               paginatedData.map(row => (
-                <TableRow key={row.id}>
+                <TableRow
+                  key={row.id}
+                  hover
+                  sx={{ cursor: 'pointer' }}
+                  onClick={() => onNavigateToForm({ id: row.id.toString(), isEdit: true })}
+                >
                   {columns.map(column => (
                     <TableCell key={`${row.id}-${column.field}`}>
                       {column.renderCell
@@ -271,91 +227,7 @@ const NablListTable = ({ accreditationData, onDataChange }: Props) => {
         <MenuItem onClick={handleCopy}>
           <CopyIcon /> Copy
         </MenuItem>
-        <MenuItem onClick={handleViewTestDetails}>
-          <InfoIcon /> View Test Details
-        </MenuItem>
       </Menu>
-
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth='md' fullWidth>
-        <DialogTitle>
-          {dialogMode === 'add'
-            ? 'Add Accreditation'
-            : dialogMode === 'edit'
-              ? 'Edit Accreditation'
-              : 'Copy Accreditation'}
-        </DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label='From Date'
-                type='date'
-                value={formData.fromDate?.split('T')[0]}
-                onChange={e => setFormData({ ...formData, fromDate: new Date(e.target.value).toISOString() })}
-                fullWidth
-                InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label='To Date'
-                type='date'
-                value={formData.toDate?.split('T')[0]}
-                onChange={e => setFormData({ ...formData, toDate: new Date(e.target.value).toISOString() })}
-                fullWidth
-                InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
-          <Button onClick={handleSave} variant='contained' color='primary'>
-            Save
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog open={openTestDetailsDialog} onClose={() => setOpenTestDetailsDialog(false)} maxWidth='md' fullWidth>
-        <DialogTitle>Test Details</DialogTitle>
-        <DialogContent>
-          {selectedRow && (
-            <Box sx={{ mt: 2 }}>
-              <TableContainer component={Paper}>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Sr. No.</TableCell>
-                      <TableCell>Test Name</TableCell>
-                      <TableCell>Added By</TableCell>
-                      <TableCell>Added On</TableCell>
-                      <TableCell>Modified By</TableCell>
-                      <TableCell>Modified On</TableCell>
-                      <TableCell>Remarks</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {selectedRow.tests.map((test, index) => (
-                      <TableRow key={test.id}>
-                        <TableCell>{index + 1}</TableCell>
-                        <TableCell>{test.testName}</TableCell>
-                        <TableCell>{test.addedBy}</TableCell>
-                        <TableCell>{format(new Date(test.addedOn), 'dd/MM/yyyy')}</TableCell>
-                        <TableCell>{test.modifiedBy}</TableCell>
-                        <TableCell>{format(new Date(test.modifiedOn), 'dd/MM/yyyy')}</TableCell>
-                        <TableCell>{test.remarks}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenTestDetailsDialog(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
     </Card>
   )
 }
