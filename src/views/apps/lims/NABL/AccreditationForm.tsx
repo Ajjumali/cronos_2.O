@@ -303,7 +303,6 @@ const AccreditationForm = ({ onNavigateToList, formParams }: AccreditationFormPr
     }
   }
 
-  // Filter available tests based on search term
   const filteredAvailableTests = availableTests.filter(
     test =>
       test.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
